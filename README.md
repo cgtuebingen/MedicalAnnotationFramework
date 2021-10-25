@@ -132,5 +132,4 @@ pyrcc5 <Resource_File>.qrc -o <Resource_File>_rc.py
 
 
 ## Acknowledgement
-
-This repo is inspired by [labelme](https://github.com/wkentaro/labelme "Labelme Github").
+This project was ported from its original creation by Nico Lösch at [segmentation_utils](https://github.com/nicoloesch/segmentation_utils), which was inspired by [labelme](https://github.com/wkentaro/labelme "Labelme Github").
