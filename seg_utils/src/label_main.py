@@ -49,7 +49,8 @@ class LabelMain(QMainWindow, LabelUI):
         self._num_colors = 25  # number of colors
         self.colorMap = None
 
-        self._FD_Dir = '/home/nico/isys/data'  # QDir.homePath()
+        # self._FD_Dir = '/home/nico/isys/data'  # QDir.homePath()
+        self._FD_Dir = '/Users/jakob/coding/MedicalAnnotationFramework/seg_utils/examples'
         self._FD_Opt = QFileDialog.DontUseNativeDialog
         self.initActions()
         self.connectEvents()
@@ -143,6 +144,8 @@ class LabelMain(QMainWindow, LabelUI):
         self.imageDisplay.scene.sShapeSelected.connect(self.imageDisplay.canvas.handleShapeSelected)
         self.sLabelSelected.connect(self.imageDisplay.canvas.handleShapeSelected)
         self.imageDisplay.sZoomLevelChanged.connect(self.on_zoomLevelChanged)
+        self.commentList.itemClicked.connect(self.handleCommentClick)
+        self.commentWindow.closeEvent = self.on_close_comment
 
         # ContextMenu
         self.imageDisplay.scene.sRequestContextMenu.connect(self.on_requestContextMenu)
@@ -203,6 +206,7 @@ class LabelMain(QMainWindow, LabelUI):
                                      color=self.getColorForLabel(_label['label']))
                                for _label in labels]
         self.polyList.updateList(self.current_labels)
+        self.commentList.initComments(self.current_labels)
 
     def initImage(self):
         """Initializes the displayed image and respective label/canvas"""
@@ -267,6 +271,7 @@ class LabelMain(QMainWindow, LabelUI):
             self.current_labels.append(shapes)
         self.imageDisplay.canvas.setLabels(self.current_labels)
         self.polyList.updateList(self.current_labels)
+        self.commentList.initComments(self.current_labels)
 
     def enableButtons(self):
         """This function enables/disabled all the buttons as soon as there is a valid database selected.
@@ -444,3 +449,29 @@ class LabelMain(QMainWindow, LabelUI):
             d = ForgotToSaveMessageBox(self)
             d.exec()
             return d.result()
+
+    def handleCommentClick(self, item):
+        """Either shows a blank comment window or the previously written comment for this label"""
+        if self.commentWindow.isVisible():
+            self.commentWindow.close()
+        self.comment.setText("")
+        self.sLabelSelected.emit(self.commentList.row(item), self.commentList.row(item), -1)
+        if item.text() != "Add comment":
+            for lbl in self.current_labels:
+                if lbl.isSelected:
+                    if lbl.comment:
+                        self.comment.setText(lbl.comment)
+        self.commentWindow.show()
+
+    def on_close_comment(self, e):
+        """saves the comment into the comment-variable of the Shape object
+        TODO: if user does not close the comment window after every change, this method is not called (properly)
+        """
+        cur_note = self.comment.toPlainText()
+        text = "Show" if cur_note else "Add comment"
+        for item in self.commentList.selectedItems():
+            item.setText(text)
+        for lbl in self.current_labels:
+            if lbl.isSelected:
+                lbl.comment = cur_note
+        self.commentWindow.close()

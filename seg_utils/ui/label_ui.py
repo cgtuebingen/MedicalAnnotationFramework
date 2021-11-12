@@ -100,10 +100,34 @@ class LabelUI(object):
         self.polyLabel.setObjectName("polyLabel")
         self.polyLabel.setText("Polygons")
         self.polyLayout.addWidget(self.polyLabel)
+
+        # polySubFrame comprises both the PolygonList and the corresponding "Add comment"-List
+        self.polySubFrame = QtWidgets.QFrame(self.polyFrame)
+        self.polySubFrame.setMinimumSize(QtCore.QSize(0, 300))
+        self.polySubFrame.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.polySubFrame.setObjectName("polySubFrame")
+        self.subFrameLayout = QtWidgets.QHBoxLayout(self.polySubFrame)
+        self.subFrameLayout.setContentsMargins(0, 0, 0, 0)
+        self.subFrameLayout.setSpacing(0)
+        self.subFrameLayout.setObjectName("subFrameLayout")
+
+        # displays the created Shapes
         self.polyList = ListWidget(self.polyFrame)
-        self.polyList.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.polyList.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.polyList.setObjectName("polyList")
-        self.polyLayout.addWidget(self.polyList)
+
+        # places a clickable "Add comment" next to each item in the polyList
+        self.commentList = ListWidget(self.polyFrame)
+        self.commentList.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.commentList.setObjectName("commentList")
+        self.commentList.setSpacing(1)
+        self.commentList.setCursor((QtGui.QCursor(QtCore.Qt.PointingHandCursor)))
+        self.commentList.setStyleSheet("selection-color: blue;"
+                                       "selection-background-color: white;")
+
+        self.subFrameLayout.addWidget(self.polyList)
+        self.subFrameLayout.addWidget(self.commentList)
+        self.polyLayout.addWidget(self.polySubFrame)
         self.rightMenuLayout.addWidget(self.polyFrame)
 
         # Frame for the file list
@@ -164,3 +188,10 @@ class LabelUI(object):
         mainWindow.addToolBar(QtCore.Qt.ToolBarArea.LeftToolBarArea, self.toolBar)
         self.toolBar.initMargins()
 
+        # window and QTextEdit for comments
+        self.commentWindow = QtWidgets.QWidget()
+        self.commentWindow.setGeometry(990, 210, 990, 210)
+        self.commentWindow.setWindowTitle("Notes")
+        self.commentWindow.move(self.toolBar.geometry().width(), 0)
+        self.comment = QtWidgets.QTextEdit(self.commentWindow)
+        self.comment.setMinimumSize(self.commentWindow.size())

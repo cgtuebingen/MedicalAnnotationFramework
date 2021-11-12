@@ -37,6 +37,7 @@ class Shape(QGraphicsItem):
                 self.flags = label_dict['flags']
             if 'group_id' in label_dict:
                 self.group_id = label_dict['group_id']
+            self.comment = label_dict['comment'] if 'comment' in label_dict else ""
         else:
             self.label = label
             _points = points
@@ -101,7 +102,8 @@ class Shape(QGraphicsItem):
                 'points': [[_pt.x(), _pt.y()] for _pt in self.vertices.vertices],
                 'shape_type': self.shape_type,
                 'flags': self.flags,
-                'group_id': self.group_id}
+                'group_id': self.group_id,
+                'comment': self.comment}
         return dict, self.label
 
     def initShape(self):
