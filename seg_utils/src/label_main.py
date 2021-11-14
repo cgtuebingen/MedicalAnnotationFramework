@@ -2,7 +2,7 @@ import sys
 
 from PyQt5.QtCore import pyqtSignal, QPointF, QRectF, Qt, QSize
 from PyQt5.QtWidgets import QMainWindow, QFileDialog, QListWidgetItem, QMessageBox, QMenu
-from PyQt5.QtGui import QPixmap, QIcon
+from PyQt5.QtGui import QPixmap, QIcon, QCloseEvent
 
 from typing import Tuple, List, Union
 from numpy import argmax
@@ -453,25 +453,29 @@ class LabelMain(QMainWindow, LabelUI):
     def handleCommentClick(self, item):
         """Either shows a blank comment window or the previously written comment for this label"""
         if self.commentWindow.isVisible():
-            self.commentWindow.close()
-        self.comment.setText("")
+            self.on_close_comment(QCloseEvent(),
+                                  prev_shape=self.commentWindow.corr_shape,
+                                  prev_item=self.commentWindow.corr_item_in_list)
+        self.commentWindow.comment.setText("")
         self.sLabelSelected.emit(self.commentList.row(item), self.commentList.row(item), -1)
-        if item.text() != "Add comment":
-            for lbl in self.current_labels:
-                if lbl.isSelected:
-                    if lbl.comment:
-                        self.comment.setText(lbl.comment)
-        self.commentWindow.show()
-
-    def on_close_comment(self, e):
-        """saves the comment into the comment-variable of the Shape object
-        TODO: if user does not close the comment window after every change, this method is not called (properly)
-        """
-        cur_note = self.comment.toPlainText()
-        text = "Show" if cur_note else "Add comment"
-        for item in self.commentList.selectedItems():
-            item.setText(text)
         for lbl in self.current_labels:
             if lbl.isSelected:
-                lbl.comment = cur_note
-        self.commentWindow.close()
+                self.commentWindow.update_pointers(lbl, item)
+                if item.text() != "Add comment" and lbl.comment:
+                    self.commentWindow.comment.setText(lbl.comment)
+        self.commentWindow.show()
+        self.commentWindow.raise_()
+
+    def on_close_comment(self, e, prev_shape=None, prev_item=None):
+        """saves the comment into the comment-variable of the Shape object"""
+        cur_note = self.commentWindow.comment.toPlainText()
+        text = "Show" if cur_note else "Add comment"
+        if prev_shape:
+            prev_item.setText(text)
+            prev_shape.comment = cur_note
+        else:
+            for item in self.commentList.selectedItems():
+                item.setText(text)
+            for lbl in self.current_labels:
+                if lbl.isSelected:
+                    lbl.comment = cur_note

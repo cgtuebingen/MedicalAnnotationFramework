@@ -7,6 +7,7 @@ from PyQt5 import QtGui
 from seg_utils.ui.image_viewer import ImageViewer
 from seg_utils.ui.toolbar import Toolbar
 from seg_utils.ui.list_widget import ListWidget
+from seg_utils.ui.comment_window import CommentWindow
 
 
 class LabelUI(object):
@@ -188,10 +189,6 @@ class LabelUI(object):
         mainWindow.addToolBar(QtCore.Qt.ToolBarArea.LeftToolBarArea, self.toolBar)
         self.toolBar.initMargins()
 
-        # window and QTextEdit for comments
-        self.commentWindow = QtWidgets.QWidget()
-        self.commentWindow.setGeometry(990, 210, 990, 210)
-        self.commentWindow.setWindowTitle("Notes")
+        # window for comments
+        self.commentWindow = CommentWindow()
         self.commentWindow.move(self.toolBar.geometry().width(), 0)
-        self.comment = QtWidgets.QTextEdit(self.commentWindow)
-        self.comment.setMinimumSize(self.commentWindow.size())
