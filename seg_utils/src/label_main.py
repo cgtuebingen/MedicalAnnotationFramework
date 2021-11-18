@@ -1,8 +1,8 @@
 import sys
 
-from PyQt5.QtCore import pyqtSignal, QPointF, QRectF, Qt, QSize
-from PyQt5.QtWidgets import QMainWindow, QFileDialog, QListWidgetItem, QMessageBox, QMenu
-from PyQt5.QtGui import QPixmap, QIcon, QCloseEvent
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
 
 from typing import Tuple, List, Union
 from numpy import argmax
@@ -137,19 +137,19 @@ class LabelMain(QMainWindow, LabelUI):
     def connectEvents(self):
         self.fileList.itemClicked.connect(self.handleFileListItemClicked)
         self.fileSearch.textChanged.connect(self.handleFileListSearch)
-        self.polyList.itemClicked.connect(self.handlePolyListSelection)
+        self.polyFrame.polyList.itemClicked.connect(self.handlePolyListSelection)
         self.imageDisplay.canvas.sRequestLabelListUpdate.connect(self.handleUpdatePolyList)
         self.imageDisplay.canvas.sRequestFitInView.connect(self.imageDisplay.fitInView)
         self.imageDisplay.scene.sShapeHovered.connect(self.imageDisplay.canvas.handleShapeHovered)
         self.imageDisplay.scene.sShapeSelected.connect(self.imageDisplay.canvas.handleShapeSelected)
         self.sLabelSelected.connect(self.imageDisplay.canvas.handleShapeSelected)
         self.imageDisplay.sZoomLevelChanged.connect(self.on_zoomLevelChanged)
-        self.commentList.itemClicked.connect(self.handleCommentClick)
+        self.polyFrame.commentList.itemClicked.connect(self.handleCommentClick)
         self.commentWindow.closeEvent = self.on_close_comment
 
         # ContextMenu
         self.imageDisplay.scene.sRequestContextMenu.connect(self.on_requestContextMenu)
-        self.polyList.sRequestContextMenu.connect(self.on_requestContextMenu)
+        self.polyFrame.polyList.sRequestContextMenu.connect(self.on_requestContextMenu)
 
         # Drawing Events
         self.imageDisplay.scene.sDrawing.connect(self.on_Drawing)
@@ -205,8 +205,8 @@ class LabelMain(QMainWindow, LabelUI):
         self.current_labels = [Shape(image_size=self.image_size, label_dict=_label,
                                      color=self.getColorForLabel(_label['label']))
                                for _label in labels]
-        self.polyList.updateList(self.current_labels)
-        self.commentList.initComments(self.current_labels)
+        self.polyFrame.polyList.updateList(self.current_labels)
+        self.polyFrame.commentList.initComments(self.current_labels)
 
     def initImage(self):
         """Initializes the displayed image and respective label/canvas"""
@@ -221,7 +221,7 @@ class LabelMain(QMainWindow, LabelUI):
     def initContextMenu(self, actions: Tuple[Action]):
         for action in actions:
             self.contextMenu.addAction(action)
-            self.polyList.contextMenu.addAction(action)
+            self.polyFrame.polyList.contextMenu.addAction(action)
 
     def handleFileListItemClicked(self):
         """Tracks the changed item in the label List"""
@@ -243,13 +243,13 @@ class LabelMain(QMainWindow, LabelUI):
                 self.fileList.item(item_idx).setHidden(False)
 
     def handleUpdatePolyList(self, _item_idx):
-        for _idx in range(self.polyList.count()):
-            self.polyList.item(_idx).setSelected(False)
-        self.polyList.item(_item_idx).setSelected(True)
+        for _idx in range(self.polyFrame.polyList.count()):
+            self.polyFrame.polyList.item(_idx).setSelected(False)
+        self.polyFrame.polyList.item(_item_idx).setSelected(True)
 
     def handlePolyListSelection(self, item):
         r"""Returns the row index within the list such that the plotter in canvas can update it"""
-        self.sLabelSelected.emit(self.polyList.row(item), self.polyList.row(item), -1)
+        self.sLabelSelected.emit(self.polyFrame.polyList.row(item), self.polyFrame.polyList.row(item), -1)
 
     def getColorForLabel(self, label_name: str):
         r"""Get a Color based on a label_name"""
@@ -270,8 +270,8 @@ class LabelMain(QMainWindow, LabelUI):
             # add one shape
             self.current_labels.append(shapes)
         self.imageDisplay.canvas.setLabels(self.current_labels)
-        self.polyList.updateList(self.current_labels)
-        self.commentList.initComments(self.current_labels)
+        self.polyFrame.polyList.updateList(self.current_labels)
+        self.polyFrame.commentList.initComments(self.current_labels)
 
     def enableButtons(self):
         """This function enables/disabled all the buttons as soon as there is a valid database selected.
@@ -457,7 +457,7 @@ class LabelMain(QMainWindow, LabelUI):
                                   prev_shape=self.commentWindow.corr_shape,
                                   prev_item=self.commentWindow.corr_item_in_list)
         self.commentWindow.comment.setText("")
-        self.sLabelSelected.emit(self.commentList.row(item), self.commentList.row(item), -1)
+        self.sLabelSelected.emit(self.polyFrame.commentList.row(item), self.polyFrame.commentList.row(item), -1)
         for lbl in self.current_labels:
             if lbl.isSelected:
                 self.commentWindow.update_pointers(lbl, item)
@@ -474,7 +474,7 @@ class LabelMain(QMainWindow, LabelUI):
             prev_item.setText(text)
             prev_shape.comment = cur_note
         else:
-            for item in self.commentList.selectedItems():
+            for item in self.polyFrame.commentList.selectedItems():
                 item.setText(text)
             for lbl in self.current_labels:
                 if lbl.isSelected:

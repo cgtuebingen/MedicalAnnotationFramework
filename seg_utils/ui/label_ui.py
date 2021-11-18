@@ -8,6 +8,7 @@ from seg_utils.ui.image_viewer import ImageViewer
 from seg_utils.ui.toolbar import Toolbar
 from seg_utils.ui.list_widget import ListWidget
 from seg_utils.ui.comment_window import CommentWindow
+from seg_utils.ui.poly_frame import PolyFrame
 
 
 class LabelUI(object):
@@ -87,48 +88,7 @@ class LabelUI(object):
         self.rightMenuLayout.addWidget(self.labelFrame)
         
         # Frame for the Polygons
-        self.polyFrame = QtWidgets.QFrame(self.rightMenuFrame)
-        self.polyFrame.setMinimumSize(QtCore.QSize(0, 300))
-        self.polyFrame.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.polyFrame.setFrameShadow(QtWidgets.QFrame.Raised)
-        self.polyFrame.setObjectName("polyFrame")
-        self.polyLayout = QtWidgets.QVBoxLayout(self.polyFrame)
-        self.polyLayout.setContentsMargins(0, 0, 0, 0)
-        self.polyLayout.setSpacing(0)
-        self.polyLayout.setObjectName("polyLayout")
-        self.polyLabel = QtWidgets.QLabel(self.polyFrame)
-        self.polyLabel.setStyleSheet("background-color: rgb(186, 189, 182);")
-        self.polyLabel.setObjectName("polyLabel")
-        self.polyLabel.setText("Polygons")
-        self.polyLayout.addWidget(self.polyLabel)
-
-        # polySubFrame comprises both the PolygonList and the corresponding "Add comment"-List
-        self.polySubFrame = QtWidgets.QFrame(self.polyFrame)
-        self.polySubFrame.setMinimumSize(QtCore.QSize(0, 300))
-        self.polySubFrame.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.polySubFrame.setObjectName("polySubFrame")
-        self.subFrameLayout = QtWidgets.QHBoxLayout(self.polySubFrame)
-        self.subFrameLayout.setContentsMargins(0, 0, 0, 0)
-        self.subFrameLayout.setSpacing(0)
-        self.subFrameLayout.setObjectName("subFrameLayout")
-
-        # displays the created Shapes
-        self.polyList = ListWidget(self.polyFrame)
-        self.polyList.setFrameShape(QtWidgets.QFrame.NoFrame)
-        self.polyList.setObjectName("polyList")
-
-        # places a clickable "Add comment" next to each item in the polyList
-        self.commentList = ListWidget(self.polyFrame)
-        self.commentList.setFrameShape(QtWidgets.QFrame.NoFrame)
-        self.commentList.setObjectName("commentList")
-        self.commentList.setSpacing(1)
-        self.commentList.setCursor((QtGui.QCursor(QtCore.Qt.PointingHandCursor)))
-        self.commentList.setStyleSheet("selection-color: blue;"
-                                       "selection-background-color: white;")
-
-        self.subFrameLayout.addWidget(self.polyList)
-        self.subFrameLayout.addWidget(self.commentList)
-        self.polyLayout.addWidget(self.polySubFrame)
+        self.polyFrame = PolyFrame(self.rightMenuFrame)
         self.rightMenuLayout.addWidget(self.polyFrame)
 
         # Frame for the file list
