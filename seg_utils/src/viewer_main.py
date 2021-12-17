@@ -3,7 +3,7 @@ from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
 from PyQt5.QtWidgets import QMainWindow, QFileDialog, QStyle, QGraphicsView, QGraphicsScene
 from PyQt5.QtGui import QPixmap, QKeySequence
 
-from seg_utils.utils.database import SQLiteDatabase
+from seg_utils.utils.database_old import SQLiteDatabaseOld
 from seg_utils.ui.viewer_ui import ViewerUI
 from seg_utils.utils.qt import getIcon
 
@@ -52,7 +52,7 @@ class ViewerMain(QMainWindow, ViewerUI):
                                                   filter="Database (*.db)",
                                                   options=FD_Options)
         self.basedir = pathlib.Path(database).parents[0]
-        self.database = SQLiteDatabase(database)
+        self.database = SQLiteDatabaseOld(database)
         self.labeled_images = self.database.get_entries_of_column('labels', 'image_path')
         self.updateImages()
         self.initButtons()

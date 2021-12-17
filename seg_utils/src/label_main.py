@@ -1,4 +1,6 @@
 import sys
+import pickle
+import os
 
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
@@ -7,13 +9,14 @@ from PyQt5.QtGui import *
 from typing import Tuple, List, Union
 from numpy import argmax
 
+from seg_utils.utils.database_old import SQLiteDatabaseOld
 from seg_utils.utils.database import SQLiteDatabase
 from seg_utils.utils import qt
 from seg_utils.ui.toolbar import Toolbar
 from seg_utils.src.actions import Action
 from seg_utils.ui.label_ui import LabelUI
 from seg_utils.ui.shape import Shape
-from seg_utils.ui.dialogs import NewShapeDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox
+from seg_utils.ui.dialogs import NewLabelDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox, SelectFileTypeDialog
 from seg_utils.config import VERTEX_SIZE
 
 import pathlib
@@ -60,6 +63,13 @@ class LabelMain(QMainWindow, LabelUI):
     def initActions(self):
         """Initialise all actions present which can be connected to buttons or menu items"""
         # TODO: some shortcuts dont work
+        actionNewDB = Action(self,
+                              "New\nDatabase",
+                              lambda: self.on_newDatabase(self._FD_Opt),
+                              'Ctrl+N',
+                              "new",
+                              "New database",
+                              enabled=True)
         actionOpenDB = Action(self,
                               "Open\nDatabase",
                               lambda: self.on_openDatabase(self._FD_Dir, self._FD_Opt),
@@ -73,6 +83,12 @@ class LabelMain(QMainWindow, LabelUI):
                             'Ctrl+S',
                             "save",
                             "Save current state to database")
+        actionImport = Action(self,
+                              "Import",
+                              lambda: self.on_import(self._FD_Dir, self._FD_Opt),
+                              'Ctrl+I',
+                              "import",
+                              "Import a new file to database")
         actionNextImage = Action(self,
                                  "Next\nImage",
                                  self.on_nextImage,
@@ -97,14 +113,12 @@ class LabelMain(QMainWindow, LabelUI):
                                     icon="outline",
                                     tip="Trace Outline",
                                     checkable=True)
-
         actionDrawCircle = Action(self,
                                   "Draw\nCircle",
                                   lambda: self.on_drawStart('circle'),
                                   icon="circle",
                                   tip="Draw Circle",
                                   checkable=True)
-
         actionDrawRectangle = Action(self,
                                      "Draw\nRectangle",
                                      lambda: self.on_drawStart('rectangle'),
@@ -112,8 +126,10 @@ class LabelMain(QMainWindow, LabelUI):
                                      tip="Draw Rectangle",
                                      checkable=True)
 
-        self.actions = ((actionOpenDB,
+        self.actions = ((actionNewDB,
+                         actionOpenDB,
                          actionSave,
+                         actionImport,
                          actionNextImage,
                          actionPrevImage,
                          actionDrawPoly,
@@ -165,7 +181,7 @@ class LabelMain(QMainWindow, LabelUI):
         """This function is called if a correct database is selected"""
         self.basedir = pathlib.Path(database).parents[0]
         self.database = SQLiteDatabase(database)
-        self.labeled_images, self.isLabeled = self.database.get_labeled_images()
+        self.labeled_images = self.database.get_images()
         self.imageDisplay.setInitialized()
         self.initColors()
         self.initClasses()
@@ -175,6 +191,7 @@ class LabelMain(QMainWindow, LabelUI):
 
     def initClasses(self):
         """This function initializes the available classes in the database and updates the label list"""
+        self.labelList.clear()
         classes = self.database.get_label_classes()
         for idx, _class in enumerate(classes):
             item = qt.createListWidgetItemWithSquareIcon(_class, self.colorMap[idx], 10)
@@ -188,6 +205,7 @@ class LabelMain(QMainWindow, LabelUI):
 
     def initFileList(self, show_check_box=False):
         r"""Initialize the file list with all the entries found in the database"""
+        self.fileList.clear()
         for idx, elem in enumerate(self.labeled_images):
             if show_check_box:
                 # TODO: relative path doesnt work
@@ -273,6 +291,15 @@ class LabelMain(QMainWindow, LabelUI):
         self.polyFrame.polyList.updateList(self.current_labels)
         self.polyFrame.commentList.initComments(self.current_labels)
 
+        # update labelList and database in case a new label class was generated
+        if len(self.classes) != self.labelList.count():
+            self.labelList.clear()
+            for i, c in enumerate(self.classes):
+                item = qt.createListWidgetItemWithSquareIcon(c, self.colorMap[i], 10)
+                self.labelList.addItem(item)
+
+            self.database.update_labels(self.classes.keys())
+
     def enableButtons(self):
         """This function enables/disabled all the buttons as soon as there is a valid database selected.
             :param bool value: True enables Buttons, False disables them
@@ -280,8 +307,9 @@ class LabelMain(QMainWindow, LabelUI):
         for act in self.toolBar.actions():
             self.toolBar.widgetForAction(act).setEnabled(True)
 
-        # TODO: this disables the Open Database Button as i only need it once
+        # TODO: this disables the Open & New Database Button as i only need it once
         #   and currently it crashes everything if clicked again
+        self.toolBar.getWidgetForAction('NewDatabase').setEnabled(False)
         self.toolBar.getWidgetForAction('OpenDatabase').setEnabled(False)
 
     def setButtonsUnchecked(self):
@@ -299,11 +327,49 @@ class LabelMain(QMainWindow, LabelUI):
             if not self.toolBar.widgetForAction(act) == action:
                 self.toolBar.widgetForAction(act).setChecked(Qt.Unchecked)
 
+    def create_annotation_entry(self, label_dict: dict, label_class: str) -> dict:
+        """
+        creates a dictionary that can be used as an entry for the annotations table in the database
+        :param label_dict: all information regarding the Shape object of the annotation
+        :param label_class: class of the label
+        :return: a dictionary used as an entry to the database
+        """
+        filename = self.labeled_images[self.img_idx]
+        modality, file = self.database.get_uids_from_filename(filename)
+        label_class = self.database.get_uid_from_label(label_class)
+        patient = 1  # TODO: Implement patient id references
+        return {'modality': modality,
+                'file': file,
+                'patient': patient,
+                'shape': pickle.dumps(label_dict),
+                'label': label_class}
+
     def closeEvent(self, event) -> None:
         dlgResult = self.checkForChanges()
         if dlgResult == QMessageBox.AcceptRole or dlgResult == QMessageBox.DestructiveRole:
             if dlgResult == QMessageBox.AcceptRole:
                 self.on_saveLabel()
+
+    def on_newDatabase(self, fdoptions):
+        """
+        This function is the handle for creating a new Database
+        :param fdoptions: options to be used in the QDialog"""
+        database, _ = QFileDialog.getSaveFileName(self,
+                                                   caption="Select location of new Database",
+                                                   directory="",
+                                                   filter="Database (*.db)",
+                                                   options=fdoptions)
+        if database:
+            # remove existing database if necessary
+            # make sure that path has a '.db' extension
+            if os.path.exists(database):
+                os.remove(database)
+            elif not database.endswith('.db'):
+                database = database + '.db'
+
+            _ = SQLiteDatabase(database, True)
+            self.initWithDatabase(database)
+
 
     def on_openDatabase(self, fddirectory, fdoptions):
         """This function is the handle for opening a database"""
@@ -318,20 +384,45 @@ class LabelMain(QMainWindow, LabelUI):
             # TODO: Exit on cancel - needs to be altered to something more useful
             sys.exit(1)
 
+    def on_import(self, fddirectory, fdoptions):
+        """This function is the handle for importing new images/videos to the database and the current project"""
+
+        # user first needs to specify the type of the file to be imported
+        select_filetype = SelectFileTypeDialog()
+        select_filetype.exec()
+        if select_filetype.filetype:
+            filename, _ = QFileDialog.getOpenFileName(self,
+                                                      caption="Select Database",
+                                                      directory=fddirectory,
+                                                      filter="Database (*.{})".format(select_filetype.filetype),
+                                                      options=fdoptions)
+
+            # get path to file and store it in the database
+            if filename:
+                cut = filename.rfind('/') + 1
+                filename = IMAGES_DIR + filename[cut:]
+                self.database.add_file(filename, select_filetype.filetype)
+
+                # check if imported file is the first file in the database; if yes, delete filler image
+                first_file = self.database.filler_exists()
+                if first_file:
+                    self.database.set_filler(False)
+                    self.labelList.clear()
+
+                # update the GUI
+                self.labeled_images = self.database.get_images()
+                self.initFileList()
+                if first_file:
+                    self.initImage()
+
     def on_saveLabel(self):
         """Save current state to database"""
-        label_list = []
-        classes_set = set()
+        entries = list()
         for _lbl in self.current_labels:
             label_dict, class_name = _lbl.to_dict()
-            label_list.append(label_dict)
-            classes_set.add(class_name)
-        classes_dict = {_key: 0 for _key in self.classes.keys()}  # initialize the final dict
-        for _class in classes_set:
-            if _class in classes_dict.keys():
-                classes_dict[_class] = 1
-        classes_dict['label_list'] = label_list
-        self.database.update_label(image_name=self.labeled_images[self.img_idx], label_class_dict=classes_dict)
+            annotation_entry = self.create_annotation_entry(label_dict, class_name)
+            entries.append(annotation_entry)
+        self.database.update_image_annotations(image_name=self.labeled_images[self.img_idx], entries=entries)
 
     def on_nextImage(self):
         """Display the next image"""
@@ -373,7 +464,7 @@ class LabelMain(QMainWindow, LabelUI):
                 self.imageDisplay.canvas.setTempLabel(points, shape_type)
 
     def on_drawEnd(self, points: List[QPointF], shape_type: str):
-        d = NewShapeDialog(self)
+        d = NewLabelDialog(self)
         d.exec()
         if d.class_name:
             # traces are also polygons so i am going to store them as such
@@ -398,7 +489,7 @@ class LabelMain(QMainWindow, LabelUI):
         self.contextMenu.exec(contextmenu_pos)
 
     def on_editLabel(self):
-        d = NewShapeDialog(self)
+        d = NewLabelDialog(self)
         d.setText(self.current_labels[self._selectedShape].label)
         d.exec()
         if d.class_name:
