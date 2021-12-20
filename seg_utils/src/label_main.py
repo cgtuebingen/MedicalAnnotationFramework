@@ -182,12 +182,14 @@ class LabelMain(QMainWindow, LabelUI):
         self.basedir = pathlib.Path(database).parents[0]
         self.database = SQLiteDatabase(database)
         self.labeled_images = self.database.get_images()
-        self.imageDisplay.setInitialized()
         self.initColors()
         self.initClasses()
         self.initFileList()
-        self.initImage()
-        self.enableButtons()
+        self.enable_essentials()
+        if self.labeled_images:
+            self.imageDisplay.setInitialized()
+            self.initImage()
+            self.enable_tools()
 
     def initClasses(self):
         """This function initializes the available classes in the database and updates the label list"""
@@ -291,19 +293,26 @@ class LabelMain(QMainWindow, LabelUI):
         self.polyFrame.polyList.updateList(self.current_labels)
         self.polyFrame.commentList.initComments(self.current_labels)
 
-        # update labelList and database in case a new label class was generated
+        # update labelList in case a new label class was generated
         if len(self.classes) != self.labelList.count():
             self.labelList.clear()
             for i, c in enumerate(self.classes):
                 item = qt.createListWidgetItemWithSquareIcon(c, self.colorMap[i], 10)
                 self.labelList.addItem(item)
 
-            self.database.update_labels(self.classes.keys())
-
-    def enableButtons(self):
-        """This function enables/disabled all the buttons as soon as there is a valid database selected.
-            :param bool value: True enables Buttons, False disables them
+    def enable_essentials(self):
+        """This function enables the Save and Import buttons when a database is opened
         """
+        self.toolBar.getWidgetForAction('Save').setEnabled(True)
+        self.toolBar.getWidgetForAction('Import').setEnabled(True)
+
+        # TODO: this disables the Open & New Database Button as i only need it once
+        #   and currently it crashes everything if clicked again
+        self.toolBar.getWidgetForAction('NewDatabase').setEnabled(False)
+        self.toolBar.getWidgetForAction('OpenDatabase').setEnabled(False)
+
+    def enable_tools(self):
+        """This function enables ever button in the toolBar except the Open & New Database Button"""
         for act in self.toolBar.actions():
             self.toolBar.widgetForAction(act).setEnabled(True)
 
@@ -380,9 +389,6 @@ class LabelMain(QMainWindow, LabelUI):
                                                   options=fdoptions)
         if database:
             self.initWithDatabase(database)
-        else:
-            # TODO: Exit on cancel - needs to be altered to something more useful
-            sys.exit(1)
 
     def on_import(self, fddirectory, fdoptions):
         """This function is the handle for importing new images/videos to the database and the current project"""
@@ -391,10 +397,14 @@ class LabelMain(QMainWindow, LabelUI):
         select_filetype = SelectFileTypeDialog()
         select_filetype.exec()
         if select_filetype.filetype:
+
+            # TODO: implement smarter filetype recognition
+            _filter = '*png *jpg *jpeg' if select_filetype.filetype == 'png' else select_filetype.filetype
+
             filename, _ = QFileDialog.getOpenFileName(self,
-                                                      caption="Select Database",
+                                                      caption="Select File",
                                                       directory=fddirectory,
-                                                      filter="Database (*.{})".format(select_filetype.filetype),
+                                                      filter="File ({})".format(_filter),
                                                       options=fdoptions)
 
             # get path to file and store it in the database
@@ -403,26 +413,28 @@ class LabelMain(QMainWindow, LabelUI):
                 filename = IMAGES_DIR + filename[cut:]
                 self.database.add_file(filename, select_filetype.filetype)
 
-                # check if imported file is the first file in the database; if yes, delete filler image
-                first_file = self.database.filler_exists()
-                if first_file:
-                    self.database.set_filler(False)
-                    self.labelList.clear()
-
                 # update the GUI
                 self.labeled_images = self.database.get_images()
                 self.initFileList()
-                if first_file:
+
+                # initialize additional parts, if it is the first added file
+                if self.imageDisplay.b_isEmpty:
+                    self.imageDisplay.setInitialized()
                     self.initImage()
+                    self.enable_tools()
 
     def on_saveLabel(self):
         """Save current state to database"""
+        self.database.update_labels(self.classes.keys())
         entries = list()
         for _lbl in self.current_labels:
             label_dict, class_name = _lbl.to_dict()
             annotation_entry = self.create_annotation_entry(label_dict, class_name)
             entries.append(annotation_entry)
-        self.database.update_image_annotations(image_name=self.labeled_images[self.img_idx], entries=entries)
+
+        if entries:
+            self.database.update_image_annotations(image_name=self.labeled_images[self.img_idx], entries=entries)
+
 
     def on_nextImage(self):
         """Display the next image"""
@@ -518,7 +530,8 @@ class LabelMain(QMainWindow, LabelUI):
 
     def on_anchorRest(self, vShape: int):
         """Handles the reset of the anchor upon the mouse release within the respective label/shape"""
-        self.current_labels[vShape].resetAnchor()
+        if self.current_labels:
+            self.current_labels[vShape].resetAnchor()
 
     def on_zoomLevelChanged(self, zoom: int):
         for shape in self.current_labels:
@@ -528,7 +541,7 @@ class LabelMain(QMainWindow, LabelUI):
     def checkForChanges(self) -> int:
         r"""Check for changes with the database
 
-            :returns: 0 if accepted or no changes, 1 if cancelled and 2 if dimissed
+            :returns: 0 if accepted or no changes, 1 if cancelled and 2 if dismissed
         """
         sql_labels = self.database.get_label_from_imagepath(self.labeled_images[self.img_idx])
         sql_labels = [Shape(image_size=self.image_size, label_dict=_label, color=self.getColorForLabel(_label['label']))

@@ -70,7 +70,7 @@ class SQLiteDatabase:
             self.create_initial_tables()
             # TODO: many functions require the existence of at least one image.
             #  Maybe exchange filler image by something else
-            self.set_filler(True)
+            # self.set_filler(True)
             self.add_patient(10, 100)  # TODO: Implement Patient references
 
         with self.connection:
@@ -92,7 +92,7 @@ class SQLiteDatabase:
             # TODO: Extend by other accepted types, substitute 'whatever' by actual WSI type
             if filetype in ['mp4']:
                 self.cursor.execute(ADD_VIDEO, (filename,))
-            elif filetype in ['png']:
+            elif filetype in ['png', 'jpg', 'jpeg']:
                 self.cursor.execute(ADD_IMAGE, (filename,))
             elif filetype in ['whatever']:
                 self.cursor.execute(ADD_WSI, (filename,))

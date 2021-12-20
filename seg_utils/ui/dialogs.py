@@ -26,26 +26,27 @@ class NewLabelDialog(QDialog):
         layout.setSpacing(5)
 
         # Textedit
-        self.shapeText = QTextEdit(self)
+        self.shapeSearch = QTextEdit(self)
         font = QFont()
         font.setPointSize(10)
         font.setKerning(True)
-        self.shapeText.setFont(font)
-        self.shapeText.setPlaceholderText("Enter shape label")
-        self.shapeText.setMaximumHeight(25)
-        self.shapeText.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.shapeSearch.setFont(font)
+        self.shapeSearch.setPlaceholderText("Search shape label")
+        self.shapeSearch.setMaximumHeight(25)
+        self.shapeSearch.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.shapeSearch.textChanged.connect(self.handle_shape_search)
 
         # Buttons
         buttonWidget = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttonWidget.button(QDialogButtonBox.Ok).clicked.connect(self.on_ButtonClicked)
-        buttonWidget.button(QDialogButtonBox.Cancel).clicked.connect(self.on_ButtonClicked)
+        buttonWidget.accepted.connect(self.close)
+        buttonWidget.rejected.connect(self.on_cancel)
 
         # List of labels
         self.listWidget = ListWidget(self)
         self.listWidget.itemClicked.connect(self.on_ListSelection)
 
         # Combining everything
-        layout.addWidget(self.shapeText)
+        layout.addWidget(self.shapeSearch)
         layout.addWidget(buttonWidget)
         layout.addWidget(self.listWidget)
 
@@ -62,6 +63,16 @@ class NewLabelDialog(QDialog):
         item = QListWidgetItem(QIcon('icons/plus.png'), "New")
         self.listWidget.addItem(item)
 
+    def handle_shape_search(self):
+        """ If user enters text, only suitable shapes are displayed """
+        text = self.shapeSearch.toPlainText()
+        for item_idx in range(self.listWidget.count()):
+            item = self.listWidget.item(item_idx)
+            if text not in item.text():
+                item.setHidden(True)
+            else:
+                item.setHidden(False)
+
     def on_ListSelection(self, item):
         """ handles the functions to be executed when user selects something from the list"""
         text = item.text()
@@ -70,26 +81,33 @@ class NewLabelDialog(QDialog):
         if text == "New":
             create_new_class = CreateNewLabelClassDialog(self)
             create_new_class.exec()
+
+            # if user entered a name, update the stored label classes
             if create_new_class.new_label_class:
                 text = create_new_class.new_label_class
-
                 idx = len(self.parent.classes)
                 self.parent.classes[text] = idx
                 self.fill()
+                self.listWidget.item(self.listWidget.count() - 2).setSelected(True)  # highlight new item
 
-        # use the selected/created label class to name the label
+            # otherwise, make sure that nothing is passed on
+            else:
+                text = ""
+                self.listWidget.currentItem().setSelected(False)
+
+        # use selected/created label class to name the label
         self.class_name = text
-        self.setText(text)
 
-    def on_ButtonClicked(self):
+    def on_cancel(self):
+        self.class_name = ""
         self.close()
 
     def setText(self, text):
-        self.shapeText.setText(text)
+        self.shapeSearch.setText(text)
         # move the cursor to the end
-        newCursor = self.shapeText.textCursor()
-        newCursor.movePosition(self.shapeText.document().characterCount())
-        self.shapeText.setTextCursor(newCursor)
+        newCursor = self.shapeSearch.textCursor()
+        newCursor.movePosition(self.shapeSearch.document().characterCount())
+        self.shapeSearch.setTextCursor(newCursor)
 
 
 class ForgotToSaveMessageBox(QMessageBox):
