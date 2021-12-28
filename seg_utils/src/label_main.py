@@ -16,7 +16,7 @@ from seg_utils.ui.toolbar import Toolbar
 from seg_utils.src.actions import Action
 from seg_utils.ui.label_ui import LabelUI
 from seg_utils.ui.shape import Shape
-from seg_utils.ui.dialogs import NewLabelDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox, SelectFileTypeDialog
+from seg_utils.ui.dialogs import NewLabelDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox, SelectFileTypeDialog, ProjectHandlerDialog
 from seg_utils.config import VERTEX_SIZE
 
 import pathlib
@@ -363,6 +363,9 @@ class LabelMain(QMainWindow, LabelUI):
         """
         This function is the handle for creating a new Database
         :param fdoptions: options to be used in the QDialog"""
+
+        projectHandler = ProjectHandlerDialog(self)
+        projectHandler.exec()
         database, _ = QFileDialog.getSaveFileName(self,
                                                    caption="Select location of new Database",
                                                    directory="",
@@ -378,7 +381,6 @@ class LabelMain(QMainWindow, LabelUI):
 
             _ = SQLiteDatabase(database, True)
             self.initWithDatabase(database)
-
 
     def on_openDatabase(self, fddirectory, fdoptions):
         """This function is the handle for opening a database"""
@@ -543,6 +545,8 @@ class LabelMain(QMainWindow, LabelUI):
 
             :returns: 0 if accepted or no changes, 1 if cancelled and 2 if dismissed
         """
+        if not self.labeled_images:
+            return 2
         sql_labels = self.database.get_label_from_imagepath(self.labeled_images[self.img_idx])
         sql_labels = [Shape(image_size=self.image_size, label_dict=_label, color=self.getColorForLabel(_label['label']))
                       for _label in sql_labels]

@@ -1,11 +1,30 @@
 from PyQt5.QtWidgets import (QDialog, QPushButton, QWidget, QLabel,
                              QVBoxLayout, QTextEdit, QHBoxLayout, QDialogButtonBox,
-                             QStyle, QMessageBox, QListWidgetItem)
+                             QStyle, QMessageBox, QListWidgetItem, QFrame, QListWidget, QFileDialog)
 from PyQt5.QtCore import QSize, QPoint, Qt
 from PyQt5.QtGui import QFont, QIcon, QPixmap
 
 from seg_utils.ui.list_widget import ListWidget
 from seg_utils.utils.qt import createListWidgetItemWithSquareIcon, getIcon
+from pathlib import Path
+import os
+
+BUTTON_STYLESHEET = """QPushButton {
+                        background-color: lightgray;
+                        color: black;
+                        min-height: 2em;
+                        border-width: 2px;
+                        border-radius: 8px;
+                        border-color: black;
+                        font: bold 12px;
+                        padding: 2px;
+                        }
+                        QPushButton::hover {
+                        background-color: gray;
+                        }
+                        QPushButton::pressed {
+                        border-style: outset;
+                        }"""
 
 
 class NewLabelDialog(QDialog):
@@ -197,32 +216,15 @@ class SelectFileTypeDialog(QDialog):
 
         self.setFixedSize(QSize(250, 150))
         self.setWindowTitle("Select File Type")
-
         self.filetype = ""
-        stylesheet = """QPushButton {
-                        background-color: lightgray;
-                        color: black;
-                        min-height: 2em;
-                        border-width: 2px;
-                        border-radius: 8px;
-                        border-color: black;
-                        font: bold 12px;
-                        padding: 2px;
-                        }
-                        QPushButton::hover {
-                        background-color: gray;
-                        }
-                        QPushButton::pressed {
-                        border-style: outset;
-                        }"""
 
         # create buttons and apply stylesheet
         v = QPushButton("Video")
         i = QPushButton("Image")
         w = QPushButton("Whole Slide Image")
-        v.setStyleSheet(stylesheet)
-        i.setStyleSheet(stylesheet)
-        w.setStyleSheet(stylesheet)
+        v.setStyleSheet(BUTTON_STYLESHEET)
+        i.setStyleSheet(BUTTON_STYLESHEET)
+        w.setStyleSheet(BUTTON_STYLESHEET)
 
         # TODO: Extend by other accepted types, substitute 'whatever' by actual WSI type
         v.clicked.connect(lambda: self.set_type("mp4"))
@@ -237,6 +239,107 @@ class SelectFileTypeDialog(QDialog):
     def set_type(self, t: str):
         """ updates the class variable by the selected filetype"""
         self.filetype = t
+        self.close()
+
+
+class ProjectHandlerDialog(QDialog):
+    def __init__(self, parent):
+        super(ProjectHandlerDialog, self).__init__()
+        self.setFixedSize(parent.size() / 2)
+        self.setWindowTitle('Create new Project')
+
+        self.project_path = ""
+        self.files = list()
+
+        # Header for TextEdit
+        self.header = QLabel()
+        self.header.setStyleSheet("font: bold 12px")
+        self.header.setText("Choose Project Location")
+
+        # TextEdit where user can enter a path
+        self.enter_path = QTextEdit(self)
+        self.enter_path.setFixedHeight(30)
+        suggestion = str(Path.home()) + '/AnnotationProjects/newProject'
+        self.enter_path.setText(suggestion)
+
+        # button to open up a FileDialog
+        self.select_path_button = QPushButton()
+        self.select_path_button.setFixedSize(QSize(40, 30))
+        self.select_path_button.setStyleSheet(BUTTON_STYLESHEET)
+        self.select_path_button.setText('...')
+        self.select_path_button.clicked.connect(self.select_path)
+
+        # button to add initial files
+        self.add_files_button = QPushButton()
+        self.add_files_button.setFixedWidth(180)
+        self.add_files_button.setStyleSheet(BUTTON_STYLESHEET)
+        self.add_files_button.setText("Add files to get started")
+        self.add_files_button.clicked.connect(self.add_files)
+
+        # ListWidget to display added files
+        self.added_files = QListWidget()
+        self.added_files.addItem(QListWidgetItem("Your project files:"))
+
+        # Accept & cancel buttons
+        self.confirmation = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.confirmation.button(QDialogButtonBox.Ok).setText("Create Project")
+        self.confirmation.accepted.connect(self.create_project)
+        self.confirmation.rejected.connect(self.on_close)
+
+        # layout setup
+        self.header_frame = QFrame()
+        self.header_layout = QHBoxLayout(self.header_frame)
+        self.header_layout.setContentsMargins(10, 20, 10, 0)
+        self.header_layout.addWidget(self.header)
+
+        self.upper_row = QFrame()
+        self.upper_row_layout = QHBoxLayout(self.upper_row)
+        self.upper_row_layout.setContentsMargins(10, 0, 10, 0)
+        self.upper_row_layout.addWidget(self.enter_path)
+        self.upper_row_layout.addWidget(self.select_path_button)
+
+        self.bottom = QFrame()
+        self.bottom_layout = QVBoxLayout(self.bottom)
+        self.bottom_layout.addWidget(self.add_files_button)
+        self.bottom_layout.addWidget(self.added_files)
+        self.bottom_layout.addWidget(self.confirmation)
+
+        self.layout = QVBoxLayout(self)
+        self.layout.addWidget(self.header_frame)
+        self.layout.addWidget(self.upper_row)
+        self.layout.addStretch(1)
+        self.layout.addWidget(self.bottom)
+
+    def select_path(self):
+        pass
+
+    def add_files(self):
+        # user first needs to specify the type of the file to be imported
+        select_filetype = SelectFileTypeDialog()
+        select_filetype.exec()
+        if select_filetype.filetype:
+            # TODO: implement smarter filetype recognition
+            _filter = '*png *jpg *jpeg' if select_filetype.filetype == 'png' else select_filetype.filetype
+
+            filename, _ = QFileDialog.getOpenFileName(self,
+                                                      caption="Select File",
+                                                      directory=str(Path.home()),
+                                                      filter="File ({})".format(_filter),
+                                                      options=QFileDialog.DontUseNativeDialog)
+
+            # TODO: Implement possibility to add several files at once
+            self.added_files.addItem(QListWidgetItem(filename))
+
+    def create_project(self):
+        self.project_path = self.enter_path.toPlainText()
+        if os.path.exists(self.project_path):
+            print("Path exists")
+        else:
+            print("Path does not exist")
+
+    def on_close(self):
+        self.project_path = ""
+        self.files = []
         self.close()
 
 

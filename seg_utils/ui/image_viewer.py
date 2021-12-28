@@ -3,7 +3,7 @@ from typing import List
 from copy import deepcopy
 
 from PyQt5.QtWidgets import QGraphicsView
-from PyQt5.QtGui import QResizeEvent
+from PyQt5.QtGui import QResizeEvent, QPainter
 from PyQt5.QtCore import QSize, Qt, QRectF, pyqtSignal
 
 
@@ -11,10 +11,12 @@ from seg_utils.ui.graphics_scene import ImageViewerScene
 from seg_utils.ui.shape import Shape
 from seg_utils.ui.canvas import Canvas
 
+PLACEHOLDER_TEXT = "No files to display"
+
 
 class ImageViewer(QGraphicsView):
-
     sZoomLevelChanged = pyqtSignal(int)
+
     def __init__(self, *args):
         super(ImageViewer, self).__init__(*args)
         self.canvas = Canvas()
@@ -89,6 +91,18 @@ class ImageViewer(QGraphicsView):
                 self._enableZoomPan = False
                 self.setDragMode(QGraphicsView.NoDrag)
 
-
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        if self.b_isEmpty:
+            painter = QPainter(self.viewport())
+            painter.save()
+            col = self.palette().placeholderText().color()
+            painter.setPen(col)
+            fm = self.fontMetrics()
+            elided_text = fm.elidedText(
+                PLACEHOLDER_TEXT, Qt.ElideRight, self.viewport().width()
+            )
+            painter.drawText(self.viewport().rect(), Qt.AlignCenter, elided_text)
+            painter.restore()
 
 
