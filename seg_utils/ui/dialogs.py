@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (QDialog, QPushButton, QWidget, QLabel,
                              QVBoxLayout, QTextEdit, QHBoxLayout, QDialogButtonBox,
-                             QStyle, QMessageBox, QListWidgetItem, QFrame, QListWidget, QFileDialog)
+                             QStyle, QMessageBox, QListWidgetItem, QFrame, QListWidget, QFileDialog, QLineEdit)
 from PyQt5.QtCore import QSize, QPoint, Qt
 from PyQt5.QtGui import QFont, QIcon, QPixmap
 
@@ -251,15 +251,21 @@ class ProjectHandlerDialog(QDialog):
         self.project_path = ""
         self.files = list()
 
-        # Header for TextEdit
+        # Header for LineEdit
         self.header = QLabel()
         self.header.setStyleSheet("font: bold 12px")
         self.header.setText("Choose Project Location")
 
-        # TextEdit where user can enter a path
-        self.enter_path = QTextEdit(self)
+        # LineEdit where user can enter a path
+        self.enter_path = QLineEdit(self)
         self.enter_path.setFixedHeight(30)
-        suggestion = str(Path.home()) + '/AnnotationProjects/newProject'
+
+        # suggestion for a project location
+        suggestion = str(Path.home()) + '/AnnotationProjects/project'
+        for i in range(1, 100):
+            if not os.path.exists(suggestion + str(i)):
+                suggestion = suggestion + str(i)
+                break
         self.enter_path.setText(suggestion)
 
         # button to open up a FileDialog
@@ -278,13 +284,12 @@ class ProjectHandlerDialog(QDialog):
 
         # ListWidget to display added files
         self.added_files = QListWidget()
-        self.added_files.addItem(QListWidgetItem("Your project files:"))
 
         # Accept & cancel buttons
         self.confirmation = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.confirmation.button(QDialogButtonBox.Ok).setText("Create Project")
-        self.confirmation.accepted.connect(self.create_project)
-        self.confirmation.rejected.connect(self.on_close)
+        self.confirmation.accepted.connect(self.check_path)
+        self.confirmation.rejected.connect(self.close)
 
         # layout setup
         self.header_frame = QFrame()
@@ -310,37 +315,103 @@ class ProjectHandlerDialog(QDialog):
         self.layout.addStretch(1)
         self.layout.addWidget(self.bottom)
 
-    def select_path(self):
-        pass
-
     def add_files(self):
         # user first needs to specify the type of the file to be imported
         select_filetype = SelectFileTypeDialog()
         select_filetype.exec()
+
         if select_filetype.filetype:
             # TODO: implement smarter filetype recognition
             _filter = '*png *jpg *jpeg' if select_filetype.filetype == 'png' else select_filetype.filetype
 
-            filename, _ = QFileDialog.getOpenFileName(self,
+            filepath, p = QFileDialog.getOpenFileName(self,
                                                       caption="Select File",
                                                       directory=str(Path.home()),
                                                       filter="File ({})".format(_filter),
                                                       options=QFileDialog.DontUseNativeDialog)
 
             # TODO: Implement possibility to add several files at once
-            self.added_files.addItem(QListWidgetItem(filename))
+            filename = filepath[filepath.rfind('/') + 1:]
+            if self.exists(filename):
 
-    def create_project(self):
-        self.project_path = self.enter_path.toPlainText()
-        if os.path.exists(self.project_path):
-            print("Path exists")
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Information)
+                msg.setText("The file\n{}\nalready exists.\nOverwrite?".format(filename))
+                msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+                msg.accepted.connect(lambda: self.overwrite(filepath, filename))
+                msg.exec()
+            else:
+                self.files.append(filepath)
+                self.added_files.addItem(QListWidgetItem(filename))
+
+    def check_path(self):
+        project_path = self.enter_path.text()
+
+        # check if user entered a non-empty directory
+        if os.path.exists(project_path):
+            content = os.listdir(project_path)
+            if len(content) != 0:
+
+                # confirmation dialog; directory will be cleared if user proceeds
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Information)
+                msg.setText("The directory\n{}\nis not empty.".format(project_path))
+                msg.setInformativeText("All existing files in that directory will be deleted.\nProceed?")
+                msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+                msg.accepted.connect(lambda: self.create_project(project_path))
+                msg.exec()
+            else:
+                self.project_path = project_path
+                self.close()
+
+        # if user entered a valid absolute path, create the project
+        elif os.path.isabs(project_path):
+            self.project_path = project_path
+            self.close()
+
+        # else do nothing
         else:
-            print("Path does not exist")
+            msg = QMessageBox()
+            msg.setText("Please enter a valid project location.")
+            msg.exec()
 
-    def on_close(self):
-        self.project_path = ""
-        self.files = []
+    def create_project(self, project_path: str):
+        """This function stores a valid path as class variable and closes the dialog"""
+        self.project_path = project_path
         self.close()
+
+    def exists(self, filename: str):
+        for i in range(self.added_files.count()):
+            cur = self.added_files.item(i).text()
+            if cur == filename:
+                return True
+        return False
+
+    def overwrite(self, filepath, filename):
+        """overwrites an existing file in the file list"""
+
+        # find and delete the corresponding item in the files list
+        for fn in self.files:
+            cur = fn[fn.rfind('/') + 1:]
+            if cur == filename:
+                self.files.remove(fn)
+                break
+
+        # append the new filepath
+        self.files.append(filepath)
+
+    def select_path(self):
+
+        # dialog to select a directory in the user's environment
+        dialog = QFileDialog()
+        dialog.setOption(QFileDialog.DontUseNativeDialog)
+        dialog.setFileMode(QFileDialog.Directory)
+        dialog.setDirectory(str(Path.home()))
+
+        # store selected path in the LineEdit
+        if dialog.exec_():
+            filename = dialog.selectedFiles()[0]
+            self.enter_path.setText(filename)
 
 
 def moveToCenter(widget, parent_pos: QPoint, parent_size: QSize):

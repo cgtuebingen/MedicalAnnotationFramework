@@ -1,6 +1,7 @@
-import sys
 import pickle
 import os
+import pathlib
+import shutil
 
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
@@ -19,9 +20,12 @@ from seg_utils.ui.shape import Shape
 from seg_utils.ui.dialogs import NewLabelDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox, SelectFileTypeDialog, ProjectHandlerDialog
 from seg_utils.config import VERTEX_SIZE
 
-import pathlib
 
-IMAGES_DIR = "images/"
+IMAGES_DIR = "/data/images/"
+VIDEOS_DIR = "/data/videos/"
+WSI_DIR = "/data/whole slide images/"
+FILE_DIRS = [IMAGES_DIR, VIDEOS_DIR, WSI_DIR]
+DATABASE_DEFAULT_NAME = '/database.db'
 
 
 class LabelMain(QMainWindow, LabelUI):
@@ -36,6 +40,7 @@ class LabelMain(QMainWindow, LabelUI):
         # placeholder variables that can be used later
         self.database = None
         self.basedir = None
+        self.project_location = None
         self.labeled_images = []
         self.current_labels = []
         self.classes = {}
@@ -63,20 +68,20 @@ class LabelMain(QMainWindow, LabelUI):
     def initActions(self):
         """Initialise all actions present which can be connected to buttons or menu items"""
         # TODO: some shortcuts dont work
-        actionNewDB = Action(self,
-                              "New\nDatabase",
-                              lambda: self.on_newDatabase(self._FD_Opt),
+        actionNewProject = Action(self,
+                              "New\nProject",
+                                  self.on_newProject,
                               'Ctrl+N',
                               "new",
-                              "New database",
-                              enabled=True)
-        actionOpenDB = Action(self,
-                              "Open\nDatabase",
-                              lambda: self.on_openDatabase(self._FD_Dir, self._FD_Opt),
+                              "New project",
+                                  enabled=True)
+        actionOpenProject = Action(self,
+                              "Open\nProject",
+                                   lambda: self.on_openProject(self._FD_Dir, self._FD_Opt),
                               'Ctrl+O',
                               "open",
-                              "Open database",
-                              enabled=True)
+                              "Open project",
+                                   enabled=True)
         actionSave = Action(self,
                             "Save",
                             self.on_saveLabel,
@@ -126,8 +131,8 @@ class LabelMain(QMainWindow, LabelUI):
                                      tip="Draw Rectangle",
                                      checkable=True)
 
-        self.actions = ((actionNewDB,
-                         actionOpenDB,
+        self.actions = ((actionNewProject,
+                         actionOpenProject,
                          actionSave,
                          actionImport,
                          actionNextImage,
@@ -149,6 +154,17 @@ class LabelMain(QMainWindow, LabelUI):
                                    tip="Delete Label")
 
         self.initContextMenu((actionEditLabel, actionDeleteLabel))
+
+    def add_file(self, filepath, filetype):
+
+        # TODO: right now it works only with images
+        # copy file to project environment
+        dest = self.project_location + IMAGES_DIR
+        shutil.copy(filepath, dest)
+
+        # add the filename to database
+        filename = filepath[filepath.rfind('/') + 1:]
+        self.database.add_file(filename, filetype)
 
     def connectEvents(self):
         self.fileList.itemClicked.connect(self.handleFileListItemClicked)
@@ -177,10 +193,16 @@ class LabelMain(QMainWindow, LabelUI):
         self.imageDisplay.scene.sMoveShape.connect(self.on_moveShape)
         self.imageDisplay.scene.sRequestAnchorReset.connect(self.on_anchorRest)
 
-    def initWithDatabase(self, database: str):
+    def initWithDatabase(self, database: str, files: list = None):
         """This function is called if a correct database is selected"""
         self.basedir = pathlib.Path(database).parents[0]
         self.database = SQLiteDatabase(database)
+
+        if files:
+            for file in files:
+                # TODO: Implement filetype distinctions, right now only images considered
+                self.add_file(file, 'png')
+
         self.labeled_images = self.database.get_images()
         self.initColors()
         self.initClasses()
@@ -230,7 +252,7 @@ class LabelMain(QMainWindow, LabelUI):
 
     def initImage(self):
         """Initializes the displayed image and respective label/canvas"""
-        image = QPixmap(str(self.basedir / self.labeled_images[self.img_idx]))
+        image = QPixmap(self.project_location + IMAGES_DIR + self.labeled_images[self.img_idx])
         self.image_size = image.size()
         self.initLabels()
         self.imageDisplay.canvas.setPixmap(image)
@@ -238,7 +260,7 @@ class LabelMain(QMainWindow, LabelUI):
         self.fileList.setCurrentRow(self.img_idx)
         self.on_zoomLevelChanged(1)
 
-    def initContextMenu(self, actions: Tuple[Action]):
+    def initContextMenu(self, actions: Tuple[Action, Action]):
         for action in actions:
             self.contextMenu.addAction(action)
             self.polyFrame.polyList.contextMenu.addAction(action)
@@ -249,8 +271,7 @@ class LabelMain(QMainWindow, LabelUI):
         if dlgResult == QMessageBox.AcceptRole or dlgResult == QMessageBox.DestructiveRole:
             if dlgResult == QMessageBox.AcceptRole:
                 self.on_saveLabel()
-            selected_file = self.fileList.currentItem().text()
-            self.img_idx = self.labeled_images.index(IMAGES_DIR + selected_file)
+            self.img_idx = self.labeled_images.index(self.fileList.currentItem().text())
             self.initImage()
 
     def handleFileListSearch(self):
@@ -308,8 +329,8 @@ class LabelMain(QMainWindow, LabelUI):
 
         # TODO: this disables the Open & New Database Button as i only need it once
         #   and currently it crashes everything if clicked again
-        self.toolBar.getWidgetForAction('NewDatabase').setEnabled(False)
-        self.toolBar.getWidgetForAction('OpenDatabase').setEnabled(False)
+        self.toolBar.getWidgetForAction('NewProject').setEnabled(False)
+        self.toolBar.getWidgetForAction('OpenProject').setEnabled(False)
 
     def enable_tools(self):
         """This function enables ever button in the toolBar except the Open & New Database Button"""
@@ -318,8 +339,8 @@ class LabelMain(QMainWindow, LabelUI):
 
         # TODO: this disables the Open & New Database Button as i only need it once
         #   and currently it crashes everything if clicked again
-        self.toolBar.getWidgetForAction('NewDatabase').setEnabled(False)
-        self.toolBar.getWidgetForAction('OpenDatabase').setEnabled(False)
+        self.toolBar.getWidgetForAction('NewProject').setEnabled(False)
+        self.toolBar.getWidgetForAction('OpenProject').setEnabled(False)
 
     def setButtonsUnchecked(self):
         """Set all Buttons into the Unchecked state"""
@@ -359,38 +380,40 @@ class LabelMain(QMainWindow, LabelUI):
             if dlgResult == QMessageBox.AcceptRole:
                 self.on_saveLabel()
 
-    def on_newDatabase(self, fdoptions):
+    def on_newProject(self):
         """
-        This function is the handle for creating a new Database
-        :param fdoptions: options to be used in the QDialog"""
+        This function is the handle for creating a new project"""
 
         projectHandler = ProjectHandlerDialog(self)
         projectHandler.exec()
-        database, _ = QFileDialog.getSaveFileName(self,
-                                                   caption="Select location of new Database",
-                                                   directory="",
-                                                   filter="Database (*.db)",
-                                                   options=fdoptions)
-        if database:
-            # remove existing database if necessary
-            # make sure that path has a '.db' extension
-            if os.path.exists(database):
-                os.remove(database)
-            elif not database.endswith('.db'):
-                database = database + '.db'
 
-            _ = SQLiteDatabase(database, True)
-            self.initWithDatabase(database)
+        # in case user specified a valid project location, set up project structure
+        if projectHandler.project_path:
+            self.project_location = projectHandler.project_path
+            create_project_structure(self.project_location)
 
-    def on_openDatabase(self, fddirectory, fdoptions):
-        """This function is the handle for opening a database"""
+            # call initialization function, pass the files that should be initially added
+            self.initWithDatabase(self.project_location + DATABASE_DEFAULT_NAME, files=projectHandler.files)
+
+    def on_openProject(self, fddirectory, fdoptions):
+        """This function is the handle for opening a project"""
+
+        # TODO: Implement a more intuitive solution than selecting the database within the project environment
         database, _ = QFileDialog.getOpenFileName(self,
                                                   caption="Select Database",
                                                   directory=fddirectory,
                                                   filter="Database (*.db)",
                                                   options=fdoptions)
         if database:
-            self.initWithDatabase(database)
+            if check_environment(str(pathlib.Path(database).parents[0])):
+                self.project_location = str(pathlib.Path(database).parents[0])
+                self.initWithDatabase(database)
+            else:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Information)
+                msg.setText("Invalid Project Location")
+                msg.setStandardButtons(QMessageBox.Ok)
+                msg.exec()
 
     def on_import(self, fddirectory, fdoptions):
         """This function is the handle for importing new images/videos to the database and the current project"""
@@ -413,7 +436,7 @@ class LabelMain(QMainWindow, LabelUI):
             if filename:
                 cut = filename.rfind('/') + 1
                 filename = IMAGES_DIR + filename[cut:]
-                self.database.add_file(filename, select_filetype.filetype)
+                self.add_file(filename, select_filetype.filetype)
 
                 # update the GUI
                 self.labeled_images = self.database.get_images()
@@ -587,3 +610,25 @@ class LabelMain(QMainWindow, LabelUI):
             for lbl in self.current_labels:
                 if lbl.isSelected:
                     lbl.comment = cur_note
+
+
+def check_environment(project_path: str) -> bool:
+    """This function checks for a given path whether it is a valid project location,
+    i.e. whether it contains a 'data' folder with videos, images and whole slide images"""
+    for file_dir in FILE_DIRS:
+        if not os.path.exists(project_path + file_dir):
+            return False
+    return True
+
+
+def create_project_structure(project_path: str):
+    """This method takes the user-specified project location and
+     (1) creates the necessary directories for the project
+     (2) calls the Database class to create an empty database with the desired structure"""
+    if os.path.exists(project_path):
+        shutil.rmtree(project_path)
+    os.makedirs(project_path)
+    for file_dir in FILE_DIRS:
+        os.makedirs(project_path + file_dir)
+    database_path = project_path + DATABASE_DEFAULT_NAME
+    _ = SQLiteDatabase(database_path, True)
