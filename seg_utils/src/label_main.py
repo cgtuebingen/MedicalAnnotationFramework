@@ -38,9 +38,9 @@ class LabelMain(QMainWindow, LabelUI):
         self.setupUI(self)
 
         # placeholder variables that can be used later
-        self.database = None
-        self.basedir = None
-        self.project_location = None
+        self.database = None  # type: SQLiteDatabase
+        self.basedir = None  # type: str
+        self.project_location = None  # type: str
         self.labeled_images = []
         self.current_labels = []
         self.classes = {}
@@ -55,7 +55,7 @@ class LabelMain(QMainWindow, LabelUI):
 
         # color stuff
         self._num_colors = 25  # number of colors
-        self.colorMap = None
+        self.colorMap = None  # type: list
 
         # self._FD_Dir = '/home/nico/isys/data'  # QDir.homePath()
         self._FD_Dir = '/Users/jakob/coding/MedicalAnnotationFramework/seg_utils/examples'
@@ -69,18 +69,18 @@ class LabelMain(QMainWindow, LabelUI):
         """Initialise all actions present which can be connected to buttons or menu items"""
         # TODO: some shortcuts dont work
         actionNewProject = Action(self,
-                              "New\nProject",
+                                  "New\nProject",
                                   self.on_newProject,
-                              'Ctrl+N',
-                              "new",
-                              "New project",
+                                  'Ctrl+N',
+                                  "new",
+                                  "New project",
                                   enabled=True)
         actionOpenProject = Action(self,
-                              "Open\nProject",
+                                   "Open\nProject",
                                    lambda: self.on_openProject(self._FD_Dir, self._FD_Opt),
-                              'Ctrl+O',
-                              "open",
-                              "Open project",
+                                   'Ctrl+O',
+                                   "open",
+                                   "Open project",
                                    enabled=True)
         actionSave = Action(self,
                             "Save",
@@ -155,10 +155,11 @@ class LabelMain(QMainWindow, LabelUI):
 
         self.initContextMenu((actionEditLabel, actionDeleteLabel))
 
-    def add_file(self, filepath, filetype):
+    def add_file(self, filepath: str, filetype: str):
+        """ This method copies a selected file to the project environment and updates the database """
 
         # TODO: right now it works only with images
-        # copy file to project environment
+        # copy file
         dest = self.project_location + IMAGES_DIR
         shutil.copy(filepath, dest)
 
@@ -167,6 +168,7 @@ class LabelMain(QMainWindow, LabelUI):
         self.database.add_file(filename, filetype)
 
     def connectEvents(self):
+        """ this method comprises the connect statements for functionality of the GUI parts"""
         self.fileList.itemClicked.connect(self.handleFileListItemClicked)
         self.fileSearch.textChanged.connect(self.handleFileListSearch)
         self.polyFrame.polyList.itemClicked.connect(self.handlePolyListSelection)
@@ -198,6 +200,7 @@ class LabelMain(QMainWindow, LabelUI):
         self.basedir = pathlib.Path(database).parents[0]
         self.database = SQLiteDatabase(database)
 
+        # if the project was newly created, user may have specified files to add
         if files:
             for file in files:
                 # TODO: Implement filetype distinctions, right now only images considered
@@ -208,6 +211,7 @@ class LabelMain(QMainWindow, LabelUI):
         self.initClasses()
         self.initFileList()
         self.enable_essentials()
+
         if self.labeled_images:
             self.imageDisplay.setInitialized()
             self.initImage()
@@ -261,6 +265,7 @@ class LabelMain(QMainWindow, LabelUI):
         self.on_zoomLevelChanged(1)
 
     def initContextMenu(self, actions: Tuple[Action, Action]):
+        """ Initializes the functionality of the contextMenu"""
         for action in actions:
             self.contextMenu.addAction(action)
             self.polyFrame.polyList.contextMenu.addAction(action)
@@ -284,6 +289,7 @@ class LabelMain(QMainWindow, LabelUI):
                 self.fileList.item(item_idx).setHidden(False)
 
     def handleUpdatePolyList(self, _item_idx):
+        """ updates the polyList """
         for _idx in range(self.polyFrame.polyList.count()):
             self.polyFrame.polyList.item(_idx).setSelected(False)
         self.polyFrame.polyList.item(_item_idx).setSelected(True)
@@ -322,8 +328,7 @@ class LabelMain(QMainWindow, LabelUI):
                 self.labelList.addItem(item)
 
     def enable_essentials(self):
-        """This function enables the Save and Import buttons when a database is opened
-        """
+        """This function enables the Save and Import buttons when a database is opened """
         self.toolBar.getWidgetForAction('Save').setEnabled(True)
         self.toolBar.getWidgetForAction('Import').setEnabled(True)
 
@@ -368,6 +373,7 @@ class LabelMain(QMainWindow, LabelUI):
         modality, file = self.database.get_uids_from_filename(filename)
         label_class = self.database.get_uid_from_label(label_class)
         patient = 1  # TODO: Implement patient id references
+
         return {'modality': modality,
                 'file': file,
                 'patient': patient,
@@ -381,8 +387,7 @@ class LabelMain(QMainWindow, LabelUI):
                 self.on_saveLabel()
 
     def on_newProject(self):
-        """
-        This function is the handle for creating a new project"""
+        """This function is the handle for creating a new project"""
 
         projectHandler = ProjectHandlerDialog(self)
         projectHandler.exec()
@@ -404,7 +409,11 @@ class LabelMain(QMainWindow, LabelUI):
                                                   directory=fddirectory,
                                                   filter="Database (*.db)",
                                                   options=fdoptions)
+
+        # if user selected a database file
         if database:
+
+            # make sure the database is inside a project environment
             if check_environment(str(pathlib.Path(database).parents[0])):
                 self.project_location = str(pathlib.Path(database).parents[0])
                 self.initWithDatabase(database)
@@ -434,8 +443,6 @@ class LabelMain(QMainWindow, LabelUI):
 
             # get path to file and store it in the database
             if filename:
-                cut = filename.rfind('/') + 1
-                filename = IMAGES_DIR + filename[cut:]
                 self.add_file(filename, select_filetype.filetype)
 
                 # update the GUI
@@ -459,7 +466,6 @@ class LabelMain(QMainWindow, LabelUI):
 
         if entries:
             self.database.update_image_annotations(image_name=self.labeled_images[self.img_idx], entries=entries)
-
 
     def on_nextImage(self):
         """Display the next image"""
@@ -501,6 +507,7 @@ class LabelMain(QMainWindow, LabelUI):
                 self.imageDisplay.canvas.setTempLabel(points, shape_type)
 
     def on_drawEnd(self, points: List[QPointF], shape_type: str):
+        """function to handle the end of a drawing event; let user assign a label to the annotation"""
         d = NewLabelDialog(self)
         d.exec()
         if d.class_name:
@@ -513,6 +520,7 @@ class LabelMain(QMainWindow, LabelUI):
                           shape_type=shape_type)
             self.updateLabels(shape)
         self.imageDisplay.canvas.setTempLabel()
+        self.setButtonsUnchecked()
 
     def on_requestContextMenu(self, shape_idx, contextmenu_pos):
         """This opens the context menu"""
@@ -583,17 +591,23 @@ class LabelMain(QMainWindow, LabelUI):
 
     def handleCommentClick(self, item):
         """Either shows a blank comment window or the previously written comment for this label"""
+
+        # properly close the previously opened comment window
         if self.commentWindow.isVisible():
             self.on_close_comment(QCloseEvent(),
                                   prev_shape=self.commentWindow.corr_shape,
                                   prev_item=self.commentWindow.corr_item_in_list)
         self.commentWindow.comment.setText("")
         self.sLabelSelected.emit(self.polyFrame.commentList.row(item), self.polyFrame.commentList.row(item), -1)
+
+        # update comment window, if needed
         for lbl in self.current_labels:
             if lbl.isSelected:
                 self.commentWindow.update_pointers(lbl, item)
                 if item.text() != "Add comment" and lbl.comment:
                     self.commentWindow.comment.setText(lbl.comment)
+
+        # open the comment window, put to foreground
         self.commentWindow.show()
         self.commentWindow.raise_()
 

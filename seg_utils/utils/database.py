@@ -31,7 +31,15 @@ CREATE_IMAGES_TABLE = """
 CREATE_WSI_TABLE = """
     CREATE TABLE IF NOT EXISTS 'whole slide images' (
     uid INTEGER PRIMARY KEY,
-    filename TEXT NOT NULL UNIQUE);"""
+    filename TEXT NOT NULL UNIQUE,
+    patient INTEGER,
+    biopsy_id INTEGER,
+    year INTEGER,
+    staining TEXT,
+    width INTEGER,
+    height INTEGER,
+    manufacturer TEXT,
+    institution TEXT);"""
 
 CREATE_PATIENTS_TABLE = """
     CREATE TABLE IF NOT EXISTS patients (
@@ -128,23 +136,13 @@ class SQLiteDatabase:
             self.cursor.execute(DELETE_FILE_ANNOTATIONS, (modality, file))
             self.cursor.execute("DELETE FROM {} WHERE filename = ?".format(table_name), (filename,))
 
-    def filler_exists(self):
-        """ checks if database contains a filler image
-        :return: bool; True if filler exists, False otherwise
-        """
-        with self.connection:
-            filler = self.cursor.execute("SELECT filename FROM images WHERE filename = 'images/filler.png'").fetchone()
-        return True if filler else False
-
-    def get_images(self):
-        """
-        :return: a list of all image names which are currently stored in the database
-        """
+    def get_images(self) -> list:
+        """ returns a list of all image names which are currently stored in the database"""
         with self.connection:
             image_paths = self.cursor.execute("SELECT filename FROM images").fetchall()
         return [image_path[0] for image_path in image_paths]
 
-    def get_column_names(self, table_name: str):
+    def get_column_names(self, table_name: str) -> list:
         """
         :param table_name: the table to be searched in
         :return: all column names of the specified table
@@ -153,7 +151,7 @@ class SQLiteDatabase:
             columns = self.cursor.execute("PRAGMA table_info({})".format(table_name)).fetchall()
         return [col[0] for col in columns]
 
-    def get_label_classes(self):
+    def get_label_classes(self) -> list:
         """
         :return: a list of all label classes which are currently stored in the database
         """
@@ -236,18 +234,6 @@ class SQLiteDatabase:
                 if not self.cursor.fetchone():
                     self.cursor.execute("""INSERT INTO labels (label_class) VALUES (?)""", (label_class,))
 
-    def set_filler(self, f: bool):
-        """
-        either adds or removes a filler to/from database
-        filler should be added when database contains no other files
-        :param f: whether filler should be added or removed
-        """
-        filler = 'images/filler.png'
-        if f:
-            self.add_file(filler, 'png')
-        else:
-            self.delete_file(filler)
-
 
 def check_for_bytes(lst: List[tuple]) -> Union[List[list], list]:
     """ Iterates over a list of tuples and depickles byte objects. The output is converted depending on how many entries
@@ -281,10 +267,3 @@ def check_for_bytes(lst: List[tuple]) -> Union[List[list], list]:
 
 def convert_to_list(lst: List[tuple]) -> List[list]:
     return [list(elem) for elem in lst]
-
-
-if __name__ == "__main__":
-    db = SQLiteDatabase("../examples/dummybase.db")
-    with db.connection:
-        db.cursor.execute("SELECT some_id FROM patients WHERE another_id = 12")
-    print("Did it work?")

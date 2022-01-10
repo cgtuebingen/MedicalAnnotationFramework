@@ -1,11 +1,10 @@
-from PyQt5.QtWidgets import (QDialog, QPushButton, QWidget, QLabel,
-                             QVBoxLayout, QTextEdit, QHBoxLayout, QDialogButtonBox,
-                             QStyle, QMessageBox, QListWidgetItem, QFrame, QListWidget, QFileDialog, QLineEdit)
+from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QSize, QPoint, Qt
 from PyQt5.QtGui import QFont, QIcon, QPixmap
 
 from seg_utils.ui.list_widget import ListWidget
 from seg_utils.utils.qt import createListWidgetItemWithSquareIcon, getIcon
+
 from pathlib import Path
 import os
 
@@ -161,9 +160,7 @@ class DeleteShapeMessageBox(QMessageBox):
 
 
 class CreateNewLabelClassDialog(QDialog):
-    """
-    handles a QDialog used to let the user enter a new label class
-    """
+    """ handles a QDialog used to let the user enter a new label class """
     def __init__(self, parent: NewLabelDialog):
         super(CreateNewLabelClassDialog, self).__init__()
 
@@ -316,6 +313,8 @@ class ProjectHandlerDialog(QDialog):
         self.layout.addWidget(self.bottom)
 
     def add_files(self):
+        """ function to let user select a file which will be added when the project is finally created"""
+
         # user first needs to specify the type of the file to be imported
         select_filetype = SelectFileTypeDialog()
         select_filetype.exec()
@@ -324,27 +323,28 @@ class ProjectHandlerDialog(QDialog):
             # TODO: implement smarter filetype recognition
             _filter = '*png *jpg *jpeg' if select_filetype.filetype == 'png' else select_filetype.filetype
 
-            filepath, p = QFileDialog.getOpenFileName(self,
+            filepath, _ = QFileDialog.getOpenFileName(self,
                                                       caption="Select File",
                                                       directory=str(Path.home()),
                                                       filter="File ({})".format(_filter),
                                                       options=QFileDialog.DontUseNativeDialog)
 
-            # TODO: Implement possibility to add several files at once
+            # only care about the filename itself (not regarding its path), to make it easier to handle
             filename = filepath[filepath.rfind('/') + 1:]
             if self.exists(filename):
-
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Information)
                 msg.setText("The file\n{}\nalready exists.\nOverwrite?".format(filename))
                 msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
                 msg.accepted.connect(lambda: self.overwrite(filepath, filename))
                 msg.exec()
-            else:
+            elif filename:
+                # TODO: Implement possibility to add several files at once
                 self.files.append(filepath)
                 self.added_files.addItem(QListWidgetItem(filename))
 
     def check_path(self):
+        """ this function verifies/rejects the project path which the user entered in the LineEdit"""
         project_path = self.enter_path.text()
 
         # check if user entered a non-empty directory
@@ -381,6 +381,8 @@ class ProjectHandlerDialog(QDialog):
         self.close()
 
     def exists(self, filename: str):
+        """ check if a filename is already in the list
+        also prevents name clashes when two files from different paths have the same name"""
         for i in range(self.added_files.count()):
             cur = self.added_files.item(i).text()
             if cur == filename:
@@ -401,6 +403,7 @@ class ProjectHandlerDialog(QDialog):
         self.files.append(filepath)
 
     def select_path(self):
+        """opens a dialog to let the user select a directory from its OS """
 
         # dialog to select a directory in the user's environment
         dialog = QFileDialog()
