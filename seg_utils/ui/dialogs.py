@@ -258,7 +258,7 @@ class ProjectHandlerDialog(QDialog):
         self.enter_path.setFixedHeight(30)
 
         # suggestion for a project location
-        suggestion = str(Path.home()) + '/AnnotationProjects/project'
+        suggestion = f"{Path.home()}{os.path.sep}AnnotationProjects{os.path.sep}project"
         for i in range(1, 100):
             if not os.path.exists(suggestion + str(i)):
                 suggestion = suggestion + str(i)
@@ -330,7 +330,7 @@ class ProjectHandlerDialog(QDialog):
                                                       options=QFileDialog.DontUseNativeDialog)
 
             # only care about the filename itself (not regarding its path), to make it easier to handle
-            filename = filepath[filepath.rfind('/') + 1:]
+            filename = os.path.basename(filepath)
             if self.exists(filename):
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Information)
@@ -394,7 +394,7 @@ class ProjectHandlerDialog(QDialog):
 
         # find and delete the corresponding item in the files list
         for fn in self.files:
-            cur = fn[fn.rfind('/') + 1:]
+            cur = os.path.basename(fn)
             if cur == filename:
                 self.files.remove(fn)
                 break

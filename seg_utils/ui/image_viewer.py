@@ -3,8 +3,8 @@ from typing import List
 from copy import deepcopy
 
 from PyQt5.QtWidgets import QGraphicsView
-from PyQt5.QtGui import QResizeEvent, QPainter
-from PyQt5.QtCore import QSize, Qt, QRectF, pyqtSignal
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
 
 
 from seg_utils.ui.graphics_scene import ImageViewerScene

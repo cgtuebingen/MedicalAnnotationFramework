@@ -55,10 +55,9 @@ class LabelMain(QMainWindow, LabelUI):
 
         # color stuff
         self._num_colors = 25  # number of colors
-        self.colorMap = None  # type: list
+        self.colorMap = None  # type: List[QColor]
 
-        # self._FD_Dir = '/home/nico/isys/data'  # QDir.homePath()
-        self._FD_Dir = '/Users/jakob/coding/MedicalAnnotationFramework/seg_utils/examples'
+        self._FD_Dir = '../examples'
         self._FD_Opt = QFileDialog.DontUseNativeDialog
         self.initActions()
         self.connectEvents()
@@ -164,7 +163,7 @@ class LabelMain(QMainWindow, LabelUI):
         shutil.copy(filepath, dest)
 
         # add the filename to database
-        filename = filepath[filepath.rfind('/') + 1:]
+        filename = os.path.basename(filepath)
         self.database.add_file(filename, filetype)
 
     def connectEvents(self):
