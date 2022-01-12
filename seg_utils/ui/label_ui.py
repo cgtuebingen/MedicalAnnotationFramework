@@ -6,8 +6,6 @@ from PyQt5 import QtCore
 from PyQt5 import QtGui
 from seg_utils.ui.image_viewer import ImageViewer
 from seg_utils.ui.toolbar import Toolbar
-from seg_utils.ui.list_widget import ListWidget
-from seg_utils.ui.comment_window import CommentWindow
 from seg_utils.ui.poly_frame import PolyFrame
 
 
@@ -148,7 +146,3 @@ class LabelUI(object):
         self.toolBar = Toolbar(mainWindow)
         mainWindow.addToolBar(QtCore.Qt.ToolBarArea.LeftToolBarArea, self.toolBar)
         self.toolBar.initMargins()
-
-        # window for comments
-        self.commentWindow = CommentWindow()
-        self.commentWindow.move(self.toolBar.geometry().width(), 0)

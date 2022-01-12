@@ -17,7 +17,8 @@ from seg_utils.ui.toolbar import Toolbar
 from seg_utils.src.actions import Action
 from seg_utils.ui.label_ui import LabelUI
 from seg_utils.ui.shape import Shape
-from seg_utils.ui.dialogs import NewLabelDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox, SelectFileTypeDialog, ProjectHandlerDialog
+from seg_utils.ui.dialogs import (NewLabelDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox,
+                                  SelectFileTypeDialog, ProjectHandlerDialog, CommentDialog)
 from seg_utils.config import VERTEX_SIZE
 
 
@@ -178,7 +179,6 @@ class LabelMain(QMainWindow, LabelUI):
         self.sLabelSelected.connect(self.imageDisplay.canvas.handleShapeSelected)
         self.imageDisplay.sZoomLevelChanged.connect(self.on_zoomLevelChanged)
         self.polyFrame.commentList.itemClicked.connect(self.handleCommentClick)
-        self.commentWindow.closeEvent = self.on_close_comment
 
         # ContextMenu
         self.imageDisplay.scene.sRequestContextMenu.connect(self.on_requestContextMenu)
@@ -591,38 +591,24 @@ class LabelMain(QMainWindow, LabelUI):
     def handleCommentClick(self, item):
         """Either shows a blank comment window or the previously written comment for this label"""
 
-        # properly close the previously opened comment window
-        if self.commentWindow.isVisible():
-            self.on_close_comment(QCloseEvent(),
-                                  prev_shape=self.commentWindow.corr_shape,
-                                  prev_item=self.commentWindow.corr_item_in_list)
-        self.commentWindow.comment.setText("")
+        comment = ""
         self.sLabelSelected.emit(self.polyFrame.commentList.row(item), self.polyFrame.commentList.row(item), -1)
 
         # update comment window, if needed
         for lbl in self.current_labels:
             if lbl.isSelected:
-                self.commentWindow.update_pointers(lbl, item)
                 if item.text() != "Add comment" and lbl.comment:
-                    self.commentWindow.comment.setText(lbl.comment)
+                    comment = lbl.comment
 
-        # open the comment window, put to foreground
-        self.commentWindow.show()
-        self.commentWindow.raise_()
+        dlg = CommentDialog(comment)
+        dlg.exec()
 
-    def on_close_comment(self, e, prev_shape=None, prev_item=None):
-        """saves the comment into the comment-variable of the Shape object"""
-        cur_note = self.commentWindow.comment.toPlainText()
-        text = "Show" if cur_note else "Add comment"
-        if prev_shape:
-            prev_item.setText(text)
-            prev_shape.comment = cur_note
-        else:
-            for item in self.polyFrame.commentList.selectedItems():
-                item.setText(text)
-            for lbl in self.current_labels:
-                if lbl.isSelected:
-                    lbl.comment = cur_note
+        text = "Show" if dlg.comment else "Add comment"
+        for item in self.polyFrame.commentList.selectedItems():
+            item.setText(text)
+        for lbl in self.current_labels:
+            if lbl.isSelected:
+                lbl.comment = dlg.comment
 
 
 def check_environment(project_path: str) -> bool:
