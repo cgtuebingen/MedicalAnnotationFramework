@@ -37,12 +37,15 @@ class Shape(QGraphicsItem):
                 self.flags = label_dict['flags']
             if 'group_id' in label_dict:
                 self.group_id = label_dict['group_id']
+            if 'comment' in label_dict:
+                self.comment = label_dict['comment']
         else:
             self.label = label
             _points = points
             self.shape_type = shape_type
             self.flags = flags
             self.group_id = group_id
+            self.comment = ""
 
         self._path = None  # only necessary for the temporary Polygon and trace
         self._anchorPoint = None
@@ -101,7 +104,8 @@ class Shape(QGraphicsItem):
                 'points': [[_pt.x(), _pt.y()] for _pt in self.vertices.vertices],
                 'shape_type': self.shape_type,
                 'flags': self.flags,
-                'group_id': self.group_id}
+                'group_id': self.group_id,
+                'comment': self.comment}
         return dict, self.label
 
     def initShape(self):

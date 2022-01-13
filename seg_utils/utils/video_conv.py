@@ -1,5 +1,5 @@
 import os
-from database import SQLiteDatabase
+from database_old import SQLiteDatabaseOld
 import ffmpeg
 from seg_utils.utils.video_sampling import get_duration
 
@@ -17,7 +17,7 @@ def mpg_to_mp4(base_dir: str = "/home/nico/isys/data",
         :param str database_name: name of the database file with extension
         :param bool quiet: if the frame contains a tumour
         """
-    db = SQLiteDatabase(os.path.join(base_dir, database_name))
+    db = SQLiteDatabaseOld(os.path.join(base_dir, database_name))
     db.create_videos_table()
     for element in sorted(os.listdir(source_dir)):
         counter = db.get_num_entries("videos")  # call here necessary for the recursion

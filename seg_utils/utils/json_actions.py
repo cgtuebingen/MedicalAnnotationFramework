@@ -4,7 +4,7 @@ import sys
 import json
 import glob
 from pathlib import Path
-from database import SQLiteDatabase
+from database_old import SQLiteDatabaseOld
 
 
 def main():
@@ -15,7 +15,7 @@ def main():
 
 
 def convert_json_to_sql(image_dir: str, database_path: str):
-    database = SQLiteDatabase(database_path)
+    database = SQLiteDatabaseOld(database_path)
     database.create_labels_table()
     for idx, file in enumerate(sorted(glob.glob(os.path.join(image_dir, "*.json")))):
         try:

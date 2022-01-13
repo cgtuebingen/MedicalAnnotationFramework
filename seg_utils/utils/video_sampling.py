@@ -1,7 +1,7 @@
 from typing import List
 import ffmpeg
 import os
-from database import SQLiteDatabase, ImageSample
+from database_old import SQLiteDatabaseOld, ImageSample
 import subprocess
 
 def get_frame(fps: int,
@@ -53,7 +53,7 @@ def extract_frames(frame_dict: dict,
         # combine to relative path
         video_name = os.path.join("converted", video_name)
         original_path = os.path.join(base_path, video_name)
-        database = SQLiteDatabase(os.path.join(base_path, database_name))
+        database = SQLiteDatabaseOld(os.path.join(base_path, database_name))
         database.create_images_table()
         for idx, frame in enumerate(frame_list):
             num = database.get_num_entries_specific(table_name="images",

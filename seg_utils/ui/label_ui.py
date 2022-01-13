@@ -6,7 +6,7 @@ from PyQt5 import QtCore
 from PyQt5 import QtGui
 from seg_utils.ui.image_viewer import ImageViewer
 from seg_utils.ui.toolbar import Toolbar
-from seg_utils.ui.list_widget import ListWidget
+from seg_utils.ui.poly_frame import PolyFrame
 
 
 class LabelUI(object):
@@ -86,24 +86,7 @@ class LabelUI(object):
         self.rightMenuLayout.addWidget(self.labelFrame)
         
         # Frame for the Polygons
-        self.polyFrame = QtWidgets.QFrame(self.rightMenuFrame)
-        self.polyFrame.setMinimumSize(QtCore.QSize(0, 300))
-        self.polyFrame.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.polyFrame.setFrameShadow(QtWidgets.QFrame.Raised)
-        self.polyFrame.setObjectName("polyFrame")
-        self.polyLayout = QtWidgets.QVBoxLayout(self.polyFrame)
-        self.polyLayout.setContentsMargins(0, 0, 0, 0)
-        self.polyLayout.setSpacing(0)
-        self.polyLayout.setObjectName("polyLayout")
-        self.polyLabel = QtWidgets.QLabel(self.polyFrame)
-        self.polyLabel.setStyleSheet("background-color: rgb(186, 189, 182);")
-        self.polyLabel.setObjectName("polyLabel")
-        self.polyLabel.setText("Polygons")
-        self.polyLayout.addWidget(self.polyLabel)
-        self.polyList = ListWidget(self.polyFrame)
-        self.polyList.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.polyList.setObjectName("polyList")
-        self.polyLayout.addWidget(self.polyList)
+        self.polyFrame = PolyFrame(self.rightMenuFrame)
         self.rightMenuLayout.addWidget(self.polyFrame)
 
         # Frame for the file list
@@ -163,4 +146,3 @@ class LabelUI(object):
         self.toolBar = Toolbar(mainWindow)
         mainWindow.addToolBar(QtCore.Qt.ToolBarArea.LeftToolBarArea, self.toolBar)
         self.toolBar.initMargins()
-
