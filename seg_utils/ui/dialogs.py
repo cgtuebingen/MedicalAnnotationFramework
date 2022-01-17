@@ -1,9 +1,8 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QSize, QPoint, Qt
-from PyQt5.QtGui import QFont, QIcon, QPixmap
+from PyQt5.QtGui import QFont, QIcon
 
 from seg_utils.ui.list_widget import ListWidget
-from seg_utils.ui.shape import Shape
 from seg_utils.utils.qt import createListWidgetItemWithSquareIcon, getIcon
 
 from pathlib import Path

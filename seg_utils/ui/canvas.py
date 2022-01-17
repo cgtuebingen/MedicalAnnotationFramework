@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QRectF, pyqtSignal, pyqtSlot, QPointF
+from PyQt5.QtCore import QRectF, pyqtSignal, QPointF
 from PyQt5.QtGui import QPixmap, QPainter, QColor
 from PyQt5.QtWidgets import QWidget
 
@@ -6,7 +6,6 @@ from seg_utils.config import VERTEX_SIZE
 from seg_utils.ui.shape import Shape
 
 from typing import List
-from random import randint
 
 
 class Canvas(QWidget):
