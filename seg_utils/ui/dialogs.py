@@ -36,7 +36,7 @@ class NewLabelDialog(QDialog):
 
         # Create the shape of the QDialog
         self.setFixedSize(QSize(300, 400))
-        moveToCenter(self, self.parent.pos(), self.parent.size())
+        move_to_center(self, self.parent.pos(), self.parent.size())
         self.setWindowTitle("Select class of new shape")
 
         layout = QVBoxLayout(self)
@@ -55,17 +55,17 @@ class NewLabelDialog(QDialog):
         self.shapeSearch.textChanged.connect(self.handle_shape_search)
 
         # Buttons
-        buttonWidget = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttonWidget.accepted.connect(self.close)
-        buttonWidget.rejected.connect(self.on_cancel)
+        button_widget = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_widget.accepted.connect(self.close)
+        button_widget.rejected.connect(self.on_cancel)
 
         # List of labels
         self.listWidget = ListWidget(self)
-        self.listWidget.itemClicked.connect(self.on_ListSelection)
+        self.listWidget.itemClicked.connect(self.on_list_selection)
 
         # Combining everything
         layout.addWidget(self.shapeSearch)
-        layout.addWidget(buttonWidget)
+        layout.addWidget(button_widget)
         layout.addWidget(self.listWidget)
 
         self.fill()
@@ -91,7 +91,7 @@ class NewLabelDialog(QDialog):
             else:
                 item.setHidden(False)
 
-    def on_ListSelection(self, item):
+    def on_list_selection(self, item):
         """ handles the functions to be executed when user selects something from the list"""
         text = item.text()
 
@@ -120,43 +120,57 @@ class NewLabelDialog(QDialog):
         self.class_name = ""
         self.close()
 
-    def setText(self, text):
+    def set_text(self, text):
         self.shapeSearch.setText(text)
         # move the cursor to the end
-        newCursor = self.shapeSearch.textCursor()
-        newCursor.movePosition(self.shapeSearch.document().characterCount())
-        self.shapeSearch.setTextCursor(newCursor)
+        new_cursor = self.shapeSearch.textCursor()
+        new_cursor.movePosition(self.shapeSearch.document().characterCount())
+        self.shapeSearch.setTextCursor(new_cursor)
 
 
 class ForgotToSaveMessageBox(QMessageBox):
     def __init__(self, *args):
         super(ForgotToSaveMessageBox, self).__init__(*args)
 
-        saveButton = QPushButton(getIcon('save'), "Save Changes")
-        dismissButton = QPushButton(self.style().standardIcon(QStyle.SP_DialogDiscardButton), "Dismiss Changes")
-        cancelButton = QPushButton(self.style().standardIcon(QStyle.SP_DialogCancelButton), "Cancel")
+        save_button = QPushButton(getIcon('save'), "Save Changes")
+        dismiss_button = QPushButton(self.style().standardIcon(QStyle.SP_DialogDiscardButton), "Dismiss Changes")
+        cancel_button = QPushButton(self.style().standardIcon(QStyle.SP_DialogCancelButton), "Cancel")
 
         self.setWindowTitle("Caution: Unsaved Changes")
         self.setText("Unsaved Changes: How do you want to progress?")
 
         # NOTE FOR SOME REASON THE ORDER IS IMPORTANT DESPITE THE ROLE - IDK WHY
-        self.addButton(saveButton, QMessageBox.AcceptRole)
-        self.addButton(cancelButton, QMessageBox.RejectRole)
-        self.addButton(dismissButton, QMessageBox.DestructiveRole)
+        self.addButton(save_button, QMessageBox.AcceptRole)
+        self.addButton(cancel_button, QMessageBox.RejectRole)
+        self.addButton(dismiss_button, QMessageBox.DestructiveRole)
 
-        moveToCenter(self, self.parentWidget().pos(), self.parentWidget().size())
+        move_to_center(self, self.parentWidget().pos(), self.parentWidget().size())
         
         
 class DeleteShapeMessageBox(QMessageBox):
     def __init__(self, shape: str, *args):
         super(DeleteShapeMessageBox, self).__init__(*args)
-        moveToCenter(self, self.parentWidget().pos(), self.parentWidget().size())
+        move_to_center(self, self.parentWidget().pos(), self.parentWidget().size())
         reply = self.question(self, "Deleting Shape", f"You are about to delete {shape}. Continue?",
-                      QMessageBox.Yes|QMessageBox.No)
+                              QMessageBox.Yes | QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.answer = 1
         else:
             self.answer = 0
+
+
+class CloseMessageBox(QMessageBox):
+    def __init__(self, *args):
+        super(CloseMessageBox, self).__init__(*args)
+
+        quit_button = QPushButton(getIcon('quit'), "Quit Program")
+        cancel_button = QPushButton(self.style().standardIcon(QStyle.SP_DialogCancelButton), "Cancel")
+        self.addButton(quit_button, QMessageBox.AcceptRole)
+        self.addButton(cancel_button, QMessageBox.RejectRole)
+
+        self.setWindowTitle("Quit Program")
+        self.setText("Are you sure you want to quit?")
+        move_to_center(self, self.parentWidget().pos(), self.parentWidget().size())
 
 
 class CreateNewLabelClassDialog(QDialog):
@@ -165,7 +179,7 @@ class CreateNewLabelClassDialog(QDialog):
         super(CreateNewLabelClassDialog, self).__init__()
 
         self.setFixedSize(QSize(200, 120))
-        moveToCenter(self, parent.pos(), parent.size())
+        move_to_center(self, parent.pos(), parent.size())
         self.setWindowTitle("Create new Shape class")
 
         # need it later to prevent duplicates
@@ -445,7 +459,7 @@ class CommentDialog(QDialog):
         self.close()
 
 
-def moveToCenter(widget, parent_pos: QPoint, parent_size: QSize):
+def move_to_center(widget, parent_pos: QPoint, parent_size: QSize):
     r"""Moves the QDialog to the center of the parent Widget.
     As self.move moves the upper left corner to the place, one needs to subtract the own size of the window"""
     widget.move(parent_pos.x() + (parent_size.width() - widget.size().width())/2,

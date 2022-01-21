@@ -167,11 +167,11 @@ class ViewerMain(QMainWindow, ViewerUI):
     def setNotesOfUI(self):
         """Retrieves Notes from SQL Database and updates the Notes Window"""
         note = self.database.get_notes(self.labeled_images[self.image_idx])
-        self.notesWidget.setText(note)
+        self.notesWidget.set_text(note)
 
     def handleError(self):
         self.playButton.setEnabled(False)
-        self.errorLabel.setText("Error: " + self.mediaPlayer.errorString())
+        self.errorLabel.set_text("Error: " + self.mediaPlayer.errorString())
 
     def setSkipButtons(self, value: bool):
         self.prevFrameButton.setEnabled(value)

@@ -39,10 +39,6 @@ class Canvas(QWidget):
         self.labels = labels
         self.update()
 
-    def setNewColor(self, color: QColor):
-        """Sets the color for drawing a new item"""
-        self.drawNewColor = color
-
     def setTempLabel(self, points: List[QPointF] = None, shape_type: str = None):
         if points and shape_type:
             self.temp_label = Shape(image_size=self.pixmap.size(),

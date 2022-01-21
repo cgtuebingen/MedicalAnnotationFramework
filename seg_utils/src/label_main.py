@@ -16,7 +16,7 @@ from seg_utils.utils.project_structure import Structure, create_project_structur
 from seg_utils.src.actions import Action
 from seg_utils.ui.label_ui import LabelUI
 from seg_utils.ui.shape import Shape
-from seg_utils.ui.dialogs import (NewLabelDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox,
+from seg_utils.ui.dialogs import (NewLabelDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox, CloseMessageBox,
                                   SelectFileTypeDialog, ProjectHandlerDialog, CommentDialog)
 from seg_utils.config import VERTEX_SIZE
 
@@ -28,13 +28,12 @@ class LabelMain(QMainWindow, LabelUI):
 
     def __init__(self):
         super(LabelMain, self).__init__()
-        self.setupUI(self)
+        self.setup_ui(self)
 
         # placeholder variables that can be used later
         self.database = None  # type: SQLiteDatabase
-        self.basedir = None  # type: str
         self.project_location = None  # type: str
-        self.labeled_images = []
+        self.images = []
         self.current_labels = []
         self.classes = {}
         self.isLabeled = None
@@ -52,100 +51,11 @@ class LabelMain(QMainWindow, LabelUI):
 
         self._FD_Dir = '../examples'
         self._FD_Opt = QFileDialog.DontUseNativeDialog
-        self.initActions()
-        self.connectEvents()
+
+        self.connect_events()
+        self.init_context_menu()
 
         self.vertex_size = VERTEX_SIZE
-
-    def initActions(self):
-        """Initialise all actions present which can be connected to buttons or menu items"""
-        # TODO: some shortcuts dont work
-        actionNewProject = Action(self,
-                                  "New\nProject",
-                                  self.on_newProject,
-                                  'Ctrl+N',
-                                  "new",
-                                  "New project",
-                                  enabled=True)
-        actionOpenProject = Action(self,
-                                   "Open\nProject",
-                                   lambda: self.on_openProject(self._FD_Dir, self._FD_Opt),
-                                   'Ctrl+O',
-                                   "open",
-                                   "Open project",
-                                   enabled=True)
-        actionSave = Action(self,
-                            "Save",
-                            self.on_saveLabel,
-                            'Ctrl+S',
-                            "save",
-                            "Save current state to database")
-        actionImport = Action(self,
-                              "Import",
-                              lambda: self.on_import(self._FD_Dir, self._FD_Opt),
-                              'Ctrl+I',
-                              "import",
-                              "Import a new file to database")
-        actionNextImage = Action(self,
-                                 "Next\nImage",
-                                 self.on_nextImage,
-                                 'Right',
-                                 "next",
-                                 "Go to next image")
-        actionPrevImage = Action(self,
-                                 "Previous\nImage",
-                                 self.on_prevImag,
-                                 'Left',
-                                 "prev",
-                                 "Go to previous image")
-        actionDrawPoly = Action(self,
-                                "Draw\nPolygon",
-                                lambda: self.on_drawStart('tempPolygon'),
-                                icon="polygon",
-                                tip="Draw Polygon (right click to show options)",
-                                checkable=True)
-        actionTraceOutline = Action(self,
-                                    "Draw\nTrace",
-                                    lambda: self.on_drawStart('tempTrace'),
-                                    icon="outline",
-                                    tip="Trace Outline",
-                                    checkable=True)
-        actionDrawCircle = Action(self,
-                                  "Draw\nCircle",
-                                  lambda: self.on_drawStart('circle'),
-                                  icon="circle",
-                                  tip="Draw Circle",
-                                  checkable=True)
-        actionDrawRectangle = Action(self,
-                                     "Draw\nRectangle",
-                                     lambda: self.on_drawStart('rectangle'),
-                                     icon="square",
-                                     tip="Draw Rectangle",
-                                     checkable=True)
-
-        self.actions = ((actionNewProject,
-                         actionOpenProject,
-                         actionSave,
-                         actionImport,
-                         actionNextImage,
-                         actionPrevImage,
-                         actionDrawPoly,
-                         actionTraceOutline,
-                         actionDrawCircle,
-                         actionDrawRectangle))
-        # Init Toolbar
-        self.toolBar.addActions(self.actions)
-
-        actionEditLabel = Action(self, "Edit Label Name",
-                                 self.on_editLabel,
-                                 icon="pen",
-                                 tip="Edit Label Name",enabled=True)
-        actionDeleteLabel = Action(self, "Delete Label",
-                                   self.on_deleteLabel,
-                                   icon="trash",
-                                   tip="Delete Label")
-
-        self.initContextMenu((actionEditLabel, actionDeleteLabel))
 
     def add_file(self, filepath: str, filetype: str):
         """ This method copies a selected file to the project environment and updates the database """
@@ -159,26 +69,37 @@ class LabelMain(QMainWindow, LabelUI):
         filename = os.path.basename(filepath)
         self.database.add_file(filename, filetype)
 
-    def connectEvents(self):
+    def connect_events(self):
         """ this method comprises the connect statements for functionality of the GUI parts"""
         self.fileList.itemClicked.connect(self.handleFileListItemClicked)
         self.fileSearch.textChanged.connect(self.handleFileListSearch)
         self.polyFrame.polyList.itemClicked.connect(self.handlePolyListSelection)
+        self.polyFrame.commentList.itemClicked.connect(self.handleCommentClick)
         self.imageDisplay.canvas.sRequestLabelListUpdate.connect(self.handleUpdatePolyList)
-        self.imageDisplay.canvas.sRequestFitInView.connect(self.imageDisplay.fitInView)
-        self.imageDisplay.scene.sShapeHovered.connect(self.imageDisplay.canvas.handleShapeHovered)
-        self.imageDisplay.scene.sShapeSelected.connect(self.imageDisplay.canvas.handleShapeSelected)
         self.sLabelSelected.connect(self.imageDisplay.canvas.handleShapeSelected)
         self.imageDisplay.sZoomLevelChanged.connect(self.on_zoomLevelChanged)
-        self.polyFrame.commentList.itemClicked.connect(self.handleCommentClick)
+
+        # toolbar actions
+        self.toolBar.get_action("NewProject").triggered.connect(self.on_newProject)
+        self.toolBar.get_action("OpenProject").triggered.connect(lambda: self.on_openProject(self._FD_Dir,
+                                                                                             self._FD_Opt))
+        self.toolBar.get_action("Save").triggered.connect(self.on_saveLabel)
+        self.toolBar.get_action("Import").triggered.connect(lambda: self.on_import(self._FD_Dir, self._FD_Opt))
+        self.toolBar.get_action("NextImage").triggered.connect(self.on_next_image)
+        self.toolBar.get_action("PreviousImage").triggered.connect(self.on_prev_image)
+        self.toolBar.get_action("DrawTrace").triggered.connect(lambda: self.on_draw_start('tempTrace'))
+        self.toolBar.get_action("DrawPolygon").triggered.connect(lambda: self.on_draw_start('tempPolygon'))
+        self.toolBar.get_action("DrawCircle").triggered.connect(lambda: self.on_draw_start('circle'))
+        self.toolBar.get_action("DrawRectangle").triggered.connect(lambda: self.on_draw_start('rectangle'))
+        self.toolBar.get_action("QuitProgram").triggered.connect(self.close)
 
         # ContextMenu
         self.imageDisplay.scene.sRequestContextMenu.connect(self.on_requestContextMenu)
         self.polyFrame.polyList.sRequestContextMenu.connect(self.on_requestContextMenu)
 
         # Drawing Events
-        self.imageDisplay.scene.sDrawing.connect(self.on_Drawing)
-        self.imageDisplay.scene.sDrawingDone.connect(self.on_drawEnd)
+        self.imageDisplay.scene.sDrawing.connect(self.on_drawing)
+        self.imageDisplay.scene.sDrawingDone.connect(self.on_draw_end)
 
         # Altering Shape Events
         self.sResetSelAndHigh.connect(self.imageDisplay.canvas.on_ResetSelAndHigh)
@@ -186,29 +107,7 @@ class LabelMain(QMainWindow, LabelUI):
         self.imageDisplay.scene.sMoveShape.connect(self.on_moveShape)
         self.imageDisplay.scene.sRequestAnchorReset.connect(self.on_anchorRest)
 
-    def initWithDatabase(self, database: str, files: list = None):
-        """This function is called if a correct database is selected"""
-        self.basedir = pathlib.Path(database).parents[0]
-        self.database = SQLiteDatabase(database)
-
-        # if the project was newly created, user may have specified files to add
-        if files:
-            for file in files:
-                # TODO: Implement filetype distinctions, right now only images considered
-                self.add_file(file, 'png')
-
-        self.labeled_images = self.database.get_images()
-        self.initColors()
-        self.initClasses()
-        self.initFileList()
-        self.enable_essentials()
-
-        if self.labeled_images:
-            self.imageDisplay.setInitialized()
-            self.initImage()
-            self.enable_tools()
-
-    def initClasses(self):
+    def init_classes(self):
         """This function initializes the available classes in the database and updates the label list"""
         self.labelList.clear()
         classes = self.database.get_label_classes()
@@ -217,49 +116,79 @@ class LabelMain(QMainWindow, LabelUI):
             self.labelList.addItem(item)
             self.classes[_class] = idx
 
-    def initColors(self):
+    def init_colors(self):
         r"""Initialise the colors for plotting and for the individual lists """
         self.colorMap, drawNewColor = qt.colormapRGB(n=self._num_colors)  # have a buffer for new classes
-        self.imageDisplay.canvas.setNewColor(drawNewColor)
+        self.imageDisplay.set_new_color(drawNewColor)
 
-    def initFileList(self, show_check_box=False):
+    def init_file_list(self, show_check_box=False):
         r"""Initialize the file list with all the entries found in the database"""
         self.fileList.clear()
-        for idx, elem in enumerate(self.labeled_images):
+        for idx, elem in enumerate(self.images):
             if show_check_box:
-                # TODO: relative path doesnt work
-                item = QListWidgetItem(QIcon("./icons/checked.png"),
-                                       self.labeled_images[idx].replace(Structure.IMAGES_DIR, ""))
+                icon = qt.getIcon("checked")
+                item = QListWidgetItem(icon,
+                                       self.images[idx].replace(Structure.IMAGES_DIR, ""))
             else:
-                item = QListWidgetItem(self.labeled_images[idx].replace(Structure.IMAGES_DIR, ""))
+                item = QListWidgetItem(self.images[idx].replace(Structure.IMAGES_DIR, ""))
             self.fileList.addItem(item)
         self.fileList.setCurrentRow(self.img_idx)
 
-    def initLabels(self):
+    def init_labels(self):
         r"""This function initializes the labels for the current image. Necessary to have only one call to the database
         if the image is changed"""
-        labels = self.database.get_label_from_imagepath(self.labeled_images[self.img_idx])
+        labels = self.database.get_label_from_imagepath(self.images[self.img_idx])
         self.current_labels = [Shape(image_size=self.image_size, label_dict=_label,
                                      color=self.getColorForLabel(_label['label']))
                                for _label in labels]
-        self.polyFrame.polyList.updateList(self.current_labels)
-        self.polyFrame.commentList.initComments(self.current_labels)
+        self.polyFrame.update_frame(self.current_labels)
 
-    def initImage(self):
+    def init_image(self):
         """Initializes the displayed image and respective label/canvas"""
-        image = QPixmap(self.project_location + Structure.IMAGES_DIR + self.labeled_images[self.img_idx])
+        image = QPixmap(self.project_location + Structure.IMAGES_DIR + self.images[self.img_idx])
         self.image_size = image.size()
-        self.initLabels()
-        self.imageDisplay.canvas.setPixmap(image)
-        self.imageDisplay.canvas.setLabels(self.current_labels)
+        self.init_labels()
+        self.imageDisplay.init_image(self, image, self.current_labels)
         self.fileList.setCurrentRow(self.img_idx)
         self.on_zoomLevelChanged(1)
 
-    def initContextMenu(self, actions: Tuple[Action, Action]):
+    def init_with_database(self, database: str, files: list = None):
+        """This function is called if a correct database is selected"""
+        self.database = SQLiteDatabase(database)
+
+        # if the project was newly created, user may have specified files to add
+        if files:
+            for file in files:
+                # TODO: Implement filetype distinctions, right now only images considered
+                self.add_file(file, 'png')
+
+        self.images = self.database.get_images()
+        self.init_colors()
+        self.init_classes()
+        self.init_file_list(True)
+        self.enable_essentials()
+
+        if self.images:
+            self.imageDisplay.set_initialized()
+            self.init_image()
+            self.enable_tools()
+
+    def init_context_menu(self):
         """ Initializes the functionality of the contextMenu"""
-        for action in actions:
-            self.contextMenu.addAction(action)
-            self.polyFrame.polyList.contextMenu.addAction(action)
+        action_edit_label = Action(self,
+                                   "Edit Label Name",
+                                   self.on_editLabel,
+                                   icon="pen",
+                                   tip="Edit Label Name",
+                                   enabled=True)
+        action_delete_label = Action(self,
+                                     "Delete Label",
+                                     self.on_deleteLabel,
+                                     icon="trash",
+                                     tip="Delete Label")
+
+        self.contextMenu.addActions((action_edit_label, action_delete_label))
+        self.polyFrame.polyList.contextMenu.addActions((action_edit_label, action_delete_label))
 
     def handleFileListItemClicked(self):
         """Tracks the changed item in the label List"""
@@ -267,8 +196,8 @@ class LabelMain(QMainWindow, LabelUI):
         if dlgResult == QMessageBox.AcceptRole or dlgResult == QMessageBox.DestructiveRole:
             if dlgResult == QMessageBox.AcceptRole:
                 self.on_saveLabel()
-            self.img_idx = self.labeled_images.index(self.fileList.currentItem().text())
-            self.initImage()
+            self.img_idx = self.images.index(self.fileList.currentItem().text())
+            self.init_image()
 
     def handleFileListSearch(self):
         r"""Handles the file search. If the user types into the text box, it changes the files which are displayed"""
@@ -308,8 +237,7 @@ class LabelMain(QMainWindow, LabelUI):
             # add one shape
             self.current_labels.append(shapes)
         self.imageDisplay.canvas.setLabels(self.current_labels)
-        self.polyFrame.polyList.updateList(self.current_labels)
-        self.polyFrame.commentList.initComments(self.current_labels)
+        self.polyFrame.update_frame(self.current_labels)
 
         # update labelList in case a new label class was generated
         if len(self.classes) != self.labelList.count():
@@ -320,13 +248,14 @@ class LabelMain(QMainWindow, LabelUI):
 
     def enable_essentials(self):
         """This function enables the Save and Import buttons when a database is opened """
-        self.toolBar.getWidgetForAction('Save').setEnabled(True)
-        self.toolBar.getWidgetForAction('Import').setEnabled(True)
+        self.toolBar.get_widget_for_action('Save').setEnabled(True)
+        self.toolBar.get_widget_for_action('Import').setEnabled(True)
+        self.toolBar.get_widget_for_action('QuitProgram').setEnabled(True)
 
         # TODO: this disables the Open & New Database Button as i only need it once
         #   and currently it crashes everything if clicked again
-        self.toolBar.getWidgetForAction('NewProject').setEnabled(False)
-        self.toolBar.getWidgetForAction('OpenProject').setEnabled(False)
+        self.toolBar.get_widget_for_action('NewProject').setEnabled(False)
+        self.toolBar.get_widget_for_action('OpenProject').setEnabled(False)
 
     def enable_tools(self):
         """This function enables ever button in the toolBar except the Open & New Database Button"""
@@ -335,8 +264,8 @@ class LabelMain(QMainWindow, LabelUI):
 
         # TODO: this disables the Open & New Database Button as i only need it once
         #   and currently it crashes everything if clicked again
-        self.toolBar.getWidgetForAction('NewProject').setEnabled(False)
-        self.toolBar.getWidgetForAction('OpenProject').setEnabled(False)
+        self.toolBar.get_widget_for_action('NewProject').setEnabled(False)
+        self.toolBar.get_widget_for_action('OpenProject').setEnabled(False)
 
     def setButtonsUnchecked(self):
         """Set all Buttons into the Unchecked state"""
@@ -360,7 +289,7 @@ class LabelMain(QMainWindow, LabelUI):
         :param label_class: class of the label
         :return: a dictionary used as an entry to the database
         """
-        filename = self.labeled_images[self.img_idx]
+        filename = self.images[self.img_idx]
         modality, file = self.database.get_uids_from_filename(filename)
         label_class = self.database.get_uid_from_label(label_class)
         patient = 1  # TODO: Implement patient id references
@@ -376,6 +305,8 @@ class LabelMain(QMainWindow, LabelUI):
         if dlgResult == QMessageBox.AcceptRole or dlgResult == QMessageBox.DestructiveRole:
             if dlgResult == QMessageBox.AcceptRole:
                 self.on_saveLabel()
+        else:
+            event.ignore()
 
     def on_newProject(self):
         """This function is the handle for creating a new project"""
@@ -389,7 +320,7 @@ class LabelMain(QMainWindow, LabelUI):
             create_project_structure(self.project_location)
 
             # call initialization function, pass the files that should be initially added
-            self.initWithDatabase(self.project_location + Structure.DATABASE_DEFAULT_NAME, files=projectHandler.files)
+            self.init_with_database(self.project_location + Structure.DATABASE_DEFAULT_NAME, files=projectHandler.files)
 
     def on_openProject(self, fddirectory, fdoptions):
         """This function is the handle for opening a project"""
@@ -407,7 +338,7 @@ class LabelMain(QMainWindow, LabelUI):
             # make sure the database is inside a project environment
             if check_environment(str(pathlib.Path(database).parents[0])):
                 self.project_location = str(pathlib.Path(database).parents[0])
-                self.initWithDatabase(database)
+                self.init_with_database(database)
             else:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Information)
@@ -437,13 +368,13 @@ class LabelMain(QMainWindow, LabelUI):
                 self.add_file(filename, select_filetype.filetype)
 
                 # update the GUI
-                self.labeled_images = self.database.get_images()
-                self.initFileList()
+                self.images = self.database.get_images()
+                self.init_file_list(True)
 
                 # initialize additional parts, if it is the first added file
                 if self.imageDisplay.b_isEmpty:
-                    self.imageDisplay.setInitialized()
-                    self.initImage()
+                    self.imageDisplay.set_initialized()
+                    self.init_image()
                     self.enable_tools()
 
     def on_saveLabel(self):
@@ -456,31 +387,31 @@ class LabelMain(QMainWindow, LabelUI):
             entries.append(annotation_entry)
 
         if entries:
-            self.database.update_image_annotations(image_name=self.labeled_images[self.img_idx], entries=entries)
+            self.database.update_image_annotations(image_name=self.images[self.img_idx], entries=entries)
 
-    def on_nextImage(self):
+    def on_next_image(self):
         """Display the next image"""
         dlgResult = self.checkForChanges()
         if dlgResult == QMessageBox.AcceptRole or dlgResult == QMessageBox.DestructiveRole:
             if dlgResult == QMessageBox.AcceptRole:
                 self.on_saveLabel()
-            self.img_idx = (self.img_idx + 1) % len(self.labeled_images)
-            self.initImage()
+            self.img_idx = (self.img_idx + 1) % len(self.images)
+            self.init_image()
             self.setButtonsUnchecked()
 
-    def on_prevImag(self):
+    def on_prev_image(self):
         """Display the previous image"""
         dlgResult = self.checkForChanges()
         if dlgResult == QMessageBox.AcceptRole or dlgResult == QMessageBox.DestructiveRole:
             if dlgResult == QMessageBox.AcceptRole:
                 self.on_saveLabel()
-            self.img_idx = (self.img_idx - 1) % len(self.labeled_images)
-            self.initImage()
+            self.img_idx = (self.img_idx - 1) % len(self.images)
+            self.init_image()
             self.setButtonsUnchecked()
 
-    def on_drawStart(self, shape_type: str):
+    def on_draw_start(self, shape_type: str):
         r"""Function to enable the drawing but also uncheck all other buttons"""
-        action = self.toolBar.getWidgetForAction(f'Draw{shape_type.replace("temp", "").capitalize()}')
+        action = self.toolBar.get_widget_for_action(f'Draw{shape_type.replace("temp", "").capitalize()}')
         self.setOtherButtonsUnchecked(action)
         self.sResetSelAndHigh.emit()
         if action.isChecked():
@@ -490,14 +421,14 @@ class LabelMain(QMainWindow, LabelUI):
             self.imageDisplay.canvas.setTempLabel()
             self.imageDisplay.scene.setMode(self.EDIT)
 
-    def on_Drawing(self, points: List[QPointF], shape_type: str):
+    def on_drawing(self, points: List[QPointF], shape_type: str):
         r"""Function to handle the drawing event"""
         action = f'Draw{shape_type.replace("temp", "").capitalize()}'
-        if self.toolBar.getWidgetForAction(action).isChecked():
+        if self.toolBar.get_widget_for_action(action).isChecked():
             if points:
-                self.imageDisplay.canvas.setTempLabel(points, shape_type)
+                self.imageDisplay.draw(points, shape_type)
 
-    def on_drawEnd(self, points: List[QPointF], shape_type: str):
+    def on_draw_end(self, points: List[QPointF], shape_type: str):
         """function to handle the end of a drawing event; let user assign a label to the annotation"""
         d = NewLabelDialog(self)
         d.exec()
@@ -526,7 +457,7 @@ class LabelMain(QMainWindow, LabelUI):
 
     def on_editLabel(self):
         d = NewLabelDialog(self)
-        d.setText(self.current_labels[self._selectedShape].label)
+        d.set_text(self.current_labels[self._selectedShape].label)
         d.exec()
         if d.class_name:
             # traces are also polygons so i am going to store them as such
@@ -559,7 +490,7 @@ class LabelMain(QMainWindow, LabelUI):
 
     def on_zoomLevelChanged(self, zoom: int):
         for shape in self.current_labels:
-            size = [self.imageDisplay.canvas.pixmap.width(), self.imageDisplay.canvas.pixmap.height()]
+            size = self.imageDisplay.get_pixmap_dimensions()
             shape.setScaling(zoom, size[argmax(size)])
 
     def checkForChanges(self) -> int:
@@ -567,18 +498,19 @@ class LabelMain(QMainWindow, LabelUI):
 
             :returns: 0 if accepted or no changes, 1 if cancelled and 2 if dismissed
         """
-        if not self.labeled_images:
-            return 2
-        sql_labels = self.database.get_label_from_imagepath(self.labeled_images[self.img_idx])
-        sql_labels = [Shape(image_size=self.image_size, label_dict=_label, color=self.getColorForLabel(_label['label']))
-                      for _label in sql_labels]
-
-        if sql_labels == self.current_labels:
-            return 0
+        if not self.images:
+            d = CloseMessageBox(self)
         else:
-            d = ForgotToSaveMessageBox(self)
-            d.exec()
-            return d.result()
+            sql_labels = self.database.get_label_from_imagepath(self.images[self.img_idx])
+            sql_labels = [Shape(image_size=self.image_size, label_dict=_label, color=self.getColorForLabel(_label['label']))
+                          for _label in sql_labels]
+
+            if sql_labels == self.current_labels:
+                d = CloseMessageBox(self)
+            else:
+                d = ForgotToSaveMessageBox(self)
+        d.exec()
+        return d.result()
 
     def handleCommentClick(self, item):
         """Either shows a blank comment window or the previously written comment for this label"""
@@ -597,7 +529,7 @@ class LabelMain(QMainWindow, LabelUI):
 
         text = "Details" if dlg.comment else "Add comment"
         for item in self.polyFrame.commentList.selectedItems():
-            item.setText(text)
+            item.set_text(text)
         for lbl in self.current_labels:
             if lbl.isSelected:
                 lbl.comment = dlg.comment

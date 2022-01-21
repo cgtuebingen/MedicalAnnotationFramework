@@ -75,6 +75,8 @@ def createListWidgetItemWithSquareIcon(text: str, color: QColor, size: int = 5) 
 def getIcon(icon):
     thisFile = osp.dirname(osp.abspath(__file__))
     icons_dir = osp.join(thisFile, "../icons")
+    t = osp.join(":/", icons_dir, "%s.png" % icon)
+
     return QIcon(osp.join(":/", icons_dir, "%s.png" % icon))
 
 
