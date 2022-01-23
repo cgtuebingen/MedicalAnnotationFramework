@@ -25,7 +25,7 @@ class LabelUI(object):
         self.mainLayout.setSpacing(0)
         self.mainLayout.setObjectName("verticalLayout")
 
-        # Body of the widget arrange as horizontral layout
+        # Body of the widget arrange as horizontal layout
         self.bodyFrame = QtWidgets.QFrame(self.mainWidget)
         self.bodyFrame.setFrameShape(QtWidgets.QFrame.StyledPanel)
         self.bodyFrame.setFrameShadow(QtWidgets.QFrame.Raised)
@@ -137,20 +137,22 @@ class LabelUI(object):
         self.centerFrame.raise_()
         self.mainLayout.addWidget(self.bodyFrame)
         main_window.setCentralWidget(self.mainWidget)
+
         self.menubar = QtWidgets.QMenuBar(main_window)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 1276, 22))
         self.menubar.setObjectName("menubar")
         main_window.setMenuBar(self.menubar)
+
         self.statusbar = QtWidgets.QStatusBar(main_window)
         self.statusbar.setObjectName("statusbar")
         main_window.setStatusBar(self.statusbar)
+
         self.toolBar = Toolbar(main_window)
         main_window.addToolBar(QtCore.Qt.ToolBarArea.LeftToolBarArea, self.toolBar)
         self.toolBar.init_margins()
+        self.init_toolbar_actions(main_window)
 
-        self.init_actions(main_window)
-
-    def init_actions(self, parent):
+    def init_toolbar_actions(self, parent):
         """Initialise all actions present which can be connected to buttons or menu items"""
         # TODO: some shortcuts dont work
         action_new_project = Action(parent,

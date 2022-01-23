@@ -49,16 +49,28 @@ class ImageViewer(QGraphicsView):
         return [self.canvas.pixmap.width(), self.canvas.pixmap.height()]
 
     def init_image(self, image, labels):
-        self.imageDisplay.canvas.setPixmap(image)
-        self.imageDisplay.canvas.setLabels(labels)
+        self.canvas.setPixmap(image)
+        self.canvas.setLabels(labels)
 
     def set_initialized(self):
         self.scene.b_isInitialized = True
         self.b_isEmpty = False
 
+    def set_labels(self, labels):
+        self.canvas.setLabels(labels)
+
+    def set_mode(self, mode):
+        self.scene.setMode(mode)
+
     def set_new_color(self, color: QColor):
         """Sets the color for drawing a new item"""
         self.canvas.drawNewColor = color
+
+    def set_shape_type(self, shape_type):
+        self.scene.setShapeType(shape_type)
+
+    def set_temp_label(self):
+        self.canvas.setTempLabel()
 
     def fitInView(self, rect: QRectF, mode: Qt.AspectRatioMode = Qt.AspectRatioMode.IgnoreAspectRatio) -> None:
         if not rect.isNull():
