@@ -199,12 +199,20 @@ class LabelMain(QMainWindow, LabelUI):
 
     def handle_file_list_item_clicked(self):
         """Tracks the changed item in the label List"""
+
+        # if user clicked on currently displayed file in the list, do nothing
+        if self.img_idx == self.images.index(self.fileList.currentItem().text()):
+            return
+
+        # else save changes if necessary
         dlg_result = self.check_for_changes(quit_program=False)
         if dlg_result == QMessageBox.AcceptRole or dlg_result == QMessageBox.DestructiveRole:
             if dlg_result == QMessageBox.AcceptRole:
                 self.on_save()
             self.img_idx = self.images.index(self.fileList.currentItem().text())
             self.init_image()
+        else:
+            self.fileList.setCurrentRow(self.img_idx)
 
     def handle_file_list_search(self):
         r"""Handles the file search. If the user types into the text box, it changes the files which are displayed"""
