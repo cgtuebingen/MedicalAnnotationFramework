@@ -20,7 +20,7 @@ class ListWidget(QListWidget):
         self.clear()
         if self.is_comment_list:
             for lbl in current_label:
-                text = "Show" if lbl.comment else "Add comment"
+                text = "Details" if lbl.comment else "Add comment"
                 item = QListWidgetItem()
                 item.setText(text)
                 item.setForeground(QColor(0, 102, 204))

@@ -4,7 +4,7 @@
 from PyQt5 import QtWidgets
 from PyQt5 import QtCore
 from PyQt5 import QtGui
-from seg_utils.ui.image_viewer import ImageViewer
+from seg_utils.ui.image_display import ImageDisplay
 from seg_utils.ui.toolbar import Toolbar
 from seg_utils.ui.poly_frame import PolyFrame
 from seg_utils.src.actions import Action
@@ -46,7 +46,7 @@ class LabelUI(object):
         self.centerLayout.setContentsMargins(0, 0, 0, 0)
         self.centerLayout.setSpacing(0)
         self.centerLayout.setObjectName("centerLayout")
-        self.imageDisplay = ImageViewer(self.centerFrame)
+        self.imageDisplay = ImageDisplay(self.centerFrame)
         self.imageDisplay.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.imageDisplay.setObjectName("imageDisplay")
         self.centerLayout.addWidget(self.imageDisplay)

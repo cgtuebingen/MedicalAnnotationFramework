@@ -1,15 +1,6 @@
-import sys
-from typing import List
-from copy import deepcopy
-
 from PyQt5.QtWidgets import QGraphicsView
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
-
-
-from seg_utils.ui.graphics_scene import ImageViewerScene
-from seg_utils.ui.shape import Shape
-from seg_utils.ui.canvas import Canvas
 
 PLACEHOLDER_TEXT = "No files to display"
 
@@ -19,11 +10,6 @@ class ImageViewer(QGraphicsView):
 
     def __init__(self, *args):
         super(ImageViewer, self).__init__(*args)
-        self.canvas = Canvas()
-        self.scene = ImageViewerScene(self)
-        self.canvas.resize(QSize(0, 0))  # Makes it invisible
-        self.proxy = self.scene.addWidget(self.canvas)
-        self.setScene(self.scene)
         self.b_isEmpty = True
 
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
@@ -34,43 +20,8 @@ class ImageViewer(QGraphicsView):
 
         # Protected Item
         self._zoom = 1
-        self._scalingfactor = 5/4
+        self._scaling_factor = 5 / 4
         self._enableZoomPan = False
-
-        # connect events
-        self.canvas.sRequestFitInView.connect(self.fitInView)
-        self.scene.sShapeHovered.connect(self.canvas.handleShapeHovered)
-        self.scene.sShapeSelected.connect(self.canvas.handleShapeSelected)
-
-    def draw(self, points: List[QPointF], shape_type: str):
-        self.canvas.setTempLabel(points, shape_type)
-
-    def get_pixmap_dimensions(self):
-        return [self.canvas.pixmap.width(), self.canvas.pixmap.height()]
-
-    def init_image(self, image, labels):
-        self.canvas.setPixmap(image)
-        self.canvas.setLabels(labels)
-
-    def set_initialized(self):
-        self.scene.b_isInitialized = True
-        self.b_isEmpty = False
-
-    def set_labels(self, labels):
-        self.canvas.setLabels(labels)
-
-    def set_mode(self, mode):
-        self.scene.setMode(mode)
-
-    def set_new_color(self, color: QColor):
-        """Sets the color for drawing a new item"""
-        self.canvas.drawNewColor = color
-
-    def set_shape_type(self, shape_type):
-        self.scene.setShapeType(shape_type)
-
-    def set_temp_label(self):
-        self.canvas.setTempLabel()
 
     def fitInView(self, rect: QRectF, mode: Qt.AspectRatioMode = Qt.AspectRatioMode.IgnoreAspectRatio) -> None:
         if not rect.isNull():
@@ -78,15 +29,15 @@ class ImageViewer(QGraphicsView):
             if not self.b_isEmpty:
                 unity = self.transform().mapRect(QRectF(0, 0, 1, 1))
                 self.scale(1 / unity.width(), 1 / unity.height())
-                viewrect = self.viewport().rect()
-                scenerect = self.transform().mapRect(rect)
-                factor = min(viewrect.width() / scenerect.width(),
-                             viewrect.height() / scenerect.height())
+                view_rect = self.viewport().rect()
+                scene_rect = self.transform().mapRect(rect)
+                factor = min(view_rect.width() / scene_rect.width(),
+                             view_rect.height() / scene_rect.height())
                 self.scale(factor, factor)
             self._zoom = 1
 
     def resizeEvent(self, event: QResizeEvent) -> None:
-        bounds = self.scene.itemsBoundingRect()
+        bounds = self.scene().itemsBoundingRect()
         self.fitInView(bounds, Qt.AspectRatioMode.KeepAspectRatio)
 
     def wheelEvent(self, event):
@@ -95,12 +46,12 @@ class ImageViewer(QGraphicsView):
             if self._enableZoomPan:
                 if event.angleDelta().y() > 0:
                     # Forward Scroll
-                    factor = self._scalingfactor
-                    self._zoom *= self._scalingfactor
+                    factor = self._scaling_factor
+                    self._zoom *= self._scaling_factor
                 else:
                     # Backwards scroll
-                    factor = 1/self._scalingfactor
-                    self._zoom /= self._scalingfactor
+                    factor = 1/self._scaling_factor
+                    self._zoom /= self._scaling_factor
 
                 if self._zoom > 1:
                     self.scale(factor, factor)
@@ -135,5 +86,3 @@ class ImageViewer(QGraphicsView):
             )
             painter.drawText(self.viewport().rect(), Qt.AlignCenter, elided_text)
             painter.restore()
-
-

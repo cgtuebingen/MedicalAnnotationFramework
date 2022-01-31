@@ -91,6 +91,10 @@ class NewLabelDialog(QDialog):
             else:
                 item.setHidden(False)
 
+    def on_cancel(self):
+        self.class_name = ""
+        self.close()
+
     def on_list_selection(self, item):
         """ handles the functions to be executed when user selects something from the list"""
         text = item.text()
@@ -115,10 +119,6 @@ class NewLabelDialog(QDialog):
 
         # use selected/created label class to name the label
         self.class_name = text
-
-    def on_cancel(self):
-        self.class_name = ""
-        self.close()
 
     def set_text(self, text):
         self.shapeSearch.setText(text)

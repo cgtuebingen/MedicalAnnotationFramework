@@ -106,9 +106,9 @@ class LabelMain(QMainWindow, LabelUI):
         self.fileSearch.textChanged.connect(self.handle_file_list_search)
         self.polyFrame.polyList.itemClicked.connect(self.handle_poly_list_selection)
         self.polyFrame.commentList.itemClicked.connect(self.handle_comment_click)
-        self.imageDisplay.canvas.sRequestLabelListUpdate.connect(self.handle_update_poly_list)
-        self.sLabelSelected.connect(self.imageDisplay.canvas.handleShapeSelected)
-        self.imageDisplay.sZoomLevelChanged.connect(self.on_zoom_level_changed)
+        self.imageDisplay.sRequestLabelListUpdate.connect(self.handle_update_poly_list)
+        self.sLabelSelected.connect(self.imageDisplay.shape_selected)
+        self.imageDisplay.image_viewer.sZoomLevelChanged.connect(self.on_zoom_level_changed)
 
         # toolbar actions
         self.toolBar.get_action("NewProject").triggered.connect(self.on_new_project)
@@ -133,7 +133,7 @@ class LabelMain(QMainWindow, LabelUI):
         self.imageDisplay.scene.sDrawingDone.connect(self.on_draw_end)
 
         # Altering Shape Events
-        self.sResetSelAndHigh.connect(self.imageDisplay.canvas.on_ResetSelAndHigh)
+        self.sResetSelAndHigh.connect(self.imageDisplay.on_reset_sel_and_high)
         self.imageDisplay.scene.sMoveVertex.connect(self.on_move_vertex)
         self.imageDisplay.scene.sMoveShape.connect(self.on_move_shape)
         self.imageDisplay.scene.sRequestAnchorReset.connect(self.on_anchor_rest)
@@ -245,8 +245,8 @@ class LabelMain(QMainWindow, LabelUI):
 
     def init_colors(self):
         r"""Initialise the colors for plotting and for the individual lists """
-        self.colorMap, drawNewColor = qt.colormapRGB(n=self._num_colors)  # have a buffer for new classes
-        self.imageDisplay.set_new_color(drawNewColor)
+        self.colorMap, new_color = qt.colormapRGB(n=self._num_colors)  # have a buffer for new classes
+        self.imageDisplay.draw_new_color = new_color
 
     def init_context_menu(self):
         """ Initializes the functionality of the contextMenu"""
@@ -352,7 +352,7 @@ class LabelMain(QMainWindow, LabelUI):
         action = f'Draw{shape_type.replace("temp", "").capitalize()}'
         if self.toolBar.get_widget_for_action(action).isChecked():
             if points:
-                self.imageDisplay.draw(points, shape_type)
+                self.imageDisplay.set_temp_label(points, shape_type)
 
     def on_draw_start(self, shape_type: str):
         r"""Function to enable the drawing but also uncheck all other buttons"""
@@ -403,7 +403,7 @@ class LabelMain(QMainWindow, LabelUI):
                 self.init_file_list(True)
 
                 # initialize additional parts, if it is the first added file
-                if self.imageDisplay.b_isEmpty:
+                if self.imageDisplay.is_empty():
                     self.imageDisplay.set_initialized()
                     self.init_image()
                     self.enable_actions()
