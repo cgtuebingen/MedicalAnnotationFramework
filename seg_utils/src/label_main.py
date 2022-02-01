@@ -17,7 +17,7 @@ from seg_utils.src.actions import Action
 from seg_utils.ui.label_ui import LabelUI
 from seg_utils.ui.shape import Shape
 from seg_utils.ui.dialogs import (NewLabelDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox, CloseMessageBox,
-                                  SelectFileTypeDialog, ProjectHandlerDialog, CommentDialog)
+                                  SelectFileTypeAndPatientDialog, ProjectHandlerDialog, CommentDialog)
 from seg_utils.config import VERTEX_SIZE
 
 
@@ -57,7 +57,7 @@ class LabelMain(QMainWindow, LabelUI):
 
         self.vertex_size = VERTEX_SIZE
 
-    def add_file(self, filepath: str, filetype: str):
+    def add_file(self, filepath: str, filetype: str, patient: str):
         """ This method copies a selected file to the project environment and updates the database """
 
         # TODO: right now it works only with images
@@ -67,7 +67,7 @@ class LabelMain(QMainWindow, LabelUI):
 
         # add the filename to database
         filename = os.path.basename(filepath)
-        self.database.add_file(filename, filetype)
+        self.database.add_file(filename, filetype, patient)
 
     def check_for_changes(self, quit_program: bool = True) -> int:
         r"""Check for changes with the database and display dialogs if necessary
@@ -148,7 +148,7 @@ class LabelMain(QMainWindow, LabelUI):
         filename = self.images[self.img_idx]
         modality, file = self.database.get_uids_from_filename(filename)
         label_class = self.database.get_uid_from_label(label_class)
-        patient = 1  # TODO: Implement patient id references
+        patient = self.database.get_patient_by_filename(filename)
 
         return {'modality': modality,
                 'file': file,
@@ -296,15 +296,18 @@ class LabelMain(QMainWindow, LabelUI):
                                for _label in labels]
         self.polyFrame.update_frame(self.current_labels)
 
-    def init_with_database(self, database: str, files: list = None):
+    def init_with_database(self, database: str, patients: list = None, files: dict = None):
         """This function is called if a correct database is selected"""
         self.database = SQLiteDatabase(database)
 
-        # if the project was newly created, user may have specified files to add
+        # if the project was newly created, user may have specified patients & files to add
+        if patients:
+            for p in patients:
+                self.database.add_patient(p)
         if files:
-            for file in files:
+            for file, patient in files.items():
                 # TODO: Implement filetype distinctions, right now only images considered
-                self.add_file(file, 'png')
+                self.add_file(file, 'png', patient)
 
         self.images = self.database.get_images()
         self.init_colors()
@@ -381,12 +384,16 @@ class LabelMain(QMainWindow, LabelUI):
         """This function is the handle for importing new images/videos to the database and the current project"""
 
         # user first needs to specify the type of the file to be imported
-        select_filetype = SelectFileTypeDialog()
+        existing_patients = self.database.get_patients()
+        select_filetype = SelectFileTypeAndPatientDialog(existing_patients)
         select_filetype.exec()
-        if select_filetype.filetype:
+        for p in select_filetype.patients:
+            self.database.add_patient(p)
+        filetype, patient = select_filetype.filetype, select_filetype.patient
+        if filetype:
 
             # TODO: implement smarter filetype recognition
-            _filter = '*png *jpg *jpeg' if select_filetype.filetype == 'png' else select_filetype.filetype
+            _filter = '*png *jpg *jpeg' if filetype == 'png' else filetype
 
             filename, _ = QFileDialog.getOpenFileName(self,
                                                       caption="Select File",
@@ -396,7 +403,7 @@ class LabelMain(QMainWindow, LabelUI):
 
             # get path to file and store it in the database
             if filename:
-                self.add_file(filename, select_filetype.filetype)
+                self.add_file(filename, filetype, patient)
 
                 # update the GUI
                 self.images = self.database.get_images()
@@ -431,6 +438,7 @@ class LabelMain(QMainWindow, LabelUI):
 
             # call initialization function, pass the files that should be initially added
             self.init_with_database(self.project_location + Structure.DATABASE_DEFAULT_NAME,
+                                    patients=project_handler.patients,
                                     files=project_handler.files)
 
     def on_next_image(self, forwards: bool):

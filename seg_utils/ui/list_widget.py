@@ -5,7 +5,8 @@ from PyQt5.QtGui import QColor
 from seg_utils.ui.shape import Shape
 from seg_utils.utils.qt import createListWidgetItemWithSquareIcon
 
-from typing import List, Union
+from typing import List
+
 
 class ListWidget(QListWidget):
     sRequestContextMenu = pyqtSignal(int, QPoint)
