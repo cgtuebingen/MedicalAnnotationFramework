@@ -3,7 +3,7 @@ from PyQt5.QtCore import QSize, QPoint, Qt
 from PyQt5.QtGui import QFont, QIcon
 
 from seg_utils.ui.list_widget import ListWidget
-from seg_utils.utils.qt import createListWidgetItemWithSquareIcon, getIcon
+from seg_utils.utils.qt import createListWidgetItemWithSquareIcon, get_icon
 
 from pathlib import Path
 import os
@@ -135,7 +135,7 @@ class ForgotToSaveMessageBox(QMessageBox):
     def __init__(self, *args):
         super(ForgotToSaveMessageBox, self).__init__(*args)
 
-        save_button = QPushButton(getIcon('save'), "Save Changes")
+        save_button = QPushButton(get_icon('save'), "Save Changes")
         dismiss_button = QPushButton(self.style().standardIcon(QStyle.SP_DialogDiscardButton), "Dismiss Changes")
         cancel_button = QPushButton(self.style().standardIcon(QStyle.SP_DialogCancelButton), "Cancel")
 
@@ -166,7 +166,7 @@ class CloseMessageBox(QMessageBox):
     def __init__(self, *args):
         super(CloseMessageBox, self).__init__(*args)
 
-        quit_button = QPushButton(getIcon('quit'), "Quit Program")
+        quit_button = QPushButton(get_icon('quit'), "Quit Program")
         cancel_button = QPushButton(self.style().standardIcon(QStyle.SP_DialogCancelButton), "Cancel")
         self.addButton(quit_button, QMessageBox.AcceptRole)
         self.addButton(cancel_button, QMessageBox.RejectRole)
@@ -228,7 +228,7 @@ class SelectFileTypeAndPatientDialog(QDialog):
     def __init__(self, existing_patients: list):
         super(SelectFileTypeAndPatientDialog, self).__init__()
 
-        self.setFixedSize(QSize(350, 300))
+        self.setFixedSize(QSize(400, 300))
         self.setWindowTitle("Select File Type")
         self.filetype = ""
         self.patient = ""

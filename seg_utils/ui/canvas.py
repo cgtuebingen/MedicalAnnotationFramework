@@ -40,7 +40,7 @@ class Canvas(QWidget):
         self._painter.drawPixmap(0, 0, self.pixmap)
         if self.labels:
             for _label in self.labels:
-                _label.paint(self._painter)
+                _label.paint(painter=self._painter)
         if self.temp_label:
             self.temp_label.paint(self._painter)
 

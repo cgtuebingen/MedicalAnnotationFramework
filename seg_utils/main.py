@@ -1,25 +1,15 @@
-import numpy as np
 import argparse
 import sys
 
 from PyQt5.QtWidgets import QApplication
 from seg_utils.src.label_main import LabelMain
-from seg_utils.src.selection_main import SelectionMain
-from seg_utils.src.viewer_main import ViewerMain
 
 
 def main(_args):
     app = QApplication(sys.argv)
-    window = SelectionMain()  # this opens the selection window
-    # window = LabelMain()
-    # window = ViewerMain()
+    window = LabelMain()  # the labeling window
     window.show()
     sys.exit(app.exec_())
-
-
-def closest_node(node, nodes):
-    dist_2 = np.sum((nodes - node)**2, axis=1)
-    return np.argmin(dist_2)
 
 
 if __name__ == "__main__":

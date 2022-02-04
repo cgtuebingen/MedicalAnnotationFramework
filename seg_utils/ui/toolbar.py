@@ -23,14 +23,6 @@ class Toolbar(QToolBar):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
         self.setObjectName("toolBar")
 
-    def init_margins(self):
-        """This function is necessary because the call to addToolBar in label_ui.py alters the alignment
-        for some reason. Therefore this method will be called AFTER the toolbar is added to the main window"""
-        m = (0, 0, 0, 0)
-        self.setContentsMargins(*m)
-        self.layout().setSpacing(2)
-        self.layout().setContentsMargins(*m)
-
     def addAction(self, action: Action):
         r"""Because I want a physical button in the toolbar, i need to create a widget"""
         if isinstance(action, QWidgetAction):
@@ -50,20 +42,6 @@ class Toolbar(QToolBar):
         action_text = action.text().replace('\n', '')
         self.actionsDict[action_text] = len(self.actionsDict)
 
-    def get_widget_for_action(self, action_str: str):
-        if action_str not in self.actionsDict:
-            raise AttributeError(f"Action '{action_str}' not available. Available actions are"
-                                 f"\n{[act for act in self.actionsDict.keys()]}")
-        else:
-            return self.widgetForAction(self.actions()[self.actionsDict[action_str]])
-
-    def get_action(self, action_str: str) -> Action:
-        if action_str not in self.actionsDict:
-            raise AttributeError(f"Action '{action_str}' not available. Available actions are"
-                                 f"\n{[act for act in self.actionsDict.keys()]}")
-        else:
-            return self.widgetForAction(self.actions()[self.actionsDict[action_str]]).defaultAction()
-
     def addActions(self, actions: Iterable[Action]) -> None:
         for action in actions:
             if action is None:
@@ -76,3 +54,25 @@ class Toolbar(QToolBar):
             if self.actionGeometry(self.actions()[self.actionsDict["DrawPolygon"]]).contains(event.pos()):
                 # TODO: raise own context menu with options for drawing a circle or a rectangle
                 pass
+
+    def get_action(self, action_str: str) -> Action:
+        if action_str not in self.actionsDict:
+            raise AttributeError(f"Action '{action_str}' not available. Available actions are"
+                                 f"\n{[act for act in self.actionsDict.keys()]}")
+        else:
+            return self.widgetForAction(self.actions()[self.actionsDict[action_str]]).defaultAction()
+
+    def get_widget_for_action(self, action_str: str):
+        if action_str not in self.actionsDict:
+            raise AttributeError(f"Action '{action_str}' not available. Available actions are"
+                                 f"\n{[act for act in self.actionsDict.keys()]}")
+        else:
+            return self.widgetForAction(self.actions()[self.actionsDict[action_str]])
+
+    def init_margins(self):
+        """This function is necessary because the call to addToolBar in label_ui.py alters the alignment
+        for some reason. Therefore this method will be called AFTER the toolbar is added to the main window"""
+        m = (0, 0, 0, 0)
+        self.setContentsMargins(*m)
+        self.layout().setSpacing(2)
+        self.layout().setContentsMargins(*m)

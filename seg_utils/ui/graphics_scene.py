@@ -61,7 +61,7 @@ class ImageViewerScene(QGraphicsScene):
             # Check if it is in the shape
             if _item.contains(event.scenePos()):
                 selected_shape = _item_idx
-            _isOnVert, _cVert = _item.vertices.isOnVertex(event.scenePos())
+            _isOnVert, _cVert = _item.vertices.is_on_vertex(event.scenePos())
             is_on_vertex.append(_isOnVert)
             closest_vertex.append(_cVert)
         # check if any of them are True, i.e. the vertex is highlighted

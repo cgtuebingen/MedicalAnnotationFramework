@@ -245,7 +245,7 @@ class LabelMain(QMainWindow, LabelUI):
 
     def init_colors(self):
         r"""Initialise the colors for plotting and for the individual lists """
-        self.colorMap, new_color = qt.colormapRGB(n=self._num_colors)  # have a buffer for new classes
+        self.colorMap, new_color = qt.colormap_rgb(n=self._num_colors)  # have a buffer for new classes
         self.imageDisplay.draw_new_color = new_color
 
     def init_context_menu(self):
@@ -270,7 +270,7 @@ class LabelMain(QMainWindow, LabelUI):
         self.fileList.clear()
         for idx, elem in enumerate(self.images):
             if show_check_box:
-                icon = qt.getIcon("checked")
+                icon = qt.get_icon("checked")
                 item = QListWidgetItem(icon,
                                        self.images[idx].replace(Structure.IMAGES_DIR, ""))
             else:
@@ -323,7 +323,7 @@ class LabelMain(QMainWindow, LabelUI):
     def on_anchor_rest(self, v_shape: int):
         """Handles the reset of the anchor upon the mouse release within the respective label/shape"""
         if self.current_labels:
-            self.current_labels[v_shape].resetAnchor()
+            self.current_labels[v_shape].reset_anchor()
 
     def on_delete_label(self):
         dialog = DeleteShapeMessageBox(self.current_labels[self._selectedShape].label, self)
@@ -377,7 +377,7 @@ class LabelMain(QMainWindow, LabelUI):
             # traces are also polygons so i am going to store them as such
             shape = self.current_labels[self._selectedShape]
             shape.label = d.class_name
-            shape.updateColor(self.get_color_for_label(shape.label))
+            shape.update_color(self.get_color_for_label(shape.label))
             self.update_labels((self._selectedShape, shape))
 
     def on_import(self, fd_directory, fd_options):
@@ -416,13 +416,13 @@ class LabelMain(QMainWindow, LabelUI):
                     self.enable_actions()
 
     def on_move_shape(self, h_shape: int, displacement: QPointF):
-        self.current_labels[h_shape].moveShape(displacement)
+        self.current_labels[h_shape].move_shape(displacement)
         self.imageDisplay.set_labels(self.current_labels)
 
     def on_move_vertex(self, v_shape: int, v_num: int, new_pos: QPointF):
         if v_shape != -1:
             if self.current_labels[v_shape].vertices.selectedVertex != -1:
-                self.current_labels[v_shape].moveVertex(v_num, new_pos)
+                self.current_labels[v_shape].move_vertex(v_num, new_pos)
                 self.imageDisplay.set_labels(self.current_labels)
 
     def on_new_project(self):
@@ -503,7 +503,7 @@ class LabelMain(QMainWindow, LabelUI):
     def on_zoom_level_changed(self, zoom: int):
         for shape in self.current_labels:
             size = self.imageDisplay.get_pixmap_dimensions()
-            shape.setScaling(zoom, size[argmax(size)])
+            shape.set_scaling(zoom, size[argmax(size)])
 
     def set_other_buttons_unchecked(self, action: str):
         """Set all buttons except the button defined by the action into the unchecked state"""

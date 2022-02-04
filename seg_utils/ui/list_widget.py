@@ -17,6 +17,11 @@ class ListWidget(QListWidget):
         self.contextMenu = QMenu(self)
         self.is_comment_list = is_comment_list
 
+    def contextMenuEvent(self, event) -> None:
+        pos = event.pos()
+        idx = self.row(self.itemAt(pos))
+        self.sRequestContextMenu.emit(idx, self.mapToGlobal(pos))
+
     def update_list(self, current_label: List[Shape]):
         self.clear()
         if self.is_comment_list:
@@ -32,9 +37,3 @@ class ListWidget(QListWidget):
                 col = lbl.line_color
                 item = createListWidgetItemWithSquareIcon(txt, col, self._icon_size)
                 self.addItem(item)
-
-    def contextMenuEvent(self, event) -> None:
-        pos = event.pos()
-        idx = self.row(self.itemAt(pos))
-        self.sRequestContextMenu.emit(idx, self.mapToGlobal(pos))
-

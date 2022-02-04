@@ -1,5 +1,4 @@
 import sqlite3
-import os
 import pickle
 
 from typing import List, Union
@@ -260,7 +259,7 @@ class SQLiteDatabase:
 
 
 def check_for_bytes(lst: List[tuple]) -> Union[List[list], list]:
-    """ Iterates over a list of tuples and depickles byte objects. The output is converted depending on how many entries
+    """ Iterates over a list of tuples and de-pickles byte objects. The output is converted depending on how many entries
     the initial list contains. If its just one per sub-list, each of them is removed
 
         :param tuple lst: tuple to be searched for

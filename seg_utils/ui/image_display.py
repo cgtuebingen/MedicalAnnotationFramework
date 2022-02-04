@@ -70,7 +70,7 @@ class ImageDisplay(QFrame):
     @staticmethod
     def reset_highlight(label: Shape):
         """resets the highlighting attribute"""
-        label.isHighlighted = False
+        label.is_highlighted = False
         label.vertices.highlightedVertex = -1
         return label
 
@@ -110,7 +110,8 @@ class ImageDisplay(QFrame):
     def shape_hovered(self, shape_idx: int, closest_vertex_shape: int, vertex_idx: int):
         self.on_reset_highlight()
         if shape_idx > -1:
-            self.labels[shape_idx].isHighlighted = True
+            shp = self.labels[shape_idx]
+            shp.isHighlighted(True)
         self.vertex_highlighted(closest_vertex_shape, vertex_idx)
         self.update_canvas()
 
