@@ -4,27 +4,28 @@
 from PyQt5 import QtWidgets
 from PyQt5 import QtCore
 from PyQt5 import QtGui
-from seg_utils.ui.image_viewer import ImageViewer
+from seg_utils.ui.image_display import ImageDisplay
 from seg_utils.ui.toolbar import Toolbar
 from seg_utils.ui.poly_frame import PolyFrame
+from seg_utils.src.actions import Action
 
 
 class LabelUI(object):
-    def setupUI(self, mainWindow):
-        mainWindow.setObjectName("MainWindow")
-        mainWindow.resize(1276, 968)
-        mainWindow.setTabShape(QtWidgets.QTabWidget.Rounded)
+    def setup_ui(self, main_window):
+        main_window.setObjectName("MainWindow")
+        main_window.resize(1276, 968)
+        main_window.setTabShape(QtWidgets.QTabWidget.Rounded)
 
         # mainWidget where Everything is included
         # contains Vertical Layout where e.g. a header can be included
-        self.mainWidget = QtWidgets.QWidget(mainWindow)
+        self.mainWidget = QtWidgets.QWidget(main_window)
         self.mainWidget.setObjectName("mainWidget")
         self.mainLayout = QtWidgets.QVBoxLayout(self.mainWidget)
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
         self.mainLayout.setSpacing(0)
         self.mainLayout.setObjectName("verticalLayout")
 
-        # Body of the widget arrange as horizontral layout
+        # Body of the widget arrange as horizontal layout
         self.bodyFrame = QtWidgets.QFrame(self.mainWidget)
         self.bodyFrame.setFrameShape(QtWidgets.QFrame.StyledPanel)
         self.bodyFrame.setFrameShadow(QtWidgets.QFrame.Raised)
@@ -45,7 +46,7 @@ class LabelUI(object):
         self.centerLayout.setContentsMargins(0, 0, 0, 0)
         self.centerLayout.setSpacing(0)
         self.centerLayout.setObjectName("centerLayout")
-        self.imageDisplay = ImageViewer(self.centerFrame)
+        self.imageDisplay = ImageDisplay(self.centerFrame)
         self.imageDisplay.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.imageDisplay.setObjectName("imageDisplay")
         self.centerLayout.addWidget(self.imageDisplay)
@@ -107,11 +108,11 @@ class LabelUI(object):
         self.fileSearch = QtWidgets.QTextEdit(self.fileFrame)
 
         # Size Policy
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.fileSearch.sizePolicy().hasHeightForWidth())
-        self.fileSearch.setSizePolicy(sizePolicy)
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        size_policy.setHorizontalStretch(0)
+        size_policy.setVerticalStretch(0)
+        size_policy.setHeightForWidth(self.fileSearch.sizePolicy().hasHeightForWidth())
+        self.fileSearch.setSizePolicy(size_policy)
         self.fileSearch.setMaximumSize(QtCore.QSize(16777215, 25))
         font = QtGui.QFont()
         font.setPointSize(10)
@@ -135,14 +136,106 @@ class LabelUI(object):
         self.rightMenuFrame.raise_()
         self.centerFrame.raise_()
         self.mainLayout.addWidget(self.bodyFrame)
-        mainWindow.setCentralWidget(self.mainWidget)
-        self.menubar = QtWidgets.QMenuBar(mainWindow)
+        main_window.setCentralWidget(self.mainWidget)
+
+        self.menubar = QtWidgets.QMenuBar(main_window)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 1276, 22))
         self.menubar.setObjectName("menubar")
-        mainWindow.setMenuBar(self.menubar)
-        self.statusbar = QtWidgets.QStatusBar(mainWindow)
+        main_window.setMenuBar(self.menubar)
+
+        self.statusbar = QtWidgets.QStatusBar(main_window)
         self.statusbar.setObjectName("statusbar")
-        mainWindow.setStatusBar(self.statusbar)
-        self.toolBar = Toolbar(mainWindow)
-        mainWindow.addToolBar(QtCore.Qt.ToolBarArea.LeftToolBarArea, self.toolBar)
-        self.toolBar.initMargins()
+        main_window.setStatusBar(self.statusbar)
+
+        self.toolBar = Toolbar(main_window)
+        main_window.addToolBar(QtCore.Qt.ToolBarArea.LeftToolBarArea, self.toolBar)
+        self.toolBar.init_margins()
+        self.init_toolbar_actions(main_window)
+
+    def init_toolbar_actions(self, parent):
+        """Initialise all actions present which can be connected to buttons or menu items"""
+        # TODO: some shortcuts dont work
+        action_new_project = Action(parent,
+                                    "New\nProject",
+                                    None,
+                                    'Ctrl+N',
+                                    "new",
+                                    "New project",
+                                    enabled=True)
+        action_open_project = Action(parent,
+                                     "Open\nProject",
+                                     None,
+                                     'Ctrl+O',
+                                     "open",
+                                     "Open project",
+                                     enabled=True)
+        action_save = Action(parent,
+                             "Save",
+                             None,
+                             'Ctrl+S',
+                             "save",
+                             "Save current state to database")
+        action_import = Action(parent,
+                               "Import",
+                               None,
+                               'Ctrl+I',
+                               "import",
+                               "Import a new file to database")
+        action_next_image = Action(parent,
+                                   "Next\nImage",
+                                   None,
+                                   'Right',
+                                   "next",
+                                   "Go to next image")
+        action_prev_image = Action(parent,
+                                   "Previous\nImage",
+                                   None,
+                                   'Left',
+                                   "prev",
+                                   "Go to previous image")
+        action_draw_poly = Action(parent,
+                                  "Draw\nPolygon",
+                                  None,
+                                  icon="polygon",
+                                  tip="Draw Polygon (right click to show options)",
+                                  checkable=True)
+        action_trace_outline = Action(parent,
+                                      "Draw\nTrace",
+                                      None,
+                                      icon="outline",
+                                      tip="Trace Outline",
+                                      checkable=True)
+        action_draw_circle = Action(parent,
+                                    "Draw\nCircle",
+                                    None,
+                                    icon="circle",
+                                    tip="Draw Circle",
+                                    checkable=True)
+        action_draw_rectangle = Action(parent,
+                                       "Draw\nRectangle",
+                                       None,
+                                       icon="square",
+                                       tip="Draw Rectangle",
+                                       checkable=True)
+        action_quit = Action(parent,
+                             "Quit\nProgram",
+                             None,
+                             icon="quit",
+                             tip="Quit Program",
+                             checkable=True,
+                             enabled=True)
+
+        actions = ((action_new_project,
+                    action_open_project,
+                    action_save,
+                    action_import,
+                    action_next_image,
+                    action_prev_image,
+                    action_draw_poly,
+                    action_trace_outline,
+                    action_draw_circle,
+                    action_draw_rectangle,
+                    action_quit))
+
+        # Init Toolbar
+        self.toolBar.addActions(actions)

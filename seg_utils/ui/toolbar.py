@@ -23,7 +23,7 @@ class Toolbar(QToolBar):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
         self.setObjectName("toolBar")
 
-    def initMargins(self):
+    def init_margins(self):
         """This function is necessary because the call to addToolBar in label_ui.py alters the alignment
         for some reason. Therefore this method will be called AFTER the toolbar is added to the main window"""
         m = (0, 0, 0, 0)
@@ -47,17 +47,17 @@ class Toolbar(QToolBar):
         btn.setMaximumSize(80, 70)
         self.addWidget(btn)
 
-        actionText = action.text().replace('\n', '')
-        self.actionsDict[actionText] = len(self.actionsDict)
+        action_text = action.text().replace('\n', '')
+        self.actionsDict[action_text] = len(self.actionsDict)
 
-    def getWidgetForAction(self, action_str: str):
+    def get_widget_for_action(self, action_str: str):
         if action_str not in self.actionsDict:
             raise AttributeError(f"Action '{action_str}' not available. Available actions are"
                                  f"\n{[act for act in self.actionsDict.keys()]}")
         else:
             return self.widgetForAction(self.actions()[self.actionsDict[action_str]])
 
-    def getAction(self, action_str: str) -> Action:
+    def get_action(self, action_str: str) -> Action:
         if action_str not in self.actionsDict:
             raise AttributeError(f"Action '{action_str}' not available. Available actions are"
                                  f"\n{[act for act in self.actionsDict.keys()]}")
@@ -76,5 +76,3 @@ class Toolbar(QToolBar):
             if self.actionGeometry(self.actions()[self.actionsDict["DrawPolygon"]]).contains(event.pos()):
                 # TODO: raise own context menu with options for drawing a circle or a rectangle
                 pass
-
-

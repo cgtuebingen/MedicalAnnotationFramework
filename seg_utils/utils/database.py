@@ -21,12 +21,16 @@ CREATE_ANNOTATIONS_TABLE = """
 CREATE_VIDEOS_TABLE = """
     CREATE TABLE IF NOT EXISTS videos (
     uid INTEGER PRIMARY KEY,
-    filename TEXT NOT NULL UNIQUE);"""
+    filename TEXT NOT NULL UNIQUE,
+    patient INTEGER,
+    FOREIGN KEY (patient) REFERENCES patients(uid));"""
 
 CREATE_IMAGES_TABLE = """
     CREATE TABLE IF NOT EXISTS images (
     uid INTEGER PRIMARY KEY,
-    filename TEXT NOT NULL UNIQUE);"""
+    filename TEXT NOT NULL UNIQUE,
+    patient INTEGER,
+    FOREIGN KEY (patient) REFERENCES patients(uid));"""
 
 CREATE_WSI_TABLE = """
     CREATE TABLE IF NOT EXISTS 'whole slide images' (
@@ -39,12 +43,13 @@ CREATE_WSI_TABLE = """
     width INTEGER,
     height INTEGER,
     manufacturer TEXT,
-    institution TEXT);"""
+    institution TEXT,
+    FOREIGN KEY (patient) REFERENCES patients(uid));"""
 
 CREATE_PATIENTS_TABLE = """
     CREATE TABLE IF NOT EXISTS patients (
     uid INTEGER PRIMARY KEY,
-    some_id INTEGER,
+    some_id INTEGER UNIQUE,
     another_id INTEGER);"""
 
 CREATE_LABELS_TABLE = """
@@ -53,9 +58,9 @@ CREATE_LABELS_TABLE = """
     label_class TEXT NOT NULL UNIQUE);"""
 
 ADD_ANNOTATION = "INSERT INTO annotations (modality, file, patient, shape, label) VALUES (?, ?, ?, ?, ?);"
-ADD_VIDEO = "INSERT INTO videos (filename) VALUES (?);"
-ADD_IMAGE = "INSERT INTO images (filename) VALUES (?);"
-ADD_WSI = "INSERT INTO 'whole slide images' (filename) VALUES (?);"
+ADD_VIDEO = "INSERT INTO videos (filename, patient) VALUES (?, ?);"
+ADD_IMAGE = "INSERT INTO images (filename, patient) VALUES (?, ?);"
+ADD_WSI = "INSERT INTO 'whole slide images' (filename, patient) VALUES (?, ?);"
 ADD_PATIENT = "INSERT INTO patients (some_id, another_id) VALUES (?, ?);"
 ADD_LABEL = "INSERT INTO labels (label_class) VALUES (?);"
 
@@ -76,10 +81,6 @@ class SQLiteDatabase:
 
         if new_db:
             self.create_initial_tables()
-            # TODO: many functions require the existence of at least one image.
-            #  Maybe exchange filler image by something else
-            # self.set_filler(True)
-            self.add_patient(10, 100)  # TODO: Implement Patient references
 
         with self.connection:
             self.cursor.execute(f"PRAGMA foreign_keys = ON;")
@@ -89,31 +90,42 @@ class SQLiteDatabase:
         with self.connection:
             self.cursor.execute(ADD_ANNOTATION, (modality, file, patient, shape, label))
 
-    def add_file(self, filename: str, filetype: str):
+    def add_file(self, filename: str, filetype: str, patient: str):
         """
         adds a file to the database
         :param filename: the name of the file to be added
         :param filetype: indicates whether it is a video, image or whole slide image
+        :param patient: a patient id which may be added to the database
         """
         with self.connection:
 
+            # check if patient already exists, add if necessary
+            p = self.cursor.execute("""SELECT uid FROM patients WHERE some_id = ?""", (patient,)).fetchone()
+            patient = p[0] if p else self.add_patient(patient)
+
             # TODO: Extend by other accepted types, substitute 'whatever' by actual WSI type
             if filetype in ['mp4']:
-                self.cursor.execute(ADD_VIDEO, (filename,))
+                self.cursor.execute(ADD_VIDEO, (filename, patient))
             elif filetype in ['png', 'jpg', 'jpeg']:
-                self.cursor.execute(ADD_IMAGE, (filename,))
+                self.cursor.execute(ADD_IMAGE, (filename, patient))
             elif filetype in ['whatever']:
-                self.cursor.execute(ADD_WSI, (filename,))
+                self.cursor.execute(ADD_WSI, (filename, patient))
 
     def add_label(self, label_class: str):
         """ add a new label class to database"""
         with self.connection:
             self.cursor.execute(ADD_LABEL, (label_class,))
 
-    def add_patient(self, some_id: int, another_id: int):
-        """ add a new patient to database"""
+    def add_patient(self, some_id: str, another_id: str = "2"):
+        """ add a new patient to database
+        returns the uid of the new patient"""
         with self.connection:
+            # make sure patient does not already exist
+            if self.cursor.execute("SELECT uid FROM patients WHERE some_id = ?", (some_id,)).fetchone():
+                return
             self.cursor.execute(ADD_PATIENT, (some_id, another_id))
+            result = self.cursor.execute("SELECT uid FROM patients WHERE some_id = ?", (some_id,)).fetchone()
+        return result[0]
 
     def create_initial_tables(self):
         """
@@ -136,12 +148,6 @@ class SQLiteDatabase:
             self.cursor.execute(DELETE_FILE_ANNOTATIONS, (modality, file))
             self.cursor.execute("DELETE FROM {} WHERE filename = ?".format(table_name), (filename,))
 
-    def get_images(self) -> list:
-        """ returns a list of all image names which are currently stored in the database"""
-        with self.connection:
-            image_paths = self.cursor.execute("SELECT filename FROM images").fetchall()
-        return [image_path[0] for image_path in image_paths]
-
     def get_column_names(self, table_name: str) -> list:
         """
         :param table_name: the table to be searched in
@@ -150,6 +156,12 @@ class SQLiteDatabase:
         with self.connection:
             columns = self.cursor.execute("PRAGMA table_info({})".format(table_name)).fetchall()
         return [col[0] for col in columns]
+
+    def get_images(self) -> list:
+        """ returns a list of all image names which are currently stored in the database"""
+        with self.connection:
+            image_paths = self.cursor.execute("SELECT filename FROM images").fetchall()
+        return [image_path[0] for image_path in image_paths]
 
     def get_label_classes(self) -> list:
         """
@@ -169,6 +181,18 @@ class SQLiteDatabase:
             labels = self.cursor.execute("""SELECT shape FROM annotations
                                             WHERE modality = 1 AND file = ?""", (image_id,)).fetchall()
         return check_for_bytes(labels)
+
+    def get_patients(self):
+        """returns all patient ids (not the uids)"""
+        with self.connection:
+            result = self.cursor.execute("SELECT some_id FROM patients").fetchall()
+        return [res[0] for res in result]
+
+    def get_patient_by_filename(self, filename: str):
+        """returns the corresponding patient uid of an image"""
+        with self.connection:
+            self.cursor.execute("SELECT patient FROM images WHERE filename = ?", (filename,))
+            return self.cursor.fetchone()[0]
 
     def get_uid_from_filename(self, table_name: str, filename: str) -> int:
         """

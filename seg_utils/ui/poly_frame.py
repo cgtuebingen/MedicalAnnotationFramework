@@ -45,7 +45,7 @@ class PolyFrame(QFrame):
         self.polyList.setObjectName("polyList")
 
         # places a clickable "Add comment" next to each item in the polyList
-        self.commentList = ListWidget(self.subFrame)
+        self.commentList = ListWidget(self.subFrame, is_comment_list=True)
         self.commentList.setFrameShape(QFrame.NoFrame)
         self.commentList.setObjectName("commentList")
         self.commentList.setSpacing(1)
@@ -57,3 +57,12 @@ class PolyFrame(QFrame):
         self.subFrameLayout.addWidget(self.commentList)
         self.layout.addWidget(self.label)
         self.layout.addWidget(self.subFrame)
+
+    def get_index_from_selected(self, item):
+        """returns the indices of the selected items in polyList and commentList, respectively"""
+        return self.polyList.row(item), self.commentList.row(item)
+
+    def update_frame(self, current_labels):
+        """updates the polyList and commentList with the specified labels"""
+        self.polyList.update_list(current_labels)
+        self.commentList.update_list(current_labels)

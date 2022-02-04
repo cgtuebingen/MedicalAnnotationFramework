@@ -1,30 +1,32 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QSize, QPoint, Qt
-from PyQt5.QtGui import QFont, QIcon, QPixmap
+from PyQt5.QtGui import QFont, QIcon
 
 from seg_utils.ui.list_widget import ListWidget
-from seg_utils.ui.shape import Shape
 from seg_utils.utils.qt import createListWidgetItemWithSquareIcon, getIcon
 
 from pathlib import Path
 import os
 
-BUTTON_STYLESHEET = """QPushButton {
-                        background-color: lightgray;
-                        color: black;
-                        min-height: 2em;
-                        border-width: 2px;
-                        border-radius: 8px;
-                        border-color: black;
-                        font: bold 12px;
-                        padding: 2px;
-                        }
-                        QPushButton::hover {
-                        background-color: gray;
-                        }
-                        QPushButton::pressed {
-                        border-style: outset;
-                        }"""
+STYLESHEET = """QPushButton {
+                background-color: lightgray;
+                color: black;
+                min-height: 2em;
+                border-width: 2px;
+                border-radius: 8px;
+                border-color: black;
+                font: bold 12px;
+                padding: 2px;
+                %s
+                }
+                QPushButton::hover {
+                background-color: gray;
+                }
+                QPushButton::pressed {
+                border-style: outset;
+                }"""
+BUTTON_STYLESHEET = STYLESHEET % ""
+BUTTON_SELECTED_STYLESHEET = STYLESHEET % "border-style: outset;\nbackground-color: gray;"
 
 
 class NewLabelDialog(QDialog):
@@ -37,7 +39,7 @@ class NewLabelDialog(QDialog):
 
         # Create the shape of the QDialog
         self.setFixedSize(QSize(300, 400))
-        moveToCenter(self, self.parent.pos(), self.parent.size())
+        move_to_center(self, self.parent.pos(), self.parent.size())
         self.setWindowTitle("Select class of new shape")
 
         layout = QVBoxLayout(self)
@@ -56,17 +58,17 @@ class NewLabelDialog(QDialog):
         self.shapeSearch.textChanged.connect(self.handle_shape_search)
 
         # Buttons
-        buttonWidget = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttonWidget.accepted.connect(self.close)
-        buttonWidget.rejected.connect(self.on_cancel)
+        button_widget = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_widget.accepted.connect(self.close)
+        button_widget.rejected.connect(self.on_cancel)
 
         # List of labels
         self.listWidget = ListWidget(self)
-        self.listWidget.itemClicked.connect(self.on_ListSelection)
+        self.listWidget.itemClicked.connect(self.on_list_selection)
 
         # Combining everything
         layout.addWidget(self.shapeSearch)
-        layout.addWidget(buttonWidget)
+        layout.addWidget(button_widget)
         layout.addWidget(self.listWidget)
 
         self.fill()
@@ -92,18 +94,22 @@ class NewLabelDialog(QDialog):
             else:
                 item.setHidden(False)
 
-    def on_ListSelection(self, item):
+    def on_cancel(self):
+        self.class_name = ""
+        self.close()
+
+    def on_list_selection(self, item):
         """ handles the functions to be executed when user selects something from the list"""
         text = item.text()
 
         # let user enter a new label class
         if text == "New":
-            create_new_class = CreateNewLabelClassDialog(self)
+            create_new_class = CreateNewClassDialog(self, self.parent.classes)
             create_new_class.exec()
 
             # if user entered a name, update the stored label classes
-            if create_new_class.new_label_class:
-                text = create_new_class.new_label_class
+            if create_new_class.new_class:
+                text = create_new_class.new_class
                 idx = len(self.parent.classes)
                 self.parent.classes[text] = idx
                 self.fill()
@@ -117,70 +123,80 @@ class NewLabelDialog(QDialog):
         # use selected/created label class to name the label
         self.class_name = text
 
-    def on_cancel(self):
-        self.class_name = ""
-        self.close()
-
-    def setText(self, text):
+    def set_text(self, text):
         self.shapeSearch.setText(text)
         # move the cursor to the end
-        newCursor = self.shapeSearch.textCursor()
-        newCursor.movePosition(self.shapeSearch.document().characterCount())
-        self.shapeSearch.setTextCursor(newCursor)
+        new_cursor = self.shapeSearch.textCursor()
+        new_cursor.movePosition(self.shapeSearch.document().characterCount())
+        self.shapeSearch.setTextCursor(new_cursor)
 
 
 class ForgotToSaveMessageBox(QMessageBox):
     def __init__(self, *args):
         super(ForgotToSaveMessageBox, self).__init__(*args)
 
-        saveButton = QPushButton(getIcon('save'), "Save Changes")
-        dismissButton = QPushButton(self.style().standardIcon(QStyle.SP_DialogDiscardButton), "Dismiss Changes")
-        cancelButton = QPushButton(self.style().standardIcon(QStyle.SP_DialogCancelButton), "Cancel")
+        save_button = QPushButton(getIcon('save'), "Save Changes")
+        dismiss_button = QPushButton(self.style().standardIcon(QStyle.SP_DialogDiscardButton), "Dismiss Changes")
+        cancel_button = QPushButton(self.style().standardIcon(QStyle.SP_DialogCancelButton), "Cancel")
 
         self.setWindowTitle("Caution: Unsaved Changes")
         self.setText("Unsaved Changes: How do you want to progress?")
 
         # NOTE FOR SOME REASON THE ORDER IS IMPORTANT DESPITE THE ROLE - IDK WHY
-        self.addButton(saveButton, QMessageBox.AcceptRole)
-        self.addButton(cancelButton, QMessageBox.RejectRole)
-        self.addButton(dismissButton, QMessageBox.DestructiveRole)
+        self.addButton(save_button, QMessageBox.AcceptRole)
+        self.addButton(cancel_button, QMessageBox.RejectRole)
+        self.addButton(dismiss_button, QMessageBox.DestructiveRole)
 
-        moveToCenter(self, self.parentWidget().pos(), self.parentWidget().size())
+        move_to_center(self, self.parentWidget().pos(), self.parentWidget().size())
         
         
 class DeleteShapeMessageBox(QMessageBox):
     def __init__(self, shape: str, *args):
         super(DeleteShapeMessageBox, self).__init__(*args)
-        moveToCenter(self, self.parentWidget().pos(), self.parentWidget().size())
+        move_to_center(self, self.parentWidget().pos(), self.parentWidget().size())
         reply = self.question(self, "Deleting Shape", f"You are about to delete {shape}. Continue?",
-                      QMessageBox.Yes|QMessageBox.No)
+                              QMessageBox.Yes | QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.answer = 1
         else:
             self.answer = 0
 
 
-class CreateNewLabelClassDialog(QDialog):
+class CloseMessageBox(QMessageBox):
+    def __init__(self, *args):
+        super(CloseMessageBox, self).__init__(*args)
+
+        quit_button = QPushButton(getIcon('quit'), "Quit Program")
+        cancel_button = QPushButton(self.style().standardIcon(QStyle.SP_DialogCancelButton), "Cancel")
+        self.addButton(quit_button, QMessageBox.AcceptRole)
+        self.addButton(cancel_button, QMessageBox.RejectRole)
+
+        self.setWindowTitle("Quit Program")
+        self.setText("Are you sure you want to quit?")
+        move_to_center(self, self.parentWidget().pos(), self.parentWidget().size())
+
+
+class CreateNewClassDialog(QDialog):
     """ handles a QDialog used to let the user enter a new label class """
-    def __init__(self, parent: NewLabelDialog):
-        super(CreateNewLabelClassDialog, self).__init__()
+    def __init__(self, parent, existing_classes: list, topic: str = "Label"):
+        super(CreateNewClassDialog, self).__init__()
 
         self.setFixedSize(QSize(200, 120))
-        moveToCenter(self, parent.pos(), parent.size())
-        self.setWindowTitle("Create new Shape class")
+        move_to_center(self, parent.pos(), parent.size())
+        self.setWindowTitle("Create new {} class".format(topic))
 
         # need it later to prevent duplicates
-        self.new_label_class = ""
-        self.existing_classes = parent.parent.classes
+        self.new_class = ""
+        self.existing_classes = existing_classes
 
         # Textedit
-        self.shapeText = QTextEdit(self)
+        self.text_edit = QTextEdit(self)
         font = QFont()
         font.setPointSize(10)
         font.setKerning(True)
-        self.shapeText.setFont(font)
-        self.shapeText.setPlaceholderText("Enter new Shape name")
-        self.shapeText.setMaximumHeight(25)
+        self.text_edit.setFont(font)
+        self.text_edit.setPlaceholderText("Enter new {} name".format(topic))
+        self.text_edit.setMaximumHeight(25)
 
         # Buttons
         self.buttonWidget = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -188,56 +204,130 @@ class CreateNewLabelClassDialog(QDialog):
         self.buttonWidget.rejected.connect(self.close)
 
         layout = QVBoxLayout(self)
-        layout.addWidget(self.shapeText)
+        layout.addWidget(self.text_edit)
         layout.addWidget(self.buttonWidget)
 
     def ok_clicked(self):
-        """ only accepts the new label class if
+        """ only accepts the new class if
         (1) the name doesn't already exist and
         (2) the name is not an empty string"""
-        name = self.shapeText.toPlainText()
+        name = self.text_edit.toPlainText()
         if name in self.existing_classes:
-            self.shapeText.setText("")
-            self.shapeText.setPlaceholderText("'{}' already exists".format(name))
+            self.text_edit.setText("")
+            self.text_edit.setPlaceholderText("'{}' already exists".format(name))
         elif name:
-            self.new_label_class = name
+            self.new_class = name
             self.close()
 
 
-class SelectFileTypeDialog(QDialog):
+class SelectFileTypeAndPatientDialog(QDialog):
     """
     handles a QDialog to let the user select between video, image and whole slide image
     the selected type is the used when importing a new file
     """
-    def __init__(self):
-        super(SelectFileTypeDialog, self).__init__()
+    def __init__(self, existing_patients: list):
+        super(SelectFileTypeAndPatientDialog, self).__init__()
 
-        self.setFixedSize(QSize(250, 150))
+        self.setFixedSize(QSize(350, 300))
         self.setWindowTitle("Select File Type")
         self.filetype = ""
+        self.patient = ""
 
         # create buttons and apply stylesheet
         v = QPushButton("Video")
         i = QPushButton("Image")
         w = QPushButton("Whole Slide Image")
-        v.setStyleSheet(BUTTON_STYLESHEET)
-        i.setStyleSheet(BUTTON_STYLESHEET)
-        w.setStyleSheet(BUTTON_STYLESHEET)
+        self.new_patient = QPushButton("New Patient")
+        self.confirmation = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.buttons = [v, i, w, self.new_patient]
+        self.set_stylesheets()
 
         # TODO: Extend by other accepted types, substitute 'whatever' by actual WSI type
         v.clicked.connect(lambda: self.set_type("mp4"))
         i.clicked.connect(lambda: self.set_type("png"))
         w.clicked.connect(lambda: self.set_type("whatever"))
+        self.new_patient.clicked.connect(self.create_new_patient)
+        self.confirmation.accepted.connect(self.finish)
+        self.confirmation.rejected.connect(self.cancel)
 
-        ft_layout = QVBoxLayout(self)
-        ft_layout.addWidget(v)
-        ft_layout.addWidget(i)
-        ft_layout.addWidget(w)
+        # create patient_list list
+        self.patient_list = QListWidget()
+        self.patient_list.itemClicked.connect(self.set_patient)
+        self.patients_label = QLabel("Select a patient")
+        self.patients_label.setStyleSheet("font: bold 12px")
+        self.patients = existing_patients
+        self.fill()
+
+        # set up the Dialog-Layout
+        self.upper_frame = QFrame(self)
+        self.upper_layout = QHBoxLayout(self.upper_frame)
+
+        self.btn_frame = QFrame(self.upper_frame)
+        self.btn_layout = QVBoxLayout(self.btn_frame)
+        self.btn_layout.addStretch(5)
+        self.btn_layout.addWidget(v)
+        self.btn_layout.addWidget(i)
+        self.btn_layout.addWidget(w)
+        self.btn_layout.addStretch(5)
+
+        self.patients_frame = QFrame(self.upper_frame)
+        self.patients_layout = QVBoxLayout(self.patients_frame)
+        self.patients_layout.addWidget(self.patients_label)
+        self.patients_layout.addWidget(self.patient_list)
+        self.patients_layout.addWidget(self.new_patient)
+
+        self.upper_layout.addWidget(self.btn_frame)
+        self.upper_layout.addWidget(self.patients_frame)
+        self.layout = QVBoxLayout(self)
+        self.layout.addWidget(self.upper_frame)
+        self.layout.addWidget(self.confirmation)
+
+    def cancel(self):
+        """resets the class variables and closes the dialog"""
+        self.filetype, self.patient = "", ""
+        self.close()
+
+    def create_new_patient(self):
+        """lets user enter a new patient name/id"""
+        dlg = CreateNewClassDialog(self, self.patients, topic="Patient")
+        dlg.exec()
+
+        if dlg.new_class:
+            self.patients.append(dlg.new_class)
+            self.fill()
+            self.patient_list.item(self.patient_list.count() - 1).setSelected(True)  # highlight new item
+
+    def fill(self):
+        """fills the patient listWidget"""
+        self.patient_list.clear()
+        for patient in self.patients:
+            item = QListWidgetItem(patient)
+            self.patient_list.addItem(item)
+
+    def finish(self):
+        """only allows a closing process when class variables contain values"""
+        if self.filetype and self.patient:
+            self.close()
+        else:
+            pass
+
+    def set_patient(self, item):
+        """sets the patient class variable"""
+        self.patient = item.text()
+
+    def set_stylesheets(self, sel_button: QPushButton = None):
+        """sets the stylesheets, if a selected button is passed, apply another stylesheet for it"""
+        for b in self.buttons:
+            if b == sel_button:
+                b.setStyleSheet(BUTTON_SELECTED_STYLESHEET)
+            else:
+                b.setStyleSheet(BUTTON_STYLESHEET)
 
     def set_type(self, t: str):
-        """ updates the class variable by the selected filetype"""
+        """ updates the class variable"""
+        # sender() returns the currently pressed button, update stylesheets accordingly
+        self.set_stylesheets(self.sender())
         self.filetype = t
-        self.close()
 
 
 class ProjectHandlerDialog(QDialog):
@@ -247,7 +337,8 @@ class ProjectHandlerDialog(QDialog):
         self.setWindowTitle('Create new Project')
 
         self.project_path = ""
-        self.files = list()
+        self.files = dict()
+        self.patients = list()
 
         # Header for LineEdit
         self.header = QLabel()
@@ -317,12 +408,14 @@ class ProjectHandlerDialog(QDialog):
         """ function to let user select a file which will be added when the project is finally created"""
 
         # user first needs to specify the type of the file to be imported
-        select_filetype = SelectFileTypeDialog()
+        select_filetype = SelectFileTypeAndPatientDialog(self.patients)
         select_filetype.exec()
+        self.patients = select_filetype.patients
+        filetype, patient = select_filetype.filetype, select_filetype.patient
 
-        if select_filetype.filetype:
+        if filetype:
             # TODO: implement smarter filetype recognition
-            _filter = '*png *jpg *jpeg' if select_filetype.filetype == 'png' else select_filetype.filetype
+            _filter = '*png *jpg *jpeg' if filetype == 'png' else filetype
 
             filepath, _ = QFileDialog.getOpenFileName(self,
                                                       caption="Select File",
@@ -337,11 +430,11 @@ class ProjectHandlerDialog(QDialog):
                 msg.setIcon(QMessageBox.Information)
                 msg.setText("The file\n{}\nalready exists.\nOverwrite?".format(filename))
                 msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-                msg.accepted.connect(lambda: self.overwrite(filepath, filename))
+                msg.accepted.connect(lambda: self.overwrite(filepath, filename, patient))
                 msg.exec()
             elif filename:
                 # TODO: Implement possibility to add several files at once
-                self.files.append(filepath)
+                self.files[filepath] = patient
                 self.added_files.addItem(QListWidgetItem(filename))
 
     def check_path(self):
@@ -390,18 +483,18 @@ class ProjectHandlerDialog(QDialog):
                 return True
         return False
 
-    def overwrite(self, filepath, filename):
+    def overwrite(self, filepath: str, filename: str, patient: str):
         """overwrites an existing file in the file list"""
 
         # find and delete the corresponding item in the files list
-        for fn in self.files:
+        for fn in self.files.keys():
             cur = os.path.basename(fn)
             if cur == filename:
-                self.files.remove(fn)
+                self.files.pop(fn)
                 break
 
         # append the new filepath
-        self.files.append(filepath)
+        self.files[filepath] = patient
 
     def select_path(self):
         """opens a dialog to let the user select a directory from its OS """
@@ -446,7 +539,7 @@ class CommentDialog(QDialog):
         self.close()
 
 
-def moveToCenter(widget, parent_pos: QPoint, parent_size: QSize):
+def move_to_center(widget, parent_pos: QPoint, parent_size: QSize):
     r"""Moves the QDialog to the center of the parent Widget.
     As self.move moves the upper left corner to the place, one needs to subtract the own size of the window"""
     widget.move(parent_pos.x() + (parent_size.width() - widget.size().width())/2,

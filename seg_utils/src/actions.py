@@ -33,6 +33,3 @@ class Action(QAction):
             self.setCheckable(True)
         self.setEnabled(enabled)
         self.setChecked(checked)
-
-
-
