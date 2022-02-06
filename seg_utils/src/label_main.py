@@ -181,7 +181,7 @@ class LabelMain(QMainWindow, LabelUI):
         _, idx = self.polyFrame.get_index_from_selected(item)
         self.sLabelSelected.emit(idx, idx, -1)
 
-        # update comment window, if needed
+        # set comment window text, if there already is a comment
         for lbl in self.current_labels:
             if lbl.isSelected:
                 if item.text() != "Add comment" and lbl.comment:
@@ -421,7 +421,7 @@ class LabelMain(QMainWindow, LabelUI):
 
     def on_move_vertex(self, v_shape: int, v_num: int, new_pos: QPointF):
         if v_shape != -1:
-            if self.current_labels[v_shape].vertices.selectedVertex != -1:
+            if self.current_labels[v_shape].vertices.selected_vertex != -1:
                 self.current_labels[v_shape].move_vertex(v_num, new_pos)
                 self.imageDisplay.set_labels(self.current_labels)
 
@@ -497,7 +497,7 @@ class LabelMain(QMainWindow, LabelUI):
             annotation_entry = self.create_annotation_entry(label_dict, class_name)
             entries.append(annotation_entry)
 
-        if entries:
+        if self.images:
             self.database.update_image_annotations(image_name=self.images[self.img_idx], entries=entries)
 
     def on_zoom_level_changed(self, zoom: int):

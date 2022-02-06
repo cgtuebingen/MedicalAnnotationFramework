@@ -19,6 +19,8 @@ class ImageViewerScene(QGraphicsScene):
     sMoveVertex = pyqtSignal(int, int, QPointF)
     sMoveShape = pyqtSignal(int, QPointF)
 
+    sResetSelAndHigh = pyqtSignal()
+
     CREATE, EDIT = 0, 1
 
     def __init__(self, *args):
@@ -42,6 +44,15 @@ class ImageViewerScene(QGraphicsScene):
         pixmap_size = np.array((pixmap_size.width(), pixmap_size.height()))
         scene_pos = np.clip(np.array((scene_pos.x(), scene_pos.y())), np.array((0, 0)), pixmap_size)
         return QPointF(scene_pos[0], scene_pos[1])
+
+    def highlighted_shape(self):
+        """returns the index of the shape which is highlighted
+        or -1 if no shape is currently highlighted"""
+        highlighted_shape = -1
+        for _item_idx, _item in enumerate(self.items()[0].widget().labels):
+            if _item.is_highlighted:
+                highlighted_shape = _item_idx
+        return highlighted_shape
         
     def is_in_drawing_mode(self) -> bool:
         """Returns true if currently in drawing mode"""
@@ -141,8 +152,13 @@ class ImageViewerScene(QGraphicsScene):
             elif event.button() == Qt.MouseButton.RightButton:
                 # Context Menu
                 if not self.is_in_drawing_mode():
-                    sel_shape = self.selected_shape()
-                    self.sRequestContextMenu.emit(sel_shape, event.screenPos())
+
+                    # if user right-clicked a shape, put it in 'selected' state (makes things easier)
+                    # evoke context menu
+                    shape_idx, _, _ = self.is_mouse_on_shape(event)
+                    self.sResetSelAndHigh.emit()
+                    self.sShapeSelected.emit(shape_idx, -1, -1)
+                    self.sRequestContextMenu.emit(shape_idx, event.screenPos())
 
     def mouseReleaseEvent(self, event) -> None:
         if self.b_isInitialized:
@@ -162,8 +178,8 @@ class ImageViewerScene(QGraphicsScene):
                     self._startButtonPressed = False
 
     def selected_shape(self):
-        """returns the index of the shape which is highlighted
-           or -1 if no shape is currently highlighted"""
+        """returns the index of the shape which is selected
+           or -1 if no shape is currently selected"""
         selected_shape = -1
         for _item_idx, _item in enumerate(self.items()[0].widget().labels):
             if _item.isSelected:

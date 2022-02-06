@@ -1,11 +1,19 @@
 from PyQt5.QtWidgets import QListWidget, QMenu, QListWidgetItem
 from PyQt5.QtCore import pyqtSignal, QPoint
-from PyQt5.QtGui import QColor
 
 from seg_utils.ui.shape import Shape
 from seg_utils.utils.qt import createListWidgetItemWithSquareIcon
 
 from typing import List
+
+STYLESHEET = """QListWidget {
+                color: rgb(0, 102, 204);
+                selection-color: blue;
+                selection-background-color: white;
+                }
+                QListWidget::item:hover {
+                color: blue;
+                }"""
 
 
 class ListWidget(QListWidget):
@@ -16,6 +24,8 @@ class ListWidget(QListWidget):
         self._icon_size = 10
         self.contextMenu = QMenu(self)
         self.is_comment_list = is_comment_list
+        if self.is_comment_list:
+            self.setStyleSheet(STYLESHEET)
 
     def contextMenuEvent(self, event) -> None:
         pos = event.pos()
@@ -29,7 +39,6 @@ class ListWidget(QListWidget):
                 text = "Details" if lbl.comment else "Add comment"
                 item = QListWidgetItem()
                 item.setText(text)
-                item.setForeground(QColor(0, 102, 204))
                 self.addItem(item)
         else:
             for lbl in current_label:

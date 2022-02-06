@@ -46,15 +46,14 @@ class NewLabelDialog(QDialog):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(5)
 
-        # Textedit
-        self.shapeSearch = QTextEdit(self)
+        # LineEdit
+        self.shapeSearch = QLineEdit(self)
         font = QFont()
         font.setPointSize(10)
         font.setKerning(True)
         self.shapeSearch.setFont(font)
         self.shapeSearch.setPlaceholderText("Search shape label")
         self.shapeSearch.setMaximumHeight(25)
-        self.shapeSearch.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.shapeSearch.textChanged.connect(self.handle_shape_search)
 
         # Buttons
@@ -86,7 +85,7 @@ class NewLabelDialog(QDialog):
 
     def handle_shape_search(self):
         """ If user enters text, only suitable shapes are displayed """
-        text = self.shapeSearch.toPlainText()
+        text = self.shapeSearch.text()
         for item_idx in range(self.listWidget.count()):
             item = self.listWidget.item(item_idx)
             if text not in item.text():
@@ -189,14 +188,14 @@ class CreateNewClassDialog(QDialog):
         self.new_class = ""
         self.existing_classes = existing_classes
 
-        # Textedit
-        self.text_edit = QTextEdit(self)
+        # LineEdit
+        self.line_edit = QLineEdit(self)
         font = QFont()
         font.setPointSize(10)
         font.setKerning(True)
-        self.text_edit.setFont(font)
-        self.text_edit.setPlaceholderText("Enter new {} name".format(topic))
-        self.text_edit.setMaximumHeight(25)
+        self.line_edit.setFont(font)
+        self.line_edit.setPlaceholderText("Enter new {} name".format(topic))
+        self.line_edit.setMaximumHeight(25)
 
         # Buttons
         self.buttonWidget = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -204,17 +203,17 @@ class CreateNewClassDialog(QDialog):
         self.buttonWidget.rejected.connect(self.close)
 
         layout = QVBoxLayout(self)
-        layout.addWidget(self.text_edit)
+        layout.addWidget(self.line_edit)
         layout.addWidget(self.buttonWidget)
 
     def ok_clicked(self):
         """ only accepts the new class if
         (1) the name doesn't already exist and
         (2) the name is not an empty string"""
-        name = self.text_edit.toPlainText()
+        name = self.line_edit.text()
         if name in self.existing_classes:
-            self.text_edit.setText("")
-            self.text_edit.setPlaceholderText("'{}' already exists".format(name))
+            self.line_edit.setText("")
+            self.line_edit.setPlaceholderText("'{}' already exists".format(name))
         elif name:
             self.new_class = name
             self.close()
@@ -229,7 +228,7 @@ class SelectFileTypeAndPatientDialog(QDialog):
         super(SelectFileTypeAndPatientDialog, self).__init__()
 
         self.setFixedSize(QSize(400, 300))
-        self.setWindowTitle("Select File Type")
+        self.setWindowTitle("Select Filetype and Patient")
         self.filetype = ""
         self.patient = ""
 
@@ -237,24 +236,28 @@ class SelectFileTypeAndPatientDialog(QDialog):
         v = QPushButton("Video")
         i = QPushButton("Image")
         w = QPushButton("Whole Slide Image")
-        self.new_patient = QPushButton("New Patient")
-        self.confirmation = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        self.buttons = [v, i, w, self.new_patient]
-        self.set_stylesheets()
-
         # TODO: Extend by other accepted types, substitute 'whatever' by actual WSI type
         v.clicked.connect(lambda: self.set_type("mp4"))
         i.clicked.connect(lambda: self.set_type("png"))
         w.clicked.connect(lambda: self.set_type("whatever"))
+
+        self.new_patient = QPushButton("New Patient")
         self.new_patient.clicked.connect(self.create_new_patient)
+        self.buttons = [v, i, w, self.new_patient]
+        self.set_stylesheets()
+
+        self.confirmation = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.confirmation.button(QDialogButtonBox.Ok).setEnabled(False)
         self.confirmation.accepted.connect(self.finish)
         self.confirmation.rejected.connect(self.cancel)
+
+        # text that will be displayed at the top
+        self.info = QLabel("Please specify the type of the file and a patient")
+        self.info.setStyleSheet("font: bold 12px")
 
         # create patient_list list
         self.patient_list = QListWidget()
         self.patient_list.itemClicked.connect(self.set_patient)
-        self.patients_label = QLabel("Select a patient")
-        self.patients_label.setStyleSheet("font: bold 12px")
         self.patients = existing_patients
         self.fill()
 
@@ -272,13 +275,13 @@ class SelectFileTypeAndPatientDialog(QDialog):
 
         self.patients_frame = QFrame(self.upper_frame)
         self.patients_layout = QVBoxLayout(self.patients_frame)
-        self.patients_layout.addWidget(self.patients_label)
         self.patients_layout.addWidget(self.patient_list)
         self.patients_layout.addWidget(self.new_patient)
 
         self.upper_layout.addWidget(self.btn_frame)
         self.upper_layout.addWidget(self.patients_frame)
         self.layout = QVBoxLayout(self)
+        self.layout.addWidget(self.info)
         self.layout.addWidget(self.upper_frame)
         self.layout.addWidget(self.confirmation)
 
@@ -295,7 +298,14 @@ class SelectFileTypeAndPatientDialog(QDialog):
         if dlg.new_class:
             self.patients.append(dlg.new_class)
             self.fill()
-            self.patient_list.item(self.patient_list.count() - 1).setSelected(True)  # highlight new item
+            item = self.patient_list.item(self.patient_list.count() - 1)
+            item.setSelected(True)  # highlight new item
+            self.set_patient(item)
+
+    def enable(self):
+        """enables the Ok button when both type and patient are selected"""
+        if self.filetype and self.patient:
+            self.confirmation.button(QDialogButtonBox.Ok).setEnabled(True)
 
     def fill(self):
         """fills the patient listWidget"""
@@ -314,6 +324,7 @@ class SelectFileTypeAndPatientDialog(QDialog):
     def set_patient(self, item):
         """sets the patient class variable"""
         self.patient = item.text()
+        self.enable()
 
     def set_stylesheets(self, sel_button: QPushButton = None):
         """sets the stylesheets, if a selected button is passed, apply another stylesheet for it"""
@@ -328,6 +339,7 @@ class SelectFileTypeAndPatientDialog(QDialog):
         # sender() returns the currently pressed button, update stylesheets accordingly
         self.set_stylesheets(self.sender())
         self.filetype = t
+        self.enable()
 
 
 class ProjectHandlerDialog(QDialog):

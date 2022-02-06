@@ -198,7 +198,7 @@ class Shape(QGraphicsItem):
 
             elif self.shape_type == "circle":
                 painter.drawEllipse(QRectF(self.vertices.vertices[0], self.vertices.vertices[2]))
-                if self.isSelected or self.is_highlighted or self.vertices.selectedVertex != -1:
+                if self.isSelected or self.is_highlighted or self.vertices.selected_vertex != -1:
                     self.vertices.paint(painter)
 
     def reset_anchor(self):
@@ -242,8 +242,8 @@ class VertexCollection(object):
         self.highlight_color = Qt.GlobalColor.white
         self.vertex_size = vertex_size
         self._highlight_size = 1
-        self.highlightedVertex = -1
-        self.selectedVertex = -1
+        self.highlighted_vertex = -1
+        self.selected_vertex = -1
         self._scaling = SCALING_INITIAL
 
     def __len__(self):
@@ -267,7 +267,7 @@ class VertexCollection(object):
         """Check if a point is within the closest vertex rectangle"""
         closest_vertex = self.closest_vertex(np.asarray([point.x(), point.y()]))
         vertex_center = self._points[closest_vertex]
-        if closest_vertex in [self.highlightedVertex, self.selectedVertex]:
+        if closest_vertex in [self.highlighted_vertex, self.selected_vertex]:
             size = (self.vertex_size * self._scaling) / 2
         else:
             size = self.vertex_size / 2
@@ -285,12 +285,12 @@ class VertexCollection(object):
             painter.setPen(QPen(self.line_color, 0.5))  # TODO: width dependent on the size of the image or something
             painter.setBrush(QBrush(self.brush_color))
 
-            if _idx == self.selectedVertex:
+            if _idx == self.selected_vertex:
                 painter.setBrush(QBrush(self.highlight_color))
                 painter.setPen(QPen(self.highlight_color, 0.5))
                 size = (self.vertex_size * self._scaling) / 2
 
-            elif _idx == self.highlightedVertex:
+            elif _idx == self.highlighted_vertex:
                 painter.setBrush(QBrush(self.highlight_color))
                 size = (self.vertex_size * self._scaling) / 2
             else:
@@ -305,7 +305,7 @@ class VertexCollection(object):
 
     def update_sel_and_high(self, new_pos: np.ndarray):
         idx = self.closest_vertex(new_pos)
-        self.selectedVertex = self.highlightedVertex = idx
+        self.selected_vertex = self.highlighted_vertex = idx
 
     @property
     def vertices(self):

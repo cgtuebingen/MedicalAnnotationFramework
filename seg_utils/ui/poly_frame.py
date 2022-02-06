@@ -50,8 +50,6 @@ class PolyFrame(QFrame):
         self.commentList.setObjectName("commentList")
         self.commentList.setSpacing(1)
         self.commentList.setCursor((QCursor(Qt.PointingHandCursor)))
-        self.commentList.setStyleSheet("selection-color: blue;"
-                                       "selection-background-color: white;")
 
         self.subFrameLayout.addWidget(self.polyList)
         self.subFrameLayout.addWidget(self.commentList)
