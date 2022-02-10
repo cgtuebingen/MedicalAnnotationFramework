@@ -41,8 +41,8 @@ class LabelMain(QMainWindow, LabelUI):
         self.b_autoSave = True
         # self.actions = tuple()
         # self.actions_dict = {}
-        self.contextMenu = QMenu(self)
-        self._selectedShape = -1
+        self.context_menu = QMenu(self)
+        self._selection_idx = -1  # helpful for contextmenu references
         self.image_size = QSize()
 
         # color stuff
@@ -125,8 +125,10 @@ class LabelMain(QMainWindow, LabelUI):
         self.toolBar.get_action("QuitProgram").triggered.connect(self.close)
 
         # ContextMenu
-        self.imageDisplay.scene.sRequestContextMenu.connect(self.on_request_context_menu)
-        self.polyFrame.polyList.sRequestContextMenu.connect(self.on_request_context_menu)
+        self.imageDisplay.scene.sRequestContextMenu.connect(self.on_request_shape_menu)
+        self.polyFrame.polyList.sRequestContextMenu.connect(self.on_request_shape_menu)
+        self.labelList.sRequestContextMenu.connect(self.on_request_class_menu)
+        self.fileList.sRequestContextMenu.connect(self.on_request_files_menu)
 
         # Drawing Events
         self.imageDisplay.scene.sDrawing.connect(self.on_drawing)
@@ -249,21 +251,34 @@ class LabelMain(QMainWindow, LabelUI):
         self.imageDisplay.draw_new_color = new_color
 
     def init_context_menu(self):
-        """ Initializes the functionality of the contextMenu"""
+        """ Initializes the functionality of the context_menu"""
         action_edit_label = Action(self,
                                    "Edit Label Name",
                                    self.on_edit_label,
                                    icon="pen",
-                                   tip="Edit Label Name",
-                                   enabled=True)
+                                   tip="Edit Label Name")
         action_delete_label = Action(self,
                                      "Delete Label",
                                      self.on_delete_label,
                                      icon="trash",
                                      tip="Delete Label")
+        action_delete_class = Action(self,
+                                     "Delete Label Class",
+                                     self.on_delete_class,
+                                     icon="trash",
+                                     tip="Delete Label Class",
+                                     enabled=True)
+        action_delete_file = Action(self,
+                                    "Delete File",
+                                    self.on_delete_file,
+                                    icon="trash",
+                                    tip="Delete file",
+                                    enabled=True)
 
-        self.contextMenu.addActions((action_edit_label, action_delete_label))
-        self.polyFrame.polyList.contextMenu.addActions((action_edit_label, action_delete_label))
+        self.context_menu.addActions((action_edit_label,
+                                      action_delete_label,
+                                      action_delete_class,
+                                      action_delete_file))
 
     def init_file_list(self, show_check_box=False):
         r"""Initialize the file list with all the entries found in the database"""
@@ -325,11 +340,19 @@ class LabelMain(QMainWindow, LabelUI):
         if self.current_labels:
             self.current_labels[v_shape].reset_anchor()
 
+    def on_delete_class(self):
+        # TODO: Implement
+        pass
+
+    def on_delete_file(self):
+        # TODO: Implement
+        pass
+
     def on_delete_label(self):
-        dialog = DeleteShapeMessageBox(self.current_labels[self._selectedShape].label, self)
+        dialog = DeleteShapeMessageBox(self.current_labels[self._selection_idx].label, self)
         if dialog.answer == 1:
             # Delete the shape
-            self.current_labels.pop(self._selectedShape)
+            self.current_labels.pop(self._selection_idx)
             self.update_labels()
 
     def on_draw_end(self, points: List[QPointF], shape_type: str):
@@ -371,14 +394,14 @@ class LabelMain(QMainWindow, LabelUI):
 
     def on_edit_label(self):
         d = NewLabelDialog(self)
-        d.set_text(self.current_labels[self._selectedShape].label)
+        d.set_text(self.current_labels[self._selection_idx].label)
         d.exec()
         if d.class_name:
             # traces are also polygons so i am going to store them as such
-            shape = self.current_labels[self._selectedShape]
+            shape = self.current_labels[self._selection_idx]
             shape.label = d.class_name
             shape.update_color(self.get_color_for_label(shape.label))
-            self.update_labels((self._selectedShape, shape))
+            self.update_labels((self._selection_idx, shape))
 
     def on_import(self, fd_directory, fd_options):
         """This function is the handle for importing new images/videos to the database and the current project"""
@@ -477,16 +500,20 @@ class LabelMain(QMainWindow, LabelUI):
                 msg.setStandardButtons(QMessageBox.Ok)
                 msg.exec()
 
-    def on_request_context_menu(self, shape_idx, contextmenu_pos):
-        """This opens the context menu"""
-        self._selectedShape = shape_idx
-        if shape_idx != -1 and self.current_labels[shape_idx].isSelected:
-            for action in self.contextMenu.actions():
-                action.setEnabled(True)
-        else:
-            for action in self.contextMenu.actions():
-                action.setEnabled(False)
-        self.contextMenu.exec(contextmenu_pos)
+    def on_request_class_menu(self, selection_idx, contextmenu_pos):
+        """Helper method to open the contextmenu with the appropriate actions"""
+        actions = ["Delete Label Class"]
+        self.open_context_menu(selection_idx, contextmenu_pos, actions)
+
+    def on_request_files_menu(self, selection_idx, contextmenu_pos):
+        """Helper method to open the contextmenu with the appropriate actions"""
+        actions = ["Delete File"]
+        self.open_context_menu(selection_idx, contextmenu_pos, actions)
+
+    def on_request_shape_menu(self, selection_idx, contextmenu_pos):
+        """Helper method to open the contextmenu with the appropriate actions"""
+        actions = ["Edit Label Name", "Delete Label"]
+        self.open_context_menu(selection_idx, contextmenu_pos, actions)
 
     def on_save(self):
         """Save current state to database"""
@@ -504,6 +531,28 @@ class LabelMain(QMainWindow, LabelUI):
         for shape in self.current_labels:
             size = self.imageDisplay.get_pixmap_dimensions()
             shape.set_scaling(zoom, size[argmax(size)])
+
+    def open_context_menu(self, selection_idx, contextmenu_pos, actions=None):
+        """This opens the context menu, uses only the suitable actions
+        (shape actions if menu_type == 'shape', otherwise, actions regarding the lists at the right)"""
+        self._selection_idx = selection_idx
+        actions = actions if actions else []
+
+        if len(actions) > 1:
+            if selection_idx != -1 and self.current_labels[selection_idx].isSelected:
+                for action in self.context_menu.actions():
+                    action.setEnabled(True)
+            else:
+                for action in self.context_menu.actions():
+                    if action.text() in actions:
+                        action.setEnabled(False)
+
+        for action in self.context_menu.actions():
+            if action.text() in actions:
+                action.setVisible(True)
+            else:
+                action.setVisible(False)
+        self.context_menu.exec(contextmenu_pos)
 
     def set_other_buttons_unchecked(self, action: str):
         """Set all buttons except the button defined by the action into the unchecked state"""

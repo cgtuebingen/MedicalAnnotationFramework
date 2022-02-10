@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QListWidget, QMenu, QListWidgetItem
+from PyQt5.QtWidgets import QListWidget, QListWidgetItem
 from PyQt5.QtCore import pyqtSignal, QPoint
 
 from seg_utils.ui.shape import Shape
@@ -22,7 +22,6 @@ class ListWidget(QListWidget):
     def __init__(self, *args, is_comment_list=False):
         super(ListWidget, self).__init__(*args)
         self._icon_size = 10
-        self.contextMenu = QMenu(self)
         self.is_comment_list = is_comment_list
         if self.is_comment_list:
             self.setStyleSheet(STYLESHEET)
