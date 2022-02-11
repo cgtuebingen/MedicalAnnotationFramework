@@ -43,25 +43,33 @@ class ImageDisplay(QFrame):
         # connect events
         self.scene.sShapeHovered.connect(self.shape_hovered)
         self.scene.sShapeSelected.connect(self.shape_selected)
+        self.scene.sResetSelAndHigh.connect(self.on_reset_sel_and_high)
         self.canvas.sRequestFitInView.connect(self.image_viewer.fitInView)
+
+    def clear(self):
+        """This function deletes all currently stored labels
+        and triggers the image_viewer to display a default image"""
+        self.scene.b_isInitialized = False
+        self.image_viewer.b_isEmpty = True
+        self.canvas.pixmap = None
+        self.set_labels([])
 
     def get_pixmap_dimensions(self):
         return [self.pixmap.width(), self.pixmap.height()]
 
     def init_image(self, pixmap: QPixmap, labels):
-        self.canvas.set_pixmap(pixmap)
+        self.pixmap = pixmap
+        self.canvas.set_pixmap(self.pixmap)
         self.set_labels(labels)
 
     def is_empty(self):
         return self.image_viewer.b_isEmpty
 
     def on_reset_highlight(self):
-        labels = list(map(self.reset_highlight, self.labels))
-        self.set_labels(labels)
+        self.labels = list(map(self.reset_highlight, self.labels))
 
     def on_reset_selected(self):
-        labels = list(map(self.reset_selection, self.labels))
-        self.set_labels(labels)
+        self.labels = list(map(self.reset_selection, self.labels))
 
     def on_reset_sel_and_high(self):
         self.on_reset_highlight()
@@ -70,15 +78,15 @@ class ImageDisplay(QFrame):
     @staticmethod
     def reset_highlight(label: Shape):
         """resets the highlighting attribute"""
-        label.isHighlighted = False
-        label.vertices.highlightedVertex = -1
+        label.is_highlighted = False
+        label.vertices.highlighted_vertex = -1
         return label
 
     @staticmethod
     def reset_selection(label: Shape):
         """resets the selection attribute"""
         label.isSelected = False
-        label.vertices.selectedVertex = -1
+        label.vertices.selected_vertex = -1
         return label
 
     def set_initialized(self):
@@ -110,14 +118,16 @@ class ImageDisplay(QFrame):
     def shape_hovered(self, shape_idx: int, closest_vertex_shape: int, vertex_idx: int):
         self.on_reset_highlight()
         if shape_idx > -1:
-            self.labels[shape_idx].isHighlighted = True
+            shp = self.labels[shape_idx]
+            shp.is_highlighted = True
         self.vertex_highlighted(closest_vertex_shape, vertex_idx)
         self.update_canvas()
 
     def shape_selected(self, shape_idx: int, closest_vertex_shape: int, vertex_idx: int):
         self.on_reset_selected()
         if shape_idx != -1:
-            self.labels[shape_idx].isSelected = True
+            shp = self.labels[shape_idx]
+            shp.isSelected = True
             self.sRequestLabelListUpdate.emit(shape_idx)
         self.vertex_selected(closest_vertex_shape, vertex_idx)
         self.update_canvas()
@@ -130,8 +140,10 @@ class ImageDisplay(QFrame):
 
     def vertex_highlighted(self, shape_idx: int, vertex_idx: int):
         if shape_idx != -1:
-            self.labels[shape_idx].vertices.highlightedVertex = vertex_idx
+            shp = self.labels[shape_idx]  # type: Shape
+            shp.vertices.highlighted_vertex = vertex_idx
 
     def vertex_selected(self, shape_idx: int, vertex_idx: int):
         if vertex_idx != -1:
-            self.labels[shape_idx].vertices.selectedVertex = vertex_idx
+            shp = self.labels[shape_idx]  # type: Shape
+            shp.vertices.selected_vertex = vertex_idx

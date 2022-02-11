@@ -4,9 +4,11 @@
 from PyQt5 import QtWidgets
 from PyQt5 import QtCore
 from PyQt5 import QtGui
+
 from seg_utils.ui.image_display import ImageDisplay
 from seg_utils.ui.toolbar import Toolbar
 from seg_utils.ui.poly_frame import PolyFrame
+from seg_utils.ui.list_widget import ListWidget
 from seg_utils.src.actions import Action
 
 
@@ -78,7 +80,7 @@ class LabelUI(object):
         self.labelListLabel.setObjectName("labelListLabel")
         self.labelListLabel.setText("Labels")
         self.labelLayout.addWidget(self.labelListLabel)
-        self.labelList = QtWidgets.QListWidget(self.labelFrame)
+        self.labelList = ListWidget(self.labelFrame)
         self.labelList.setFrameShape(QtWidgets.QFrame.StyledPanel)
         self.labelList.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.labelList.setObjectName("labelList")
@@ -126,7 +128,7 @@ class LabelUI(object):
         self.fileSearch.setPlaceholderText("Search Filename")
         self.fileSearch.setObjectName("fileSearch")
         self.fileLayout.addWidget(self.fileSearch)
-        self.fileList = QtWidgets.QListWidget(self.fileFrame)
+        self.fileList = ListWidget(self.fileFrame)
         self.fileList.setIconSize(QtCore.QSize(7, 7))
         self.fileList.setItemAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
         self.fileList.setObjectName("fileList")

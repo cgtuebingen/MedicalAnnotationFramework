@@ -1,5 +1,6 @@
 import os
 import shutil
+import filetype
 from seg_utils.utils.database import SQLiteDatabase
 
 
@@ -9,6 +10,15 @@ class Structure:
     WSI_DIR = "/data/whole slide images/"
     FILE_DIRS = [IMAGES_DIR, VIDEOS_DIR, WSI_DIR]
     DATABASE_DEFAULT_NAME = '/database.db'
+
+
+def check_environment(project_path: str) -> bool:
+    """This function checks for a given path whether it is a valid project location,
+    i.e. whether it contains a 'data' folder with videos, images and whole slide images"""
+    for file_dir in Structure.FILE_DIRS:
+        if not os.path.exists(project_path + file_dir):
+            return False
+    return True
 
 
 def create_project_structure(project_path: str):
@@ -24,10 +34,13 @@ def create_project_structure(project_path: str):
     _ = SQLiteDatabase(database_path, True)
 
 
-def check_environment(project_path: str) -> bool:
-    """This function checks for a given path whether it is a valid project location,
-    i.e. whether it contains a 'data' folder with videos, images and whole slide images"""
-    for file_dir in Structure.FILE_DIRS:
-        if not os.path.exists(project_path + file_dir):
-            return False
-    return True
+def modality(filepath: str):
+    """This method uses the 'filetype' library to detect the type of a given file
+    returns: 0 if video, 1 if image, 2 if whole slide image, -1 if none of the above"""
+    detection = filetype.guess(filepath).mime
+    if detection.startswith('video'):
+        return 0
+    elif detection.startswith('image'):
+        return 1
+    else:
+        return -1

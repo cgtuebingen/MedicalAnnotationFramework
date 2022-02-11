@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QAction
-from seg_utils.utils.qt import getIcon
+from seg_utils.utils.qt import get_icon
 
 
 class Action(QAction):
@@ -18,7 +18,7 @@ class Action(QAction):
         super(Action, self).__init__(text, parent)
         if icon is not None:
             self.setIconText(text.replace(" ", "\n"))
-            self.setIcon(getIcon(icon))
+            self.setIcon(get_icon(icon))
         if shortcut is not None:
             if isinstance(shortcut, (list, tuple)):
                 self.setShortcuts(shortcut)

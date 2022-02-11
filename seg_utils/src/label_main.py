@@ -2,6 +2,7 @@ import pickle
 import os
 import pathlib
 import shutil
+import filetype
 
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
@@ -12,12 +13,13 @@ from numpy import argmax
 
 from seg_utils.utils.database import SQLiteDatabase
 from seg_utils.utils import qt
-from seg_utils.utils.project_structure import Structure, create_project_structure, check_environment
+from seg_utils.utils.project_structure import Structure, create_project_structure, check_environment, modality
 from seg_utils.src.actions import Action
 from seg_utils.ui.label_ui import LabelUI
 from seg_utils.ui.shape import Shape
-from seg_utils.ui.dialogs import (NewLabelDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox, CloseMessageBox,
-                                  SelectFileTypeAndPatientDialog, ProjectHandlerDialog, CommentDialog)
+from seg_utils.ui.dialogs import (NewLabelDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox,
+                                  CloseMessageBox, SelectPatientDialog, ProjectHandlerDialog,
+                                  CommentDialog, DeleteClassMessageBox)
 from seg_utils.config import VERTEX_SIZE
 
 
@@ -41,8 +43,8 @@ class LabelMain(QMainWindow, LabelUI):
         self.b_autoSave = True
         # self.actions = tuple()
         # self.actions_dict = {}
-        self.contextMenu = QMenu(self)
-        self._selectedShape = -1
+        self.context_menu = QMenu(self)
+        self._selection_idx = -1  # helpful for contextmenu references
         self.image_size = QSize()
 
         # color stuff
@@ -57,17 +59,17 @@ class LabelMain(QMainWindow, LabelUI):
 
         self.vertex_size = VERTEX_SIZE
 
-    def add_file(self, filepath: str, filetype: str, patient: str):
+    def add_file(self, filepath: str, patient: str):
         """ This method copies a selected file to the project environment and updates the database """
 
-        # TODO: right now it works only with images
         # copy file
         dest = self.project_location + Structure.IMAGES_DIR
         shutil.copy(filepath, dest)
 
         # add the filename to database
         filename = os.path.basename(filepath)
-        self.database.add_file(filename, filetype, patient)
+        mod = modality(filepath)
+        self.database.add_file(filename, mod, patient)
 
     def check_for_changes(self, quit_program: bool = True) -> int:
         r"""Check for changes with the database and display dialogs if necessary
@@ -91,6 +93,17 @@ class LabelMain(QMainWindow, LabelUI):
             d = CloseMessageBox(self)
         d.exec()
         return d.result()
+
+    def class_is_used(self, class_name: str) -> bool:
+        """This function checks for a given label class
+        whether there are annotations of that class in any of the current files"""
+        for i in range(len(self.images)):
+            if i != self.img_idx:
+                labels = self.database.get_label_from_imagepath(self.images[i])
+                for lbl in labels:
+                    if lbl['label'] == class_name:
+                        return True
+        return False
 
     def closeEvent(self, event) -> None:
         dlg_result = self.check_for_changes()
@@ -125,8 +138,10 @@ class LabelMain(QMainWindow, LabelUI):
         self.toolBar.get_action("QuitProgram").triggered.connect(self.close)
 
         # ContextMenu
-        self.imageDisplay.scene.sRequestContextMenu.connect(self.on_request_context_menu)
-        self.polyFrame.polyList.sRequestContextMenu.connect(self.on_request_context_menu)
+        self.imageDisplay.scene.sRequestContextMenu.connect(self.on_request_shape_menu)
+        self.polyFrame.polyList.sRequestContextMenu.connect(self.on_request_shape_menu)
+        self.labelList.sRequestContextMenu.connect(self.on_request_class_menu)
+        self.fileList.sRequestContextMenu.connect(self.on_request_files_menu)
 
         # Drawing Events
         self.imageDisplay.scene.sDrawing.connect(self.on_drawing)
@@ -172,6 +187,8 @@ class LabelMain(QMainWindow, LabelUI):
 
     def get_color_for_label(self, label_name: str):
         r"""Get a Color based on a label_name"""
+        if label_name not in self.classes.keys():
+            return None
         label_index = self.classes[label_name]
         return self.colorMap[label_index]
 
@@ -181,7 +198,7 @@ class LabelMain(QMainWindow, LabelUI):
         _, idx = self.polyFrame.get_index_from_selected(item)
         self.sLabelSelected.emit(idx, idx, -1)
 
-        # update comment window, if needed
+        # set comment window text, if there already is a comment
         for lbl in self.current_labels:
             if lbl.isSelected:
                 if item.text() != "Add comment" and lbl.comment:
@@ -245,32 +262,45 @@ class LabelMain(QMainWindow, LabelUI):
 
     def init_colors(self):
         r"""Initialise the colors for plotting and for the individual lists """
-        self.colorMap, new_color = qt.colormapRGB(n=self._num_colors)  # have a buffer for new classes
+        self.colorMap, new_color = qt.colormap_rgb(n=self._num_colors)  # have a buffer for new classes
         self.imageDisplay.draw_new_color = new_color
 
     def init_context_menu(self):
-        """ Initializes the functionality of the contextMenu"""
+        """ Initializes the functionality of the context_menu"""
         action_edit_label = Action(self,
                                    "Edit Label Name",
                                    self.on_edit_label,
                                    icon="pen",
-                                   tip="Edit Label Name",
-                                   enabled=True)
+                                   tip="Edit Label Name")
         action_delete_label = Action(self,
                                      "Delete Label",
                                      self.on_delete_label,
                                      icon="trash",
                                      tip="Delete Label")
+        action_delete_class = Action(self,
+                                     "Delete Label Class",
+                                     self.on_delete_class,
+                                     icon="trash",
+                                     tip="Delete Label Class",
+                                     enabled=True)
+        action_delete_file = Action(self,
+                                    "Delete File",
+                                    self.on_delete_file,
+                                    icon="trash",
+                                    tip="Delete file",
+                                    enabled=True)
 
-        self.contextMenu.addActions((action_edit_label, action_delete_label))
-        self.polyFrame.polyList.contextMenu.addActions((action_edit_label, action_delete_label))
+        self.context_menu.addActions((action_edit_label,
+                                      action_delete_label,
+                                      action_delete_class,
+                                      action_delete_file))
 
     def init_file_list(self, show_check_box=False):
         r"""Initialize the file list with all the entries found in the database"""
         self.fileList.clear()
         for idx, elem in enumerate(self.images):
             if show_check_box:
-                icon = qt.getIcon("checked")
+                icon = qt.get_icon("checked")
                 item = QListWidgetItem(icon,
                                        self.images[idx].replace(Structure.IMAGES_DIR, ""))
             else:
@@ -290,7 +320,7 @@ class LabelMain(QMainWindow, LabelUI):
     def init_labels(self):
         r"""This function initializes the labels for the current image. Necessary to have only one call to the database
         if the image is changed"""
-        labels = self.database.get_label_from_imagepath(self.images[self.img_idx])
+        labels = self.database.get_label_from_imagepath(self.images[self.img_idx]) if self.images else []
         self.current_labels = [Shape(image_size=self.image_size, label_dict=_label,
                                      color=self.get_color_for_label(_label['label']))
                                for _label in labels]
@@ -306,8 +336,7 @@ class LabelMain(QMainWindow, LabelUI):
                 self.database.add_patient(p)
         if files:
             for file, patient in files.items():
-                # TODO: Implement filetype distinctions, right now only images considered
-                self.add_file(file, 'png', patient)
+                self.add_file(file, patient)
 
         self.images = self.database.get_images()
         self.init_colors()
@@ -323,13 +352,83 @@ class LabelMain(QMainWindow, LabelUI):
     def on_anchor_rest(self, v_shape: int):
         """Handles the reset of the anchor upon the mouse release within the respective label/shape"""
         if self.current_labels:
-            self.current_labels[v_shape].resetAnchor()
+            self.current_labels[v_shape].reset_anchor()
+
+    def on_delete_class(self):
+        """This function is the handle for deleting a user-specified label class"""
+        keys = list(self.classes.keys())
+        class_name = keys[self._selection_idx]
+        msg = DeleteClassMessageBox(class_name=class_name)
+        msg.exec()
+
+        # 0 cancel
+        # 1 delete only the annotations of that class
+        # 2 delete the whole label class
+        if msg.answer in (1, 2):
+
+            # first create a list, then remove these items to prevent indexing errors
+            remove_list = [lbl for lbl in self.current_labels if lbl.label == class_name]
+            for lbl in remove_list:
+                self.current_labels.remove(lbl)
+
+            if msg.answer == 2:
+                # check for annotations of that class in other images
+                if self.class_is_used(class_name):
+                    reject = QMessageBox(QMessageBox.Information,
+                                         "Deleting not possible",
+                                         "This label class is used in other files.")
+                    reject.exec()
+                else:
+                    self.classes.pop(class_name)
+            self.update_labels()
+
+    def on_delete_file(self):
+
+        # set up a message box
+        image_name = self.images[self._selection_idx]
+        title = "Delete File"
+        text = "You are about to delete the file {}. \n" \
+               "All annotations in that image will be lost. Continue?".format(image_name)
+        sb = QMessageBox.Ok | QMessageBox.Cancel
+        msg = QMessageBox()
+        reply = msg.information(self, title, text, sb)
+
+        if reply == QMessageBox.Ok:
+
+            # deleting the currently displayed file must be handled differently
+            if self._selection_idx == self.img_idx:
+                self.database.delete_file(image_name)
+                self.images = self.database.get_images()
+
+                # if user deleted the last file in the project, return to default state
+                if not self.images:
+                    self.imageDisplay.clear()
+                    self.init_labels()
+                    for act in self.toolBar.actions():
+                        act.setEnabled(False)
+
+                # else switch to the previous/next file
+                else:
+                    if self.img_idx != 0:
+                        self.img_idx -= 1
+                    self.init_image()
+
+                self.init_file_list(True)
+                self.enable_actions(['Save', 'Import', 'QuitProgram'])
+
+            # if the file is not currently displayed, simply delete it from the database & the fileList
+            else:
+                cur_image = self.images[self.img_idx]
+                self.database.delete_file(image_name)
+                self.images = self.database.get_images()
+                self.img_idx = self.images.index(cur_image)  # prevent indexing errors
+                self.init_file_list(True)
 
     def on_delete_label(self):
-        dialog = DeleteShapeMessageBox(self.current_labels[self._selectedShape].label, self)
+        dialog = DeleteShapeMessageBox(self.current_labels[self._selection_idx].label, self)
         if dialog.answer == 1:
             # Delete the shape
-            self.current_labels.pop(self._selectedShape)
+            self.current_labels.pop(self._selection_idx)
             self.update_labels()
 
     def on_draw_end(self, points: List[QPointF], shape_type: str):
@@ -371,58 +470,59 @@ class LabelMain(QMainWindow, LabelUI):
 
     def on_edit_label(self):
         d = NewLabelDialog(self)
-        d.set_text(self.current_labels[self._selectedShape].label)
+        d.set_text(self.current_labels[self._selection_idx].label)
         d.exec()
         if d.class_name:
             # traces are also polygons so i am going to store them as such
-            shape = self.current_labels[self._selectedShape]
+            shape = self.current_labels[self._selection_idx]
             shape.label = d.class_name
-            shape.updateColor(self.get_color_for_label(shape.label))
-            self.update_labels((self._selectedShape, shape))
+            shape.update_color(self.get_color_for_label(shape.label))
+            self.update_labels((self._selection_idx, shape))
 
     def on_import(self, fd_directory, fd_options):
         """This function is the handle for importing new images/videos to the database and the current project"""
 
         # user first needs to specify the type of the file to be imported
         existing_patients = self.database.get_patients()
-        select_filetype = SelectFileTypeAndPatientDialog(existing_patients)
-        select_filetype.exec()
-        for p in select_filetype.patients:
+        select_patient = SelectPatientDialog(existing_patients)
+        select_patient.exec()
+
+        # add the newly created patients ot the project
+        for p in select_patient.patients:
             self.database.add_patient(p)
-        filetype, patient = select_filetype.filetype, select_filetype.patient
-        if filetype:
 
-            # TODO: implement smarter filetype recognition
-            _filter = '*png *jpg *jpeg' if filetype == 'png' else filetype
-
+        if select_patient.patient:
             filename, _ = QFileDialog.getOpenFileName(self,
                                                       caption="Select File",
                                                       directory=fd_directory,
-                                                      filter="File ({})".format(_filter),
                                                       options=fd_options)
 
             # get path to file and store it in the database
             if filename:
-                self.add_file(filename, filetype, patient)
+                self.add_file(filename, select_patient.patient)
 
                 # update the GUI
+                cur_image = self.images[self.img_idx] if self.images else None
                 self.images = self.database.get_images()
-                self.init_file_list(True)
 
                 # initialize additional parts, if it is the first added file
                 if self.imageDisplay.is_empty():
                     self.imageDisplay.set_initialized()
                     self.init_image()
                     self.enable_actions()
+                # make sure the correct image is still selected in the fileList
+                else:
+                    self.img_idx = self.images.index(cur_image)
+                self.init_file_list(True)
 
     def on_move_shape(self, h_shape: int, displacement: QPointF):
-        self.current_labels[h_shape].moveShape(displacement)
+        self.current_labels[h_shape].move_shape(displacement)
         self.imageDisplay.set_labels(self.current_labels)
 
     def on_move_vertex(self, v_shape: int, v_num: int, new_pos: QPointF):
         if v_shape != -1:
-            if self.current_labels[v_shape].vertices.selectedVertex != -1:
-                self.current_labels[v_shape].moveVertex(v_num, new_pos)
+            if self.current_labels[v_shape].vertices.selected_vertex != -1:
+                self.current_labels[v_shape].move_vertex(v_num, new_pos)
                 self.imageDisplay.set_labels(self.current_labels)
 
     def on_new_project(self):
@@ -477,19 +577,25 @@ class LabelMain(QMainWindow, LabelUI):
                 msg.setStandardButtons(QMessageBox.Ok)
                 msg.exec()
 
-    def on_request_context_menu(self, shape_idx, contextmenu_pos):
-        """This opens the context menu"""
-        self._selectedShape = shape_idx
-        if shape_idx != -1 and self.current_labels[shape_idx].isSelected:
-            for action in self.contextMenu.actions():
-                action.setEnabled(True)
-        else:
-            for action in self.contextMenu.actions():
-                action.setEnabled(False)
-        self.contextMenu.exec(contextmenu_pos)
+    def on_request_class_menu(self, selection_idx, contextmenu_pos):
+        """Helper method to open the contextmenu with the appropriate actions"""
+        actions = ["Delete Label Class"]
+        self.open_context_menu(selection_idx, contextmenu_pos, actions)
+
+    def on_request_files_menu(self, selection_idx, contextmenu_pos):
+        """Helper method to open the contextmenu with the appropriate actions"""
+        actions = ["Delete File"]
+        self.open_context_menu(selection_idx, contextmenu_pos, actions)
+
+    def on_request_shape_menu(self, selection_idx, contextmenu_pos):
+        """Helper method to open the contextmenu with the appropriate actions"""
+        actions = ["Edit Label Name", "Delete Label"]
+        self.open_context_menu(selection_idx, contextmenu_pos, actions)
 
     def on_save(self):
         """Save current state to database"""
+        if not self.database:
+            return
         self.database.update_labels(list(self.classes.keys()))
         entries = list()
         for _lbl in self.current_labels:
@@ -497,13 +603,35 @@ class LabelMain(QMainWindow, LabelUI):
             annotation_entry = self.create_annotation_entry(label_dict, class_name)
             entries.append(annotation_entry)
 
-        if entries:
+        if self.images:
             self.database.update_image_annotations(image_name=self.images[self.img_idx], entries=entries)
 
     def on_zoom_level_changed(self, zoom: int):
         for shape in self.current_labels:
             size = self.imageDisplay.get_pixmap_dimensions()
-            shape.setScaling(zoom, size[argmax(size)])
+            shape.set_scaling(zoom, size[argmax(size)])
+
+    def open_context_menu(self, selection_idx, contextmenu_pos, actions=None):
+        """This opens the context menu, uses only the suitable actions
+        (shape actions if menu_type == 'shape', otherwise, actions regarding the lists at the right)"""
+        self._selection_idx = selection_idx
+        actions = actions if actions else []
+
+        if len(actions) > 1:
+            if selection_idx != -1 and self.current_labels[selection_idx].isSelected:
+                for action in self.context_menu.actions():
+                    action.setEnabled(True)
+            else:
+                for action in self.context_menu.actions():
+                    if action.text() in actions:
+                        action.setEnabled(False)
+
+        for action in self.context_menu.actions():
+            if action.text() in actions:
+                action.setVisible(True)
+            else:
+                action.setVisible(False)
+        self.context_menu.exec(contextmenu_pos)
 
     def set_other_buttons_unchecked(self, action: str):
         """Set all buttons except the button defined by the action into the unchecked state"""
