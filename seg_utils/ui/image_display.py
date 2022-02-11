@@ -46,11 +46,20 @@ class ImageDisplay(QFrame):
         self.scene.sResetSelAndHigh.connect(self.on_reset_sel_and_high)
         self.canvas.sRequestFitInView.connect(self.image_viewer.fitInView)
 
+    def clear(self):
+        """This function deletes all currently stored labels
+        and triggers the image_viewer to display a default image"""
+        self.scene.b_isInitialized = False
+        self.image_viewer.b_isEmpty = True
+        self.canvas.pixmap = None
+        self.set_labels([])
+
     def get_pixmap_dimensions(self):
         return [self.pixmap.width(), self.pixmap.height()]
 
     def init_image(self, pixmap: QPixmap, labels):
-        self.canvas.set_pixmap(pixmap)
+        self.pixmap = pixmap
+        self.canvas.set_pixmap(self.pixmap)
         self.set_labels(labels)
 
     def is_empty(self):

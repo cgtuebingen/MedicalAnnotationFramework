@@ -89,11 +89,11 @@ class SQLiteDatabase:
         with self.connection:
             self.cursor.execute(ADD_ANNOTATION, (modality, file, patient, shape, label))
 
-    def add_file(self, filename: str, filetype: str, patient: str):
+    def add_file(self, filename: str, modality: int, patient: str):
         """
         adds a file to the database
         :param filename: the name of the file to be added
-        :param filetype: indicates whether it is a video, image or whole slide image
+        :param modality: indicates whether it is a video (0), image (1) or whole slide image (2)
         :param patient: a patient id which may be added to the database
         """
         with self.connection:
@@ -102,12 +102,11 @@ class SQLiteDatabase:
             p = self.cursor.execute("""SELECT uid FROM patients WHERE some_id = ?""", (patient,)).fetchone()
             patient = p[0] if p else self.add_patient(patient)
 
-            # TODO: Extend by other accepted types, substitute 'whatever' by actual WSI type
-            if filetype in ['mp4']:
+            if modality == 0:
                 self.cursor.execute(ADD_VIDEO, (filename, patient))
-            elif filetype in ['png', 'jpg', 'jpeg']:
+            elif modality == 1:
                 self.cursor.execute(ADD_IMAGE, (filename, patient))
-            elif filetype in ['whatever']:
+            elif modality == 2:
                 self.cursor.execute(ADD_WSI, (filename, patient))
 
     def add_label(self, label_class: str):

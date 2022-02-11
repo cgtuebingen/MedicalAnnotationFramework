@@ -4,6 +4,7 @@ from PyQt5.QtGui import QFont, QIcon
 
 from seg_utils.ui.list_widget import ListWidget
 from seg_utils.utils.qt import createListWidgetItemWithSquareIcon, get_icon
+from seg_utils.utils.project_structure import modality
 
 from pathlib import Path
 import os
@@ -175,6 +176,29 @@ class CloseMessageBox(QMessageBox):
         move_to_center(self, self.parentWidget().pos(), self.parentWidget().size())
 
 
+class DeleteClassMessageBox(QMessageBox):
+    def __init__(self, *args, class_name: str):
+        super(DeleteClassMessageBox, self).__init__(*args)
+
+        self.setText("You are about to delete the '{}'-class. Continue?".format(class_name))
+        self.setInformativeText("This will remove all occurrences of '{}' from the image.\n\n".format(class_name))
+        self.setCheckBox(QCheckBox("Do not delete the label class itself", self))
+        self.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+
+        self.answer = 0
+        self.accepted.connect(self.set_answer)
+
+    def set_answer(self):
+        """this sets the answer-variable.
+        0 cancel
+        1 delete only the annotations of that class
+        2 delete the whole class"""
+        if self.checkBox().isChecked():
+            self.answer = 1
+        else:
+            self.answer = 2
+
+
 class CreateNewClassDialog(QDialog):
     """ handles a QDialog used to let the user enter a new label class """
     def __init__(self, parent, existing_classes: list, topic: str = "Label"):
@@ -219,40 +243,29 @@ class CreateNewClassDialog(QDialog):
             self.close()
 
 
-class SelectFileTypeAndPatientDialog(QDialog):
+class SelectPatientDialog(QDialog):
     """
     handles a QDialog to let the user select between video, image and whole slide image
     the selected type is the used when importing a new file
     """
     def __init__(self, existing_patients: list):
-        super(SelectFileTypeAndPatientDialog, self).__init__()
+        super(SelectPatientDialog, self).__init__()
 
-        self.setFixedSize(QSize(400, 300))
-        self.setWindowTitle("Select Filetype and Patient")
-        self.filetype = ""
+        self.setFixedSize(QSize(300, 300))
+        self.setWindowTitle("Select Patient")
         self.patient = ""
-
-        # create buttons and apply stylesheet
-        v = QPushButton("Video")
-        i = QPushButton("Image")
-        w = QPushButton("Whole Slide Image")
-        # TODO: Extend by other accepted types, substitute 'whatever' by actual WSI type
-        v.clicked.connect(lambda: self.set_type("mp4"))
-        i.clicked.connect(lambda: self.set_type("png"))
-        w.clicked.connect(lambda: self.set_type("whatever"))
 
         self.new_patient = QPushButton("New Patient")
         self.new_patient.clicked.connect(self.create_new_patient)
-        self.buttons = [v, i, w, self.new_patient]
-        self.set_stylesheets()
+        self.new_patient.setStyleSheet(BUTTON_STYLESHEET)
 
         self.confirmation = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.confirmation.button(QDialogButtonBox.Ok).setEnabled(False)
-        self.confirmation.accepted.connect(self.finish)
         self.confirmation.rejected.connect(self.cancel)
+        self.confirmation.accepted.connect(self.close)
 
         # text that will be displayed at the top
-        self.info = QLabel("Please specify the type of the file and a patient")
+        self.info = QLabel("Please specify a patient")
         self.info.setStyleSheet("font: bold 12px")
 
         # create patient_list list
@@ -262,32 +275,15 @@ class SelectFileTypeAndPatientDialog(QDialog):
         self.fill()
 
         # set up the Dialog-Layout
-        self.upper_frame = QFrame(self)
-        self.upper_layout = QHBoxLayout(self.upper_frame)
-
-        self.btn_frame = QFrame(self.upper_frame)
-        self.btn_layout = QVBoxLayout(self.btn_frame)
-        self.btn_layout.addStretch(5)
-        self.btn_layout.addWidget(v)
-        self.btn_layout.addWidget(i)
-        self.btn_layout.addWidget(w)
-        self.btn_layout.addStretch(5)
-
-        self.patients_frame = QFrame(self.upper_frame)
-        self.patients_layout = QVBoxLayout(self.patients_frame)
-        self.patients_layout.addWidget(self.patient_list)
-        self.patients_layout.addWidget(self.new_patient)
-
-        self.upper_layout.addWidget(self.btn_frame)
-        self.upper_layout.addWidget(self.patients_frame)
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.info)
-        self.layout.addWidget(self.upper_frame)
+        self.layout.addWidget(self.patient_list)
+        self.layout.addWidget(self.new_patient)
         self.layout.addWidget(self.confirmation)
 
     def cancel(self):
-        """resets the class variables and closes the dialog"""
-        self.filetype, self.patient = "", ""
+        """resets the class variable and closes the dialog"""
+        self.patient = ""
         self.close()
 
     def create_new_patient(self):
@@ -302,11 +298,6 @@ class SelectFileTypeAndPatientDialog(QDialog):
             item.setSelected(True)  # highlight new item
             self.set_patient(item)
 
-    def enable(self):
-        """enables the Ok button when both type and patient are selected"""
-        if self.filetype and self.patient:
-            self.confirmation.button(QDialogButtonBox.Ok).setEnabled(True)
-
     def fill(self):
         """fills the patient listWidget"""
         self.patient_list.clear()
@@ -314,32 +305,10 @@ class SelectFileTypeAndPatientDialog(QDialog):
             item = QListWidgetItem(patient)
             self.patient_list.addItem(item)
 
-    def finish(self):
-        """only allows a closing process when class variables contain values"""
-        if self.filetype and self.patient:
-            self.close()
-        else:
-            pass
-
     def set_patient(self, item):
         """sets the patient class variable"""
         self.patient = item.text()
-        self.enable()
-
-    def set_stylesheets(self, sel_button: QPushButton = None):
-        """sets the stylesheets, if a selected button is passed, apply another stylesheet for it"""
-        for b in self.buttons:
-            if b == sel_button:
-                b.setStyleSheet(BUTTON_SELECTED_STYLESHEET)
-            else:
-                b.setStyleSheet(BUTTON_STYLESHEET)
-
-    def set_type(self, t: str):
-        """ updates the class variable"""
-        # sender() returns the currently pressed button, update stylesheets accordingly
-        self.set_stylesheets(self.sender())
-        self.filetype = t
-        self.enable()
+        self.confirmation.button(QDialogButtonBox.Ok).setEnabled(True)
 
 
 class ProjectHandlerDialog(QDialog):
@@ -420,19 +389,14 @@ class ProjectHandlerDialog(QDialog):
         """ function to let user select a file which will be added when the project is finally created"""
 
         # user first needs to specify the type of the file to be imported
-        select_filetype = SelectFileTypeAndPatientDialog(self.patients)
-        select_filetype.exec()
-        self.patients = select_filetype.patients
-        filetype, patient = select_filetype.filetype, select_filetype.patient
+        select_patient = SelectPatientDialog(self.patients)
+        select_patient.exec()
+        self.patients = select_patient.patients
 
-        if filetype:
-            # TODO: implement smarter filetype recognition
-            _filter = '*png *jpg *jpeg' if filetype == 'png' else filetype
-
+        if select_patient.patient:
             filepath, _ = QFileDialog.getOpenFileName(self,
                                                       caption="Select File",
                                                       directory=str(Path.home()),
-                                                      filter="File ({})".format(_filter),
                                                       options=QFileDialog.DontUseNativeDialog)
 
             # only care about the filename itself (not regarding its path), to make it easier to handle
@@ -442,11 +406,11 @@ class ProjectHandlerDialog(QDialog):
                 msg.setIcon(QMessageBox.Information)
                 msg.setText("The file\n{}\nalready exists.\nOverwrite?".format(filename))
                 msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-                msg.accepted.connect(lambda: self.overwrite(filepath, filename, patient))
+                msg.accepted.connect(lambda: self.overwrite(filepath, filename, select_patient.patient))
                 msg.exec()
             elif filename:
                 # TODO: Implement possibility to add several files at once
-                self.files[filepath] = patient
+                self.files[filepath] = select_patient.patient
                 self.added_files.addItem(QListWidgetItem(filename))
 
     def check_path(self):

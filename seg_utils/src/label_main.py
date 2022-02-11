@@ -2,6 +2,7 @@ import pickle
 import os
 import pathlib
 import shutil
+import filetype
 
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
@@ -12,12 +13,13 @@ from numpy import argmax
 
 from seg_utils.utils.database import SQLiteDatabase
 from seg_utils.utils import qt
-from seg_utils.utils.project_structure import Structure, create_project_structure, check_environment
+from seg_utils.utils.project_structure import Structure, create_project_structure, check_environment, modality
 from seg_utils.src.actions import Action
 from seg_utils.ui.label_ui import LabelUI
 from seg_utils.ui.shape import Shape
-from seg_utils.ui.dialogs import (NewLabelDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox, CloseMessageBox,
-                                  SelectFileTypeAndPatientDialog, ProjectHandlerDialog, CommentDialog)
+from seg_utils.ui.dialogs import (NewLabelDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox,
+                                  CloseMessageBox, SelectPatientDialog, ProjectHandlerDialog,
+                                  CommentDialog, DeleteClassMessageBox)
 from seg_utils.config import VERTEX_SIZE
 
 
@@ -57,17 +59,17 @@ class LabelMain(QMainWindow, LabelUI):
 
         self.vertex_size = VERTEX_SIZE
 
-    def add_file(self, filepath: str, filetype: str, patient: str):
+    def add_file(self, filepath: str, patient: str):
         """ This method copies a selected file to the project environment and updates the database """
 
-        # TODO: right now it works only with images
         # copy file
         dest = self.project_location + Structure.IMAGES_DIR
         shutil.copy(filepath, dest)
 
         # add the filename to database
         filename = os.path.basename(filepath)
-        self.database.add_file(filename, filetype, patient)
+        mod = modality(filepath)
+        self.database.add_file(filename, mod, patient)
 
     def check_for_changes(self, quit_program: bool = True) -> int:
         r"""Check for changes with the database and display dialogs if necessary
@@ -91,6 +93,17 @@ class LabelMain(QMainWindow, LabelUI):
             d = CloseMessageBox(self)
         d.exec()
         return d.result()
+
+    def class_is_used(self, class_name: str) -> bool:
+        """This function checks for a given label class
+        whether there are annotations of that class in any of the current files"""
+        for i in range(len(self.images)):
+            if i != self.img_idx:
+                labels = self.database.get_label_from_imagepath(self.images[i])
+                for lbl in labels:
+                    if lbl['label'] == class_name:
+                        return True
+        return False
 
     def closeEvent(self, event) -> None:
         dlg_result = self.check_for_changes()
@@ -174,6 +187,8 @@ class LabelMain(QMainWindow, LabelUI):
 
     def get_color_for_label(self, label_name: str):
         r"""Get a Color based on a label_name"""
+        if label_name not in self.classes.keys():
+            return None
         label_index = self.classes[label_name]
         return self.colorMap[label_index]
 
@@ -305,7 +320,7 @@ class LabelMain(QMainWindow, LabelUI):
     def init_labels(self):
         r"""This function initializes the labels for the current image. Necessary to have only one call to the database
         if the image is changed"""
-        labels = self.database.get_label_from_imagepath(self.images[self.img_idx])
+        labels = self.database.get_label_from_imagepath(self.images[self.img_idx]) if self.images else []
         self.current_labels = [Shape(image_size=self.image_size, label_dict=_label,
                                      color=self.get_color_for_label(_label['label']))
                                for _label in labels]
@@ -321,8 +336,7 @@ class LabelMain(QMainWindow, LabelUI):
                 self.database.add_patient(p)
         if files:
             for file, patient in files.items():
-                # TODO: Implement filetype distinctions, right now only images considered
-                self.add_file(file, 'png', patient)
+                self.add_file(file, patient)
 
         self.images = self.database.get_images()
         self.init_colors()
@@ -341,12 +355,74 @@ class LabelMain(QMainWindow, LabelUI):
             self.current_labels[v_shape].reset_anchor()
 
     def on_delete_class(self):
-        # TODO: Implement
-        pass
+        """This function is the handle for deleting a user-specified label class"""
+        keys = list(self.classes.keys())
+        class_name = keys[self._selection_idx]
+        msg = DeleteClassMessageBox(class_name=class_name)
+        msg.exec()
+
+        # 0 cancel
+        # 1 delete only the annotations of that class
+        # 2 delete the whole label class
+        if msg.answer in (1, 2):
+
+            # first create a list, then remove these items to prevent indexing errors
+            remove_list = [lbl for lbl in self.current_labels if lbl.label == class_name]
+            for lbl in remove_list:
+                self.current_labels.remove(lbl)
+
+            if msg.answer == 2:
+                # check for annotations of that class in other images
+                if self.class_is_used(class_name):
+                    reject = QMessageBox(QMessageBox.Information,
+                                         "Deleting not possible",
+                                         "This label class is used in other files.")
+                    reject.exec()
+                else:
+                    self.classes.pop(class_name)
+            self.update_labels()
 
     def on_delete_file(self):
-        # TODO: Implement
-        pass
+
+        # set up a message box
+        image_name = self.images[self._selection_idx]
+        title = "Delete File"
+        text = "You are about to delete the file {}. \n" \
+               "All annotations in that image will be lost. Continue?".format(image_name)
+        sb = QMessageBox.Ok | QMessageBox.Cancel
+        msg = QMessageBox()
+        reply = msg.information(self, title, text, sb)
+
+        if reply == QMessageBox.Ok:
+
+            # deleting the currently displayed file must be handled differently
+            if self._selection_idx == self.img_idx:
+                self.database.delete_file(image_name)
+                self.images = self.database.get_images()
+
+                # if user deleted the last file in the project, return to default state
+                if not self.images:
+                    self.imageDisplay.clear()
+                    self.init_labels()
+                    for act in self.toolBar.actions():
+                        act.setEnabled(False)
+
+                # else switch to the previous/next file
+                else:
+                    if self.img_idx != 0:
+                        self.img_idx -= 1
+                    self.init_image()
+
+                self.init_file_list(True)
+                self.enable_actions(['Save', 'Import', 'QuitProgram'])
+
+            # if the file is not currently displayed, simply delete it from the database & the fileList
+            else:
+                cur_image = self.images[self.img_idx]
+                self.database.delete_file(image_name)
+                self.images = self.database.get_images()
+                self.img_idx = self.images.index(cur_image)  # prevent indexing errors
+                self.init_file_list(True)
 
     def on_delete_label(self):
         dialog = DeleteShapeMessageBox(self.current_labels[self._selection_idx].label, self)
@@ -408,35 +484,36 @@ class LabelMain(QMainWindow, LabelUI):
 
         # user first needs to specify the type of the file to be imported
         existing_patients = self.database.get_patients()
-        select_filetype = SelectFileTypeAndPatientDialog(existing_patients)
-        select_filetype.exec()
-        for p in select_filetype.patients:
+        select_patient = SelectPatientDialog(existing_patients)
+        select_patient.exec()
+
+        # add the newly created patients ot the project
+        for p in select_patient.patients:
             self.database.add_patient(p)
-        filetype, patient = select_filetype.filetype, select_filetype.patient
-        if filetype:
 
-            # TODO: implement smarter filetype recognition
-            _filter = '*png *jpg *jpeg' if filetype == 'png' else filetype
-
+        if select_patient.patient:
             filename, _ = QFileDialog.getOpenFileName(self,
                                                       caption="Select File",
                                                       directory=fd_directory,
-                                                      filter="File ({})".format(_filter),
                                                       options=fd_options)
 
             # get path to file and store it in the database
             if filename:
-                self.add_file(filename, filetype, patient)
+                self.add_file(filename, select_patient.patient)
 
                 # update the GUI
+                cur_image = self.images[self.img_idx] if self.images else None
                 self.images = self.database.get_images()
-                self.init_file_list(True)
 
                 # initialize additional parts, if it is the first added file
                 if self.imageDisplay.is_empty():
                     self.imageDisplay.set_initialized()
                     self.init_image()
                     self.enable_actions()
+                # make sure the correct image is still selected in the fileList
+                else:
+                    self.img_idx = self.images.index(cur_image)
+                self.init_file_list(True)
 
     def on_move_shape(self, h_shape: int, displacement: QPointF):
         self.current_labels[h_shape].move_shape(displacement)
@@ -517,6 +594,8 @@ class LabelMain(QMainWindow, LabelUI):
 
     def on_save(self):
         """Save current state to database"""
+        if not self.database:
+            return
         self.database.update_labels(list(self.classes.keys()))
         entries = list()
         for _lbl in self.current_labels:
