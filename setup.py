@@ -47,7 +47,8 @@ def get_install_requires():
         "termcolor",
         "PyQT5",
         "opencv-python",
-        "imgviz"
+        "imgviz",
+        "filetype"
     ]
 
     """
