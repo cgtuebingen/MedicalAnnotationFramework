@@ -1,10 +1,3 @@
-#########################################
-# This comment was created on main branch
-# I added this line in the video-inclusion branch
-#########################################
-
-
-
 import pickle
 import os
 import pathlib
