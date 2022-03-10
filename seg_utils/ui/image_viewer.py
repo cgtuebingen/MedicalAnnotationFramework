@@ -7,6 +7,7 @@ PLACEHOLDER_TEXT = "No files to display"
 
 class ImageViewer(QGraphicsView):
     sZoomLevelChanged = pyqtSignal(int)
+    sRequestFitInView = pyqtSignal()
 
     def __init__(self, *args):
         super(ImageViewer, self).__init__(*args)
@@ -56,7 +57,7 @@ class ImageViewer(QGraphicsView):
                 if self._zoom > 1:
                     self.scale(factor, factor)
                 elif self._zoom == 1:
-                    self.fitInView(QRectF(self.canvas.rect()))
+                    self.sRequestFitInView.emit()
                 else:
                     self._zoom = 1
             self.sZoomLevelChanged.emit(self._zoom)
