@@ -10,7 +10,7 @@ class VideoPlayer(QWidget):
     """
     A custom widget for playing a video with an embedded frame extractor
     """
-    media_state_changed = pyqtSignal(int)  # QMediaPlayer.PlayingState
+    media_state_changed = pyqtSignal(int)  # QMediaPlayer.state()
     playback_position_changed = pyqtSignal(int)
     video_duration_changed = pyqtSignal(int)
     media_error = pyqtSignal(QMediaPlayer.Error)
@@ -76,6 +76,21 @@ class VideoPlayer(QWidget):
         """
         self.media_player.setPosition(video_position)
 
+    def toggle_play_pause(self):
+        """ toggle to play if paused or vice versa """
+        if self.media_player.state() == QMediaPlayer.PlayingState:
+            self.pause()
+        else:
+            self.play()
+
+    def keyPressEvent(self, event: QKeyEvent):
+        """ Process user key press events """
+        key = event.key()
+        if key == Qt.Key_Space:
+            self.toggle_play_pause()
+        elif key == Qt.Key_Return:
+            self.pause_and_grab()
+
 
 class VideoFrameGrabber(QAbstractVideoSurface):
     """ A parasitic video surface used for extracting video frames """
@@ -121,6 +136,7 @@ if __name__ == '__main__':
     test_vid = r"C:\Users\Somers\Desktop\GRK008.MP4"
     app = QApplication(["test"])
     vid = VideoPlayer()
+    vid.frame_grabbed.connect(lambda x, t: print(f'got frame at time {t}'))
     vid.set_video(test_vid)
     vid.show()
     vid.play()
