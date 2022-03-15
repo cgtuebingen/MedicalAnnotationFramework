@@ -49,7 +49,7 @@ class VideoPlayer(QWidget):
         self.media_player.stop()
         self.media_player.setMedia(QMediaContent(QUrl.fromLocalFile(video_file)))
         self.video_name = os.path.splitext(os.path.basename(video_file))[0]
-        self.video_path = f'{os.path.dirname(video_file)}/{self.video_name}'
+        self.video_path = video_file
 
     def grab_frame(self):
         """ trigger the capture of the next displayed frame """
