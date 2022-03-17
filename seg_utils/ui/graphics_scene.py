@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QGraphicsScene, QGraphicsSceneMouseEvent
-from PyQt5.QtCore import Qt, pyqtSignal, QPointF, QRectF, QPoint
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
 
 from seg_utils.config import VERTEX_SIZE
 
@@ -40,7 +40,7 @@ class ImageViewerScene(QGraphicsScene):
 
     def check_out_of_bounds(self, scene_pos: QPointF) -> QPointF:
         """Returns the corrected scene pos which is limited by the boundaries of the image"""
-        pixmap_size = self.items()[0].widget().pixmap.size()
+        pixmap_size = self.items()[0].widget().pixmap.pixmap().size()
         pixmap_size = np.array((pixmap_size.width(), pixmap_size.height()))
         scene_pos = np.clip(np.array((scene_pos.x(), scene_pos.y())), np.array((0, 0)), pixmap_size)
         return QPointF(scene_pos[0], scene_pos[1])
@@ -68,8 +68,13 @@ class ImageViewerScene(QGraphicsScene):
         is_on_vertex = []
         closest_vertex = []
         # only contains one item which is the proxy item aka the canvas
-        for _item_idx, _item in enumerate(self.items()[0].widget().labels):
-            # Check if it is in the shape
+
+        # TODO: This shouldn't be done here. Or maybe it will make more sense after the canvas is organized better...
+        for _item_idx, _item in enumerate(self.items()):
+            if isinstance(_item, QGraphicsItemGroup):
+                group = _item
+                break
+        for _item_idx, _item in enumerate(group.childItems()):
             if _item.contains(event.scenePos()):
                 selected_shape = _item_idx
             _isOnVert, _cVert = _item.vertices.is_on_vertex(event.scenePos())

@@ -1,6 +1,7 @@
-from PyQt5.QtCore import QRectF, pyqtSignal
-from PyQt5.QtGui import QPixmap, QPainter
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from typing import *
 
 from seg_utils.config import VERTEX_SIZE
 from seg_utils.ui.shape import Shape
@@ -17,31 +18,35 @@ class Canvas(QWidget):
     def __init__(self, *args, **kwargs):
         super(Canvas, self).__init__(*args, **kwargs)
         self.vertex_size = VERTEX_SIZE
-        self.labels = [Shape]
+        self.labels = []  # type: List[Shape]
         self.temp_label = None
-        self.pixmap = QPixmap()
-        self._painter = QPainter()
+        self.pixmap = QGraphicsPixmapItem()
+        self._item_group = QGraphicsItemGroup()
+
+    def add_label(self, new_label):
+        self._item_group.addToGroup(new_label)
+
+    def remove_label(self, label):
+        self._item_group.removeFromGroup(label)
+
+    def get_label_index(self, label: Shape):
+        for i, item in self._item_group.childItems():
+            if label == item:
+                return i
+
+    def set_labels(self, new_labels):
+        for item in self._item_group.childItems():
+            self._item_group.removeFromGroup(item)
+        for new_label in new_labels:
+            self._item_group.addToGroup(new_label)
 
     def set_pixmap(self, pixmap: QPixmap):
         """Sets the pixmap and resizes the Widget to the size of the pixmap as this is just connected
         to the Scene and the image_viewer will display the scene respectively a view into the scene"""
-        self.pixmap = pixmap
-        self.resize(self.pixmap.size())
-        self.sRequestFitInView.emit(QRectF(self.pixmap.rect()))
+        self.pixmap.setPixmap(pixmap)
+        self.sRequestFitInView.emit(QRectF(self.pixmap.boundingRect()))
 
-    def paintEvent(self, event) -> None:
-        if not self.pixmap:
-            return super(Canvas, self).paintEvent(event)
-
-        self._painter.begin(self)
-        self._painter.setRenderHint(QPainter.Antialiasing)
-        self._painter.setRenderHint(QPainter.HighQualityAntialiasing)
-        self._painter.setRenderHint(QPainter.SmoothPixmapTransform)
-        self._painter.drawPixmap(0, 0, self.pixmap)
-        if self.labels:
-            for _label in self.labels:
-                _label.paint(painter=self._painter)
-        if self.temp_label:
-            self.temp_label.paint(self._painter)
-
-        self._painter.end()
+    def clear(self):
+        for item in self._item_group.childItems():
+            self._item_group.removeFromGroup(item)
+        self.pixmap.setPixmap(QPixmap())

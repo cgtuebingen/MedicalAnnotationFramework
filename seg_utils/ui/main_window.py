@@ -28,7 +28,6 @@ class LabelingMainWindow(QMainWindow):
         # TODO: The center frame should be given a widget to say "No files to display". This should not be handled
         #       within the ImageDisplay widget
         self.image_display = ImageDisplay()
-        self.image_display.setFrameShape(QFrame.NoFrame)
         self.center_frame.layout().addWidget(self.image_display)
 
         # Right Menu

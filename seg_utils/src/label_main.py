@@ -123,7 +123,6 @@ class MainLogic(LabelingMainWindow):
         self.poly_frame.commentList.itemClicked.connect(self.handle_comment_click)
         self.image_display.sRequestLabelListUpdate.connect(self.handle_update_poly_list)
         self.sLabelSelected.connect(self.image_display.shape_selected)
-        self.image_display.image_viewer.sZoomLevelChanged.connect(self.on_zoom_level_changed)
 
         # toolbar actions
         self.toolBar.get_action("NewProject").triggered.connect(self.on_new_project)
@@ -317,7 +316,6 @@ class MainLogic(LabelingMainWindow):
         self.init_labels()
         self.image_display.init_image(image, self.current_labels)
         self.file_list.file_list.setCurrentRow(self.img_idx)
-        self.on_zoom_level_changed(1)
 
     def init_labels(self):
         r"""This function initializes the labels for the current image. Necessary to have only one call to the database
@@ -607,11 +605,6 @@ class MainLogic(LabelingMainWindow):
 
         if self.images:
             self.database.update_image_annotations(image_name=self.images[self.img_idx], entries=entries)
-
-    def on_zoom_level_changed(self, zoom: int):
-        for shape in self.current_labels:
-            size = self.image_display.get_pixmap_dimensions()
-            shape.set_scaling(zoom, size[argmax(size)])
 
     def open_context_menu(self, selection_idx, contextmenu_pos, actions=None):
         """This opens the context menu, uses only the suitable actions

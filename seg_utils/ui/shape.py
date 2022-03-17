@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QGraphicsItem
-from PyQt5.QtGui import QColor, QPainter, QPen, QBrush, QPainterPath, QPolygonF
-from PyQt5.QtCore import QPointF, Qt, QRectF, QSize
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
 
 from copy import deepcopy
 from typing import Tuple, List, Optional
@@ -173,7 +173,7 @@ class Shape(QGraphicsItem):
 
         self.vertices.update_sel_and_high(np.asarray([new_pos.x(), new_pos.y()]))
 
-    def paint(self, painter: QPainter) -> None:
+    def paint(self, painter: QPainter, *args) -> None:
         if len(self.vertices.vertices) > 0:
             # SELECTION
             if self.isSelected:

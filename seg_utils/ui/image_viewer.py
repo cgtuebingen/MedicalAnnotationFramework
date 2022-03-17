@@ -6,8 +6,6 @@ PLACEHOLDER_TEXT = "No files to display"
 
 
 class ImageViewer(QGraphicsView):
-    sZoomLevelChanged = pyqtSignal(int)
-
     def __init__(self, *args):
         super(ImageViewer, self).__init__(*args)
         self.b_isEmpty = True
@@ -19,7 +17,6 @@ class ImageViewer(QGraphicsView):
         self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
 
         # Protected Item
-        self._zoom = 1
         self._scaling_factor = 5 / 4
         self._enableZoomPan = False
 
@@ -34,7 +31,6 @@ class ImageViewer(QGraphicsView):
                 factor = min(view_rect.width() / scene_rect.width(),
                              view_rect.height() / scene_rect.height())
                 self.scale(factor, factor)
-            self._zoom = 1
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         bounds = self.scene().itemsBoundingRect()
@@ -47,19 +43,11 @@ class ImageViewer(QGraphicsView):
                 if event.angleDelta().y() > 0:
                     # Forward Scroll
                     factor = self._scaling_factor
-                    self._zoom *= self._scaling_factor
                 else:
                     # Backwards scroll
                     factor = 1/self._scaling_factor
-                    self._zoom /= self._scaling_factor
 
-                if self._zoom > 1:
-                    self.scale(factor, factor)
-                elif self._zoom == 1:
-                    self.fitInView(QRectF(self.canvas.rect()))
-                else:
-                    self._zoom = 1
-            self.sZoomLevelChanged.emit(self._zoom)
+                self.scale(factor, factor)
 
     def keyPressEvent(self, event) -> None:
         if not self.b_isEmpty:

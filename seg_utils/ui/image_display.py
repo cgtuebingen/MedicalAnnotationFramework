@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QFrame, QVBoxLayout
-from PyQt5.QtCore import QSize, pyqtSignal, QPointF
-from PyQt5.QtGui import QPixmap, QColor
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 
 from seg_utils.ui.image_viewer import ImageViewer
 from seg_utils.ui.canvas import Canvas
@@ -10,7 +10,7 @@ from seg_utils.ui.shape import Shape
 from typing import List
 
 
-class ImageDisplay(QFrame):
+class ImageDisplay(QWidget):
     """class to manage the central display in the GUI
     controls a QGraphicsView, a QGraphicsScene, a QPixmap and a QWidget for drawing (canvas)"""
 
@@ -21,22 +21,22 @@ class ImageDisplay(QFrame):
         super(ImageDisplay, self).__init__(*args)
 
         # main components of the display
-        self.image_viewer = ImageViewer(self)
-        self.scene = ImageViewerScene(self.image_viewer)
+        self.scene = ImageViewerScene()
+        self.image_viewer = ImageViewer(self.scene)
         self.canvas = Canvas()
-        self.pixmap = QPixmap()
+        self.scene.addItem(self.canvas.pixmap)
+        self.scene.addItem(self.canvas._item_group)
 
         # connecting the components
         self.canvas.resize(QSize(0, 0))
         self.proxy = self.scene.addWidget(self.canvas)
-        self.image_viewer.setScene(self.scene)
 
         # put the viewer in the ImageDisplay-Frame
         self.image_viewer.setFrameShape(QFrame.NoFrame)
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.image_viewer)
 
-        self.labels = List[Shape]
+        self.labels = []  # type: List[Shape]
         self.temp_label = None  # type: Shape
         self.draw_new_color = None  # type: QColor
 
@@ -51,15 +51,14 @@ class ImageDisplay(QFrame):
         and triggers the image_viewer to display a default image"""
         self.scene.b_isInitialized = False
         self.image_viewer.b_isEmpty = True
-        self.canvas.pixmap = None
+        self.canvas.clear()
         self.set_labels([])
 
     def get_pixmap_dimensions(self):
-        return [self.pixmap.width(), self.pixmap.height()]
+        return [self.canvas.pixmap.pixmap().width(), self.canvas.pixmap.pixmap().height()]
 
     def init_image(self, pixmap: QPixmap, labels):
-        self.pixmap = pixmap
-        self.canvas.set_pixmap(self.pixmap)
+        self.canvas.set_pixmap(pixmap)
         self.set_labels(labels)
 
     def is_empty(self):
@@ -106,14 +105,14 @@ class ImageDisplay(QFrame):
 
     def set_temp_label(self, points: List[QPointF] = None, shape_type: str = None):
         if points and shape_type:
-            self.temp_label = Shape(image_size=self.pixmap.size(),
+            self.temp_label = Shape(image_size=self.canvas.pixmap.pixmap().size(),
                                     points=points,
                                     shape_type=shape_type,
                                     color=self.draw_new_color)
+            self.canvas.add_label(self.temp_label)
         else:
+            self.canvas.remove_label(self.temp_label)
             self.temp_label = None
-
-        self.update_canvas()
 
     def shape_hovered(self, shape_idx: int, closest_vertex_shape: int, vertex_idx: int):
         self.on_reset_highlight()
@@ -134,9 +133,7 @@ class ImageDisplay(QFrame):
 
     def update_canvas(self):
         """updates the class variables of the canvas object and triggers a paintEvent"""
-        self.canvas.labels = self.labels
-        self.canvas.temp_label = self.temp_label
-        self.canvas.update()
+        self.canvas.set_labels(self.labels)
 
     def vertex_highlighted(self, shape_idx: int, vertex_idx: int):
         if shape_idx != -1:
