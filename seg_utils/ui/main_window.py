@@ -12,9 +12,8 @@ class LabelingMainWindow(QMainWindow):
     """ The main window for the application """
     def __init__(self):
         super(LabelingMainWindow, self).__init__()
+        self.setWindowTitle("The All-Purpose Labeling Tool")
         self.resize(1276, 968)
-        self.setTabShape(QTabWidget.Rounded)
-
         # The main widget set as focus. Based on a horizontal layout
         self.main_widget = QWidget()
         self.main_widget.setLayout(QHBoxLayout())
@@ -23,9 +22,6 @@ class LabelingMainWindow(QMainWindow):
 
         # Center Frame of the body where the image will be displayed in
         self.center_frame = QFrame()
-        self.center_frame.setAutoFillBackground(False)
-        self.center_frame.setFrameShape(QFrame.NoFrame)
-        self.center_frame.setFrameShadow(QFrame.Raised)
         self.center_frame.setLayout(QVBoxLayout())
         self.center_frame.layout().setContentsMargins(0, 0, 0, 0)
         self.center_frame.layout().setSpacing(0)
