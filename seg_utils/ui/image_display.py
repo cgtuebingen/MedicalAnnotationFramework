@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QFrame, QVBoxLayout
-from PyQt5.QtCore import QSize, pyqtSignal, QPointF
+from PyQt5.QtCore import QSize, pyqtSignal, QPointF, QRectF, Qt
 from PyQt5.QtGui import QPixmap, QColor
 
 from seg_utils.ui.image_viewer import ImageViewer
@@ -44,7 +44,8 @@ class ImageDisplay(QFrame):
         self.scene.sShapeHovered.connect(self.shape_hovered)
         self.scene.sShapeSelected.connect(self.shape_selected)
         self.scene.sResetSelAndHigh.connect(self.on_reset_sel_and_high)
-        self.canvas.sRequestFitInView.connect(self.image_viewer.fitInView)
+        self.canvas.sRequestFitInView.connect(self.fit_in_view)
+        self.image_viewer.sRequestFitInView.connect(self.fit_in_view)
 
     def clear(self):
         """This function deletes all currently stored labels
@@ -64,6 +65,12 @@ class ImageDisplay(QFrame):
 
     def is_empty(self):
         return self.image_viewer.b_isEmpty
+
+    def fit_in_view(self, rect: QRectF = None, mode: Qt.AspectRatioMode = Qt.AspectRatioMode.IgnoreAspectRatio) -> None:
+        """intermediate step to retrieve canvas dimensions and call the actual fitInView function"""
+        if rect is None:
+            rect = QRectF(self.canvas.rect())
+        self.image_viewer.fitInView(rect, mode)
 
     def on_reset_highlight(self):
         self.labels = list(map(self.reset_highlight, self.labels))
