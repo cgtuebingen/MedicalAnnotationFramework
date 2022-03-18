@@ -40,13 +40,7 @@ class ImageViewer(QGraphicsView):
         """Responsible for Zoom.Redefines base function"""
         if not self.b_isEmpty:
             if self._enableZoomPan:
-                if event.angleDelta().y() > 0:
-                    # Forward Scroll
-                    factor = self._scaling_factor
-                else:
-                    # Backwards scroll
-                    factor = 1/self._scaling_factor
-
+                factor = self._scaling_factor if event.angleDelta().y() > 0 else 1/self._scaling_factor
                 self.scale(factor, factor)
 
     def keyPressEvent(self, event) -> None:

@@ -76,6 +76,12 @@ class Shape(QGraphicsObject):
         else:
             return False
 
+    @pyqtSlot(QGraphicsSceneMouseEvent)
+    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
+        super(Shape, self).mouseMoveEvent()
+        # TODO: implement vertex editing and shape moving here
+
+    @pyqtSlot(QGraphicsSceneMouseEvent)
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
         self.clicked.emit(event)
 
@@ -97,7 +103,7 @@ class Shape(QGraphicsObject):
                 self.update()
 
     @pyqtSlot(QGraphicsSceneHoverEvent)
-    def hoverLeaveEvent(self, event):
+    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent):
         if self.is_highlighted:
             self.is_highlighted = False
             self.hover_exit.emit()
