@@ -6,6 +6,7 @@ from seg_utils.ui.shape import Shape
 
 
 class AnnotationGroup(QObject):
+    """ A group for managing annotation objects and their signals with a scene """
     item_highlighted = pyqtSignal(Shape)
     item_dehighlighted = pyqtSignal(Shape)
     item_clicked = pyqtSignal(Shape, QGraphicsSceneMouseEvent)
@@ -64,7 +65,7 @@ class AnnotationGroup(QObject):
         """
         if isinstance(shapes, Shape):
             shapes = [shapes]
-            ids_to_remove = []
+        ids_to_remove = []
         for shape_id in self.annotations:
             if self.annotations[shape_id] in shapes:
                 ids_to_remove.append(shape_id)

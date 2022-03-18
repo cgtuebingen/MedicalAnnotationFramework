@@ -1,10 +1,7 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from PyQt5.QtGui import *
 
 from seg_utils.config import VERTEX_SIZE
-from seg_utils.ui.annotation_painter import AnnotationGroup
-from seg_utils.ui.shape import Shape
 
 from typing import *
 import numpy as np

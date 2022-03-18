@@ -27,7 +27,6 @@ class MainLogic(LabelingMainWindow):
     TODO: This logic should be made more modularized and not wrap the GUI.
     """
     sLabelSelected = pyqtSignal(int, int, int)
-    sResetSelAndHigh = pyqtSignal()
     CREATE, EDIT = 0, 1
 
     def __init__(self):
@@ -458,7 +457,6 @@ class MainLogic(LabelingMainWindow):
         r"""Function to enable the drawing but also uncheck all other buttons"""
         action = self.toolBar.get_widget_for_action(f'Draw{shape_type.replace("temp", "").capitalize()}')
         self.set_other_buttons_unchecked(action)
-        self.sResetSelAndHigh.emit()
         if action.isChecked():
             self.image_display.set_mode(self.CREATE)
             self.image_display.set_shape_type(shape_type)

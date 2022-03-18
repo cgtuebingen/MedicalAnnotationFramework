@@ -5,14 +5,14 @@ from PyQt5.QtGui import *
 from seg_utils.ui.image_viewer import ImageViewer
 from seg_utils.ui.graphics_scene import ImageViewerScene
 from seg_utils.ui.shape import Shape
-from seg_utils.ui.annotation_painter import AnnotationGroup
+from seg_utils.ui.annotation_group import AnnotationGroup
 
 from typing import List
 
 
 class ImageDisplay(QWidget):
     """class to manage the central display in the GUI
-    controls a QGraphicsView and a QGraphicsScene for drawing """
+    controls a QGraphicsView and a QGraphicsScene for drawing on top of a pixmap """
 
     sRequestLabelListUpdate = pyqtSignal(int)
     CREATE, EDIT = 0, 1
