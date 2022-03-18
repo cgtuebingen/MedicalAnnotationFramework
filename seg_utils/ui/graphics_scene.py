@@ -1,9 +1,12 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 
 from seg_utils.config import VERTEX_SIZE
+from seg_utils.ui.annotation_painter import AnnotationGroup
+from seg_utils.ui.shape import Shape
 
-from typing import Tuple
+from typing import *
 import numpy as np
 
 
@@ -32,7 +35,7 @@ class ImageViewerScene(QGraphicsScene):
         self.last_point = QPointF()  # necessary for moving the shapes as it stores the previous pos
         self._startButtonPressed = False  # whether the left button was clicked
         self.poly_points = []  # list of points for the polygon drawing
-        
+
         # this is for highlighting
         self.hShape = -1
         self.vShape = -1
@@ -40,19 +43,16 @@ class ImageViewerScene(QGraphicsScene):
 
     def check_out_of_bounds(self, scene_pos: QPointF) -> QPointF:
         """Returns the corrected scene pos which is limited by the boundaries of the image"""
-        pixmap_size = self.items()[0].widget().pixmap.pixmap().size()
-        pixmap_size = np.array((pixmap_size.width(), pixmap_size.height()))
+        rect = self.itemsBoundingRect()  # type: QRect
+        pixmap_size = np.array((rect.width(), rect.height()))
         scene_pos = np.clip(np.array((scene_pos.x(), scene_pos.y())), np.array((0, 0)), pixmap_size)
         return QPointF(scene_pos[0], scene_pos[1])
 
     def highlighted_shape(self):
         """returns the index of the shape which is highlighted
         or -1 if no shape is currently highlighted"""
-        highlighted_shape = -1
-        for _item_idx, _item in enumerate(self.items()[0].widget().labels):
-            if _item.is_highlighted:
-                highlighted_shape = _item_idx
-        return highlighted_shape
+        i, shape = self.annotations.get_hovered_item()
+        return i
         
     def is_in_drawing_mode(self) -> bool:
         """Returns true if currently in drawing mode"""
@@ -64,22 +64,21 @@ class ImageViewerScene(QGraphicsScene):
             :param event: Mouse Event on scene
             :returns: hovered shape index, closest shape index, vertex index
         """
+
         selected_shape = -1
         is_on_vertex = []
         closest_vertex = []
         # only contains one item which is the proxy item aka the canvas
 
-        # TODO: This shouldn't be done here. Or maybe it will make more sense after the canvas is organized better...
-        for _item_idx, _item in enumerate(self.items()):
-            if isinstance(_item, QGraphicsItemGroup):
-                group = _item
-                break
-        for _item_idx, _item in enumerate(group.childItems()):
-            if _item.contains(event.scenePos()):
-                selected_shape = _item_idx
-            _isOnVert, _cVert = _item.vertices.is_on_vertex(event.scenePos())
-            is_on_vertex.append(_isOnVert)
-            closest_vertex.append(_cVert)
+        # TODO: This shouldn't be done here...
+        # for _item_idx, _item in enumerate(self.items()):
+        #     if isinstance(_item, Shape):
+        #         if _item.contains(event.scenePos()):
+        #             selected_shape = _item_idx
+        #         _isOnVert, _cVert = _item.vertices.is_on_vertex(event.scenePos())
+        #         is_on_vertex.append(_isOnVert)
+        #         closest_vertex.append(_cVert)
+
         # check if any of them are True, i.e. the vertex is highlighted
         if any(is_on_vertex):
             return selected_shape, int(np.argmax(is_on_vertex)), closest_vertex[np.argmax(is_on_vertex)]
@@ -132,6 +131,7 @@ class ImageViewerScene(QGraphicsScene):
                 else:
                     self.hShape, self.vShape, self.vNum = self.is_mouse_on_shape(event)
                     self.sShapeHovered.emit(self.hShape, self.vShape, self.vNum)
+        QGraphicsScene.mouseMoveEvent(self, event)
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         r"""Handle the event for pressing the mouse. Handling of shape selection and of drawing for various shapes
@@ -164,6 +164,7 @@ class ImageViewerScene(QGraphicsScene):
                     self.sResetSelAndHigh.emit()
                     self.sShapeSelected.emit(shape_idx, -1, -1)
                     self.sRequestContextMenu.emit(shape_idx, event.screenPos())
+        QGraphicsScene.mousePressEvent(self, event)
 
     def mouseReleaseEvent(self, event) -> None:
         if self.b_isInitialized:
@@ -181,6 +182,7 @@ class ImageViewerScene(QGraphicsScene):
                 else:
                     self.sRequestAnchorReset.emit(self.vShape)
                     self._startButtonPressed = False
+        QGraphicsScene.mouseReleaseEvent(self, event)
 
     def selected_shape(self):
         """returns the index of the shape which is selected

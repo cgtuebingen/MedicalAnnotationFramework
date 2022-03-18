@@ -122,7 +122,6 @@ class MainLogic(LabelingMainWindow):
         self.poly_frame.polygon_list.itemClicked.connect(self.handle_poly_list_selection)
         self.poly_frame.commentList.itemClicked.connect(self.handle_comment_click)
         self.image_display.sRequestLabelListUpdate.connect(self.handle_update_poly_list)
-        self.sLabelSelected.connect(self.image_display.shape_selected)
 
         # toolbar actions
         self.toolBar.get_action("NewProject").triggered.connect(self.on_new_project)
@@ -149,7 +148,6 @@ class MainLogic(LabelingMainWindow):
         self.image_display.scene.sDrawingDone.connect(self.on_draw_end)
 
         # Altering Shape Events
-        self.sResetSelAndHigh.connect(self.image_display.on_reset_sel_and_high)
         self.image_display.scene.sMoveVertex.connect(self.on_move_vertex)
         self.image_display.scene.sMoveShape.connect(self.on_move_shape)
         self.image_display.scene.sRequestAnchorReset.connect(self.on_anchor_rest)

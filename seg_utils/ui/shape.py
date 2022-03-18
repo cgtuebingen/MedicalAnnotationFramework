@@ -10,7 +10,12 @@ from seg_utils.config import VERTEX_SIZE, SCALING_INITIAL
 from seg_utils.utils.qt import closest_euclidean_distance
 
 
-class Shape(QGraphicsItem):
+class Shape(QGraphicsObject):
+    # TODO: Maybe we should make these QGraphicsItems again to reduce overhead.
+    hover_enter = pyqtSignal()
+    hover_exit = pyqtSignal()
+    clicked = pyqtSignal(QGraphicsSceneMouseEvent)
+
     def __init__(self,
                  image_size: QSize,
                  label: str = None,
@@ -21,10 +26,12 @@ class Shape(QGraphicsItem):
                  group_id=None,
                  label_dict: Optional[dict] = None):
         super(Shape, self).__init__()
+
         _points = points if points else []
         self.image_size = image_size
         self.image_rect = QRectF(0, 0, self.image_size.width(), self.image_size.height())
         self.vertex_size = VERTEX_SIZE
+        self.setAcceptHoverEvents(True)
 
         # prioritize label dict
         if label_dict:
@@ -69,6 +76,33 @@ class Shape(QGraphicsItem):
         else:
             return False
 
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
+        self.clicked.emit(event)
+
+    @pyqtSlot(QGraphicsSceneHoverEvent)
+    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent):
+        super(Shape, self).hoverEnterEvent(event)
+
+    @pyqtSlot(QGraphicsSceneHoverEvent)
+    def hoverMoveEvent(self, event: QGraphicsSceneHoverEvent):
+        if self.contains(event.pos()):
+            if not self.is_highlighted:
+                self.is_highlighted = True
+                self.hover_enter.emit()
+                self.update()
+        else:
+            if self.is_highlighted:
+                self.is_highlighted = False
+                self.hover_exit.emit()
+                self.update()
+
+    @pyqtSlot(QGraphicsSceneHoverEvent)
+    def hoverLeaveEvent(self, event):
+        if self.is_highlighted:
+            self.is_highlighted = False
+            self.hover_exit.emit()
+            self.update()
+
     def boundingRect(self) -> QRectF:
         return self.vertices.bounding_rect()
 
@@ -82,7 +116,7 @@ class Shape(QGraphicsItem):
         else:
             return QPointF(0.0, 0.0)
 
-    def contains(self, point: QPointF) -> bool:
+    def contains(self, point: QPointF, *args) -> bool:
         r"""Reimplementation as the initial method for a QGraphicsItem uses the shape,
         which results in the bounding rectangle. As both tempRectangle and tempTrace do not need
         a contain method due to being an unfinished shape, no method is here for them"""
