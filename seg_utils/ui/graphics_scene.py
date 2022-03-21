@@ -8,9 +8,7 @@ import numpy as np
 
 
 class ImageViewerScene(QGraphicsScene):
-    sShapeHovered = pyqtSignal(int, int, int)
-    sShapeSelected = pyqtSignal(int, int, int)
-
+    mouse_pressed = pyqtSignal(QGraphicsSceneMouseEvent)
     sRequestContextMenu = pyqtSignal(int, QPoint)
     sRequestAnchorReset = pyqtSignal(int)
 
@@ -125,9 +123,6 @@ class ImageViewerScene(QGraphicsScene):
                         self.last_point = self.check_out_of_bounds(event.scenePos())
                     else:
                         self.sMoveVertex.emit(self.vShape, self.vNum, self.check_out_of_bounds(event.scenePos()))
-                else:
-                    self.hShape, self.vShape, self.vNum = self.is_mouse_on_shape(event)
-                    self.sShapeHovered.emit(self.hShape, self.vShape, self.vNum)
         QGraphicsScene.mouseMoveEvent(self, event)
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
@@ -148,20 +143,17 @@ class ImageViewerScene(QGraphicsScene):
                     self._startButtonPressed = True
                     self.starting_point = self.check_out_of_bounds(event.scenePos())
                     self.last_point = self.starting_point
-                    self.hShape, self.vShape, self.vNum = self.is_mouse_on_shape(event)
-                    self.sShapeSelected.emit(self.hShape, self.vShape, self.vNum)
 
             elif event.button() == Qt.MouseButton.RightButton:
                 # Context Menu
                 if not self.is_in_drawing_mode():
-
                     # if user right-clicked a shape, put it in 'selected' state (makes things easier)
                     # evoke context menu
                     shape_idx, _, _ = self.is_mouse_on_shape(event)
                     self.sResetSelAndHigh.emit()
-                    self.sShapeSelected.emit(shape_idx, -1, -1)
                     self.sRequestContextMenu.emit(shape_idx, event.screenPos())
         QGraphicsScene.mousePressEvent(self, event)
+        self.mouse_pressed.emit(event)
 
     def mouseReleaseEvent(self, event) -> None:
         if self.b_isInitialized:

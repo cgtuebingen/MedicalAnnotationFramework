@@ -115,8 +115,6 @@ class MainLogic(LabelingMainWindow):
         # TODO: A lot of these should be handled within their owning widgets.
         self.file_list.itemClicked.connect(self.handle_file_list_item_clicked)
         self.file_list.search_text_changed.connect(self.handle_file_list_search)
-        self.poly_frame.polygon_list.itemClicked.connect(self.handle_poly_list_selection)
-        self.image_display.sRequestLabelListUpdate.connect(self.handle_update_poly_list)
 
         # toolbar actions
         self.tool_bar.get_action("NewProject").triggered.connect(self.on_new_project)
@@ -126,10 +124,10 @@ class MainLogic(LabelingMainWindow):
         self.tool_bar.get_action("Import").triggered.connect(lambda: self.on_import(self._FD_Dir, self._FD_Opt))
         self.tool_bar.get_action("NextImage").triggered.connect(lambda: self.on_next_image(True))
         self.tool_bar.get_action("PreviousImage").triggered.connect(lambda: self.on_next_image(False))
-        self.tool_bar.get_action("DrawTrace").toggled.connect(lambda: self.on_draw_start('tempTrace'))
-        self.tool_bar.get_action("DrawPolygon").toggled.connect(lambda: self.on_draw_start('tempPolygon'))
-        self.tool_bar.get_action("DrawCircle").toggled.connect(lambda: self.on_draw_start('circle'))
-        self.tool_bar.get_action("DrawRectangle").toggled.connect(lambda: self.on_draw_start('rectangle'))
+        self.tool_bar.get_action("DrawTrace").triggered.connect(lambda: self.on_draw_start('tempTrace'))
+        self.tool_bar.get_action("DrawPolygon").triggered.connect(lambda: self.on_draw_start('tempPolygon'))
+        self.tool_bar.get_action("DrawCircle").triggered.connect(lambda: self.on_draw_start('circle'))
+        self.tool_bar.get_action("DrawRectangle").triggered.connect(lambda: self.on_draw_start('rectangle'))
         self.tool_bar.get_action("QuitProgram").triggered.connect(self.close)
 
         # ContextMenu
@@ -207,17 +205,6 @@ class MainLogic(LabelingMainWindow):
                 self.file_list.item(item_idx).setHidden(True)
             else:
                 self.file_list.item(item_idx).setHidden(False)
-
-    def handle_poly_list_selection(self, item):
-        r"""Returns the row index within the list such that the plotter in canvas can update it"""
-        idx, _ = self.poly_frame.get_index_from_selected(item)
-        self.sLabelSelected.emit(idx, idx, -1)
-
-    def handle_update_poly_list(self, _item_idx):
-        """ updates the polyList """
-        for _idx in range(self.poly_frame.polygon_list.count()):
-            self.poly_frame.polygon_list.item(_idx).setSelected(False)
-        self.poly_frame.polygon_list.item(_item_idx).setSelected(True)
 
     def init_classes(self):
         """This function initializes the available classes in the database and updates the label list"""

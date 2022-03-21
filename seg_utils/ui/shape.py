@@ -15,6 +15,8 @@ class Shape(QGraphicsObject):
     hover_enter = pyqtSignal()
     hover_exit = pyqtSignal()
     clicked = pyqtSignal(QGraphicsSceneMouseEvent)
+    selected = pyqtSignal()
+    deselected = pyqtSignal()
 
     def __init__(self,
                  image_size: QSize,
@@ -64,7 +66,7 @@ class Shape(QGraphicsObject):
         # distinction between highlighted (hovering over it) and selecting it (click)
         self._isHighlighted = False
         self._isClosedPath = False
-        self._isSelected = False
+        self._is_selected = False
         self.init_shape()
 
     def __repr__(self):
@@ -83,7 +85,9 @@ class Shape(QGraphicsObject):
 
     @pyqtSlot(QGraphicsSceneMouseEvent)
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
+        self.is_selected = True
         self.clicked.emit(event)
+        super(Shape, self).mousePressEvent(event)
 
     @pyqtSlot(QGraphicsSceneHoverEvent)
     def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent):
@@ -183,12 +187,19 @@ class Shape(QGraphicsObject):
         self._isHighlighted = value
 
     @property
-    def isSelected(self) -> bool:
-        return self._isSelected
+    def is_selected(self) -> bool:
+        return self._is_selected
 
-    @isSelected.setter
-    def isSelected(self, value: bool):
-        self._isSelected = value
+    @is_selected.setter
+    def is_selected(self, value: bool):
+        changed = not (self._is_selected and value)
+        self._is_selected = value
+        if self._is_selected and changed:
+            self.selected.emit()
+            self.update()
+        elif not self._is_selected and changed:
+            self.deselected.emit()
+            self.update()
 
     def move_shape(self, displacement: QPointF) -> None:
         r"""Moves the shape by the given displacement"""
@@ -216,13 +227,13 @@ class Shape(QGraphicsObject):
     def paint(self, painter: QPainter, *args) -> None:
         if len(self.vertices.vertices) > 0:
             # SELECTION
-            if self.isSelected:
+            if self.is_selected:
                 painter.setPen(QPen(self.selected_color, 1))
             else:
                 painter.setPen(QPen(self.line_color, 1))  # TODO: pen width depending on the image size
 
             # HIGHLIGHT BRUSH
-            if self.is_highlighted or self.isSelected:
+            if self.is_highlighted or self.is_selected:
                 painter.setBrush(QBrush(self.brush_color))
             else:
                 painter.setBrush(QBrush())

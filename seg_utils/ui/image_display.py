@@ -27,7 +27,9 @@ class CenterDisplayWidget(QWidget):
 
         self.pixmap = QGraphicsPixmapItem()
         self.scene.addItem(self.pixmap)
-        self.annotations = AnnotationGroup(scene=self.scene)
+        self.annotations = AnnotationGroup()
+        self.scene.addItem(self.annotations)
+        self.scene.mouse_pressed.connect(self.annotations.mousePressEvent)
 
         # put the viewer in the ImageDisplay-Frame
         self.image_viewer.setFrameShape(QFrame.NoFrame)

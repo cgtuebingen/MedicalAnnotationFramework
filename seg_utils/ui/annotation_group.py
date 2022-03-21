@@ -5,26 +5,15 @@ from typing import *
 from seg_utils.ui.shape import Shape
 
 
-class AnnotationGroup(QObject):
+class AnnotationGroup(QGraphicsObject):
     """ A group for managing annotation objects and their signals with a scene """
     item_highlighted = pyqtSignal(Shape)
     item_dehighlighted = pyqtSignal(Shape)
     item_clicked = pyqtSignal(Shape, QGraphicsSceneMouseEvent)
 
-    def __init__(self, scene: QGraphicsScene = None):
-        QObject.__init__(self)
+    def __init__(self):
+        QGraphicsObject.__init__(self)
         self.annotations = {}  # type: Dict[int, Shape]
-        self.highlighted_item = None  # type: Shape
-        self.scene = scene  # type: QGraphicsScene
-
-    def set_scene(self, scene: QGraphicsScene):
-        shapes = []
-        if self.scene:
-            shapes = self.annotations.values()
-            self.remove_shapes(shapes)
-
-        self.scene = scene
-        self.add_shapes(shapes)
 
     def boundingRect(self):
         return self.childrenBoundingRect()
@@ -32,13 +21,20 @@ class AnnotationGroup(QObject):
     def paint(self, *args):
         pass
 
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        for annotation in self.annotations:
+            self.annotations[annotation].is_selected = self.annotations[annotation].is_highlighted
+        super(AnnotationGroup, self).mousePressEvent(event)
+
     @pyqtSlot(int)
     def on_hover_enter(self, shape_id: int):
         self.item_highlighted.emit(self.annotations[shape_id])
+        self.update()
 
     @pyqtSlot(int)
     def on_hover_leave(self, shape_id: int):
         self.item_dehighlighted.emit(self.annotations[shape_id])
+        self.update()
 
     def add_shapes(self, new_shapes: Union[Shape, List[Shape]]):
         """
@@ -49,8 +45,7 @@ class AnnotationGroup(QObject):
         if isinstance(new_shapes, Shape):
             new_shapes = [new_shapes]
         for shape in new_shapes:
-            if self.scene:
-                self.scene.addItem(shape)
+            self.scene().addItem(shape)
             new_id = 0 if not self.annotations else max(self.annotations.keys()) + 1
             self.annotations[new_id] = shape
             shape.hover_enter.connect(lambda: self.on_hover_enter(new_id))
@@ -71,8 +66,7 @@ class AnnotationGroup(QObject):
         for shape_id in self.annotations:
             if self.annotations[shape_id] in shapes:
                 ids_to_remove.append(shape_id)
-                if self.scene:
-                    self.scene.removeItem(self.annotations[shape_id])
+                self.scene().removeItem(self.annotations[shape_id])
         [self.annotations.pop(x) for x in ids_to_remove]
 
     def clear(self):
