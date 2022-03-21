@@ -30,6 +30,7 @@ class ListWidget(QListWidget):
             self.itemClicked.connect(self.handle_click)
         self.itemClicked.connect(self.item_selected)
 
+    @pyqtSlot(QListWidgetItem)
     def item_selected(self, item: QListWidgetItem):
         shape = item.data(Qt.UserRole)
         # TODO: This check needs to be deleted once this widget isn't used for a lot of different things

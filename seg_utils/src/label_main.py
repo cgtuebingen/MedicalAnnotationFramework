@@ -39,7 +39,7 @@ class MainLogic(LabelingMainWindow):
         self.img_idx = 0
         self.b_autoSave = True
         self.context_menu = QMenu(self)
-        self._selection_idx = -1  # helpful for contextmenu references
+        self._selection_idx = -1  # helpful for context menu references
         self.image_size = QSize()
 
         # color stuff

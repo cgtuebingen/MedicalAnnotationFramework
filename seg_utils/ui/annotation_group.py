@@ -5,7 +5,7 @@ from typing import *
 from seg_utils.ui.shape import Shape
 
 
-class AnnotationGroup(QGraphicsObject):
+class AnnotationGroup(QGraphicsObject, QGraphicsItem):
     """ A group for managing annotation objects and their signals with a scene """
     item_highlighted = pyqtSignal(Shape)
     item_dehighlighted = pyqtSignal(Shape)
@@ -13,7 +13,9 @@ class AnnotationGroup(QGraphicsObject):
 
     def __init__(self):
         QGraphicsObject.__init__(self)
+        QGraphicsItem.__init__(self)
         self.annotations = {}  # type: Dict[int, Shape]
+        self.setAcceptHoverEvents(True)
 
     def boundingRect(self):
         return self.childrenBoundingRect()
@@ -45,7 +47,7 @@ class AnnotationGroup(QGraphicsObject):
         if isinstance(new_shapes, Shape):
             new_shapes = [new_shapes]
         for shape in new_shapes:
-            self.scene().addItem(shape)
+            shape.setParentItem(self)
             new_id = 0 if not self.annotations else max(self.annotations.keys()) + 1
             self.annotations[new_id] = shape
             shape.hover_enter.connect(lambda: self.on_hover_enter(new_id))
@@ -66,8 +68,17 @@ class AnnotationGroup(QGraphicsObject):
         for shape_id in self.annotations:
             if self.annotations[shape_id] in shapes:
                 ids_to_remove.append(shape_id)
-                self.scene().removeItem(self.annotations[shape_id])
+                self.annotations[shape_id].setParentItem(None)
         [self.annotations.pop(x) for x in ids_to_remove]
+
+    def hoverMoveEvent(self, event: QGraphicsSceneHoverEvent, **kwargs):
+        [x.hoverMoveEvent(event) for x in self.childItems()]
+
+    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent, **kwargs):
+        [x.hoverEnterEvent(event) for x in self.childItems()]
+
+    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent, **kwargs):
+        [x.hoverLeaveEvent(event) for x in self.childItems()]
 
     def clear(self):
         """

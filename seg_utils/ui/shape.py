@@ -33,7 +33,6 @@ class Shape(QGraphicsObject):
         self.image_size = image_size
         self.image_rect = QRectF(0, 0, self.image_size.width(), self.image_size.height())
         self.vertex_size = VERTEX_SIZE
-        self.setAcceptHoverEvents(True)
 
         # prioritize label dict
         if label_dict:
@@ -72,12 +71,6 @@ class Shape(QGraphicsObject):
     def __repr__(self):
         return f"Shape [{self.label.capitalize()}, {self.shape_type.capitalize()}]"
 
-    def __eq__(self, other):
-        if self.vertices.vertices == other.vertices.vertices and self.label == other.label:
-            return True
-        else:
-            return False
-
     @pyqtSlot(QGraphicsSceneMouseEvent)
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
         super(Shape, self).mouseMoveEvent(event)
@@ -105,6 +98,7 @@ class Shape(QGraphicsObject):
                 self.is_highlighted = False
                 self.hover_exit.emit()
                 self.update()
+        super(Shape, self).hoverMoveEvent(event)
 
     @pyqtSlot(QGraphicsSceneHoverEvent)
     def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent):
