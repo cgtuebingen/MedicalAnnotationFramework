@@ -5,6 +5,7 @@ from typing import List
 
 from seg_utils.ui.shape import Shape
 from seg_utils.utils.qt import createListWidgetItemWithSquareIcon
+from seg_utils.ui.misc_dialogs import CommentDialog
 
 
 STYLESHEET = """QListWidget {
@@ -26,6 +27,7 @@ class ListWidget(QListWidget):
         self.is_comment_list = is_comment_list
         if self.is_comment_list:
             self.setStyleSheet(STYLESHEET)
+            self.itemClicked.connect(self.handle_click)
 
     def contextMenuEvent(self, event) -> None:
         pos = event.pos()
@@ -38,6 +40,7 @@ class ListWidget(QListWidget):
             for lbl in current_label:
                 text = "Details" if lbl.comment else "Add comment"
                 item = QListWidgetItem()
+                item.setData(Qt.UserRole, lbl)
                 item.setText(text)
                 self.addItem(item)
         else:
@@ -45,7 +48,23 @@ class ListWidget(QListWidget):
                 txt = lbl.label
                 col = lbl.line_color
                 item = createListWidgetItemWithSquareIcon(txt, col, self._icon_size)
+                item.setData(Qt.UserRole, lbl)
                 self.addItem(item)
+
+    def handle_click(self, item: QListWidgetItem):
+        """Either shows a blank comment window or the previously written comment for this label"""
+        comment = ""
+        data = item.data(Qt.UserRole)
+        if data is not None:
+            if item.text() != "Add comment" and item.data(Qt.UserRole).comment is not None:
+                comment = item.data(Qt.UserRole).comment
+
+        dlg = CommentDialog(comment)
+        dlg.exec()
+
+        text = "Details" if dlg.comment else "Add comment"
+        item.setText(text)
+        item.data(Qt.UserRole).comment = dlg.comment
 
 
 class LabelsViewingWidget(QWidget):

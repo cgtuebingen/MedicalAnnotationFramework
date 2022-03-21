@@ -16,8 +16,7 @@ from seg_utils.src.actions import Action
 from seg_utils.ui.main_window import LabelingMainWindow
 from seg_utils.ui.shape import Shape
 from seg_utils.ui.dialogs import (NewLabelDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox,
-                                  CloseMessageBox, SelectPatientDialog, ProjectHandlerDialog,
-                                  CommentDialog, DeleteClassMessageBox)
+                                  CloseMessageBox, SelectPatientDialog, ProjectHandlerDialog, DeleteClassMessageBox)
 from seg_utils.config import VERTEX_SIZE
 
 
@@ -117,7 +116,6 @@ class MainLogic(LabelingMainWindow):
         self.file_list.itemClicked.connect(self.handle_file_list_item_clicked)
         self.file_list.search_text_changed.connect(self.handle_file_list_search)
         self.poly_frame.polygon_list.itemClicked.connect(self.handle_poly_list_selection)
-        self.poly_frame.commentList.itemClicked.connect(self.handle_comment_click)
         self.image_display.sRequestLabelListUpdate.connect(self.handle_update_poly_list)
 
         # toolbar actions
@@ -186,28 +184,6 @@ class MainLogic(LabelingMainWindow):
             return None
         label_index = self.classes[label_name]
         return self.colorMap[label_index]
-
-    def handle_comment_click(self, item):
-        """Either shows a blank comment window or the previously written comment for this label"""
-        comment = ""
-        _, idx = self.poly_frame.get_index_from_selected(item)
-        self.sLabelSelected.emit(idx, idx, -1)
-
-        # set comment window text, if there already is a comment
-        for lbl in self.current_labels:
-            if lbl.isSelected:
-                if item.text() != "Add comment" and lbl.comment:
-                    comment = lbl.comment
-
-        dlg = CommentDialog(comment)
-        dlg.exec()
-
-        text = "Details" if dlg.comment else "Add comment"
-        for item in self.poly_frame.commentList.selectedItems():
-            item.setText(text)
-        for lbl in self.current_labels:
-            if lbl.isSelected:
-                lbl.comment = dlg.comment
 
     def handle_file_list_item_clicked(self):
         """Tracks the changed item in the label List"""
