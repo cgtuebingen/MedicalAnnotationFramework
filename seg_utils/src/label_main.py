@@ -24,7 +24,6 @@ class MainLogic(LabelingMainWindow):
     """
     TODO: This logic should be made more modularized and not wrap the GUI.
     """
-    sLabelSelected = pyqtSignal(int, int, int)
     CREATE, EDIT = 0, 1
 
     def __init__(self):

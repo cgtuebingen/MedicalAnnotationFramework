@@ -70,7 +70,7 @@ class ListWidget(QListWidget):
             for lbl in current_label:
                 text = "Details" if lbl.comment else "Add comment"
                 item = QListWidgetItem()
-                item.setData(Qt.UserRole, lbl)
+                item.setData(Qt.UserRole, lbl)  # store reference to shape so it can be used later
                 item.setText(text)
                 self.addItem(item)
         else:
@@ -78,7 +78,7 @@ class ListWidget(QListWidget):
                 txt = lbl.label
                 col = lbl.line_color
                 item = createListWidgetItemWithSquareIcon(txt, col, self._icon_size)
-                item.setData(Qt.UserRole, lbl)
+                item.setData(Qt.UserRole, lbl)    # store reference to shape so it can be used later
                 self.addItem(item)
 
         for lbl in current_label:

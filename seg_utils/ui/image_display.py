@@ -29,7 +29,7 @@ class CenterDisplayWidget(QWidget):
         self.scene.addItem(self.pixmap)
         self.annotations = AnnotationGroup()
         self.scene.addItem(self.annotations)
-        self.scene.mouse_pressed.connect(self.annotations.mousePressEvent)
+        self.scene.mouse_pressed.connect(self.annotations.mousePressEvent)  # needed for deselecting shapes
 
         # put the viewer in the ImageDisplay-Frame
         self.image_viewer.setFrameShape(QFrame.NoFrame)
