@@ -134,9 +134,6 @@ class MainLogic(LabelingMainWindow):
 
         # ContextMenu
         self.image_display.scene.sRequestContextMenu.connect(self.on_request_shape_menu)
-        self.poly_frame.polygon_list.sRequestContextMenu.connect(self.on_request_shape_menu)
-        self.labels_list.label_list.sRequestContextMenu.connect(self.on_request_class_menu)
-        self.file_list.file_list.sRequestContextMenu.connect(self.on_request_files_menu)
 
         # Drawing Events
         self.image_display.scene.sDrawing.connect(self.on_drawing)

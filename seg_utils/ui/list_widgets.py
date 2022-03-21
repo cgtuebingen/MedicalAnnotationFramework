@@ -19,7 +19,7 @@ STYLESHEET = """QListWidget {
 
 
 class ListWidget(QListWidget):
-    sRequestContextMenu = pyqtSignal(int, QPoint)
+    shape_selected = pyqtSignal(Shape)
 
     def __init__(self, *args, is_comment_list=False):
         super(ListWidget, self).__init__(*args)
@@ -28,6 +28,7 @@ class ListWidget(QListWidget):
         if self.is_comment_list:
             self.setStyleSheet(STYLESHEET)
             self.itemClicked.connect(self.handle_click)
+        self.itemClicked.connect(lambda item: self.shape_selected.emit(item.data(Qt.UserRole)))
 
     def contextMenuEvent(self, event) -> None:
         pos = event.pos()
