@@ -1,9 +1,9 @@
-from PyQt5.QtWidgets import QWidgetAction, QToolButton, QToolBar
-from PyQt5.QtCore import QSize, Qt
-from typing import Iterable
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from typing import *
 
 from seg_utils.src.actions import Action
-from seg_utils.ui.tool_button import ToolbarButton
 
 
 class Toolbar(QToolBar):
@@ -22,17 +22,25 @@ class Toolbar(QToolBar):
         self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
         self.setObjectName("toolBar")
+        self.button_group = QButtonGroup()
+        self.button_group.setExclusive(False)
+        self.button_group.buttonToggled.connect(self.exclusive_optional)
+
+    def disable_drawing(self, disable: bool):
+        [btn.setDisabled(disable) for btn in self.button_group.buttons()]
+
+    def exclusive_optional(self, btn: QToolButton):
+        [x.setChecked(False) for x in self.button_group.buttons() if x != btn]
 
     def addAction(self, action: Action):
         r"""Because I want a physical button in the toolbar, i need to create a widget"""
         if isinstance(action, QWidgetAction):
             return super(Toolbar, self).addAction(action)
-
+        btn = QToolButton()
+        btn.setAutoRaise(True)
+        btn.setCheckable(action.isCheckable())
         if action.isCheckable():
-            btn = ToolbarButton()
-            # This enables onw functionality with drawing
-        else:
-            btn = QToolButton()
+            self.button_group.addButton(btn)
         btn.setDefaultAction(action)
         btn.setToolButtonStyle(self.toolButtonStyle())
         btn.setMinimumSize(80, 70)

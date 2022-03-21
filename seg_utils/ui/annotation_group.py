@@ -63,6 +63,8 @@ class AnnotationGroup(QObject):
         :param shapes: a shape or list of shapes
         :return: None
         """
+        if shapes is None:
+            return
         if isinstance(shapes, Shape):
             shapes = [shapes]
         ids_to_remove = []

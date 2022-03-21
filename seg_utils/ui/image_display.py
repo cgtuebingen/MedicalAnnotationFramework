@@ -11,15 +11,15 @@ from seg_utils.ui.annotation_group import AnnotationGroup
 from typing import List
 
 
-class ImageDisplay(QWidget):
-    """class to manage the central display in the GUI
+class CenterDisplayWidget(QWidget):
+    """ widget to manage the central display in the GUI
     controls a QGraphicsView and a QGraphicsScene for drawing on top of a pixmap """
 
     sRequestLabelListUpdate = pyqtSignal(int)
     CREATE, EDIT = 0, 1
 
     def __init__(self, *args):
-        super(ImageDisplay, self).__init__(*args)
+        super(CenterDisplayWidget, self).__init__(*args)
 
         # main components of the display
         self.scene = ImageViewerScene()

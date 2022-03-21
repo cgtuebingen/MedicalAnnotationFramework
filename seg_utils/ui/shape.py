@@ -78,7 +78,7 @@ class Shape(QGraphicsObject):
 
     @pyqtSlot(QGraphicsSceneMouseEvent)
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
-        super(Shape, self).mouseMoveEvent()
+        super(Shape, self).mouseMoveEvent(event)
         # TODO: implement vertex editing and shape moving here
 
     @pyqtSlot(QGraphicsSceneMouseEvent)

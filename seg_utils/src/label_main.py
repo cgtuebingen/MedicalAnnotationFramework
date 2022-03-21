@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 
 from typing import Tuple, List, Union
-from numpy import argmax
 
 from seg_utils.utils.database import SQLiteDatabase
 from seg_utils.utils import qt
@@ -41,8 +40,6 @@ class MainLogic(LabelingMainWindow):
         self.isLabeled = None
         self.img_idx = 0
         self.b_autoSave = True
-        # self.actions = tuple()
-        # self.actions_dict = {}
         self.context_menu = QMenu(self)
         self._selection_idx = -1  # helpful for contextmenu references
         self.image_size = QSize()
@@ -56,6 +53,7 @@ class MainLogic(LabelingMainWindow):
 
         self.connect_events()
         self.init_context_menu()
+        self.tool_bar.disable_drawing(True)
 
         self.vertex_size = VERTEX_SIZE
 
@@ -123,18 +121,18 @@ class MainLogic(LabelingMainWindow):
         self.image_display.sRequestLabelListUpdate.connect(self.handle_update_poly_list)
 
         # toolbar actions
-        self.toolBar.get_action("NewProject").triggered.connect(self.on_new_project)
-        self.toolBar.get_action("OpenProject").triggered.connect(lambda: self.on_open_project(self._FD_Dir,
-                                                                                              self._FD_Opt))
-        self.toolBar.get_action("Save").triggered.connect(self.on_save)
-        self.toolBar.get_action("Import").triggered.connect(lambda: self.on_import(self._FD_Dir, self._FD_Opt))
-        self.toolBar.get_action("NextImage").triggered.connect(lambda: self.on_next_image(True))
-        self.toolBar.get_action("PreviousImage").triggered.connect(lambda: self.on_next_image(False))
-        self.toolBar.get_action("DrawTrace").triggered.connect(lambda: self.on_draw_start('tempTrace'))
-        self.toolBar.get_action("DrawPolygon").triggered.connect(lambda: self.on_draw_start('tempPolygon'))
-        self.toolBar.get_action("DrawCircle").triggered.connect(lambda: self.on_draw_start('circle'))
-        self.toolBar.get_action("DrawRectangle").triggered.connect(lambda: self.on_draw_start('rectangle'))
-        self.toolBar.get_action("QuitProgram").triggered.connect(self.close)
+        self.tool_bar.get_action("NewProject").triggered.connect(self.on_new_project)
+        self.tool_bar.get_action("OpenProject").triggered.connect(lambda: self.on_open_project(self._FD_Dir,
+                                                                                               self._FD_Opt))
+        self.tool_bar.get_action("Save").triggered.connect(self.on_save)
+        self.tool_bar.get_action("Import").triggered.connect(lambda: self.on_import(self._FD_Dir, self._FD_Opt))
+        self.tool_bar.get_action("NextImage").triggered.connect(lambda: self.on_next_image(True))
+        self.tool_bar.get_action("PreviousImage").triggered.connect(lambda: self.on_next_image(False))
+        self.tool_bar.get_action("DrawTrace").toggled.connect(lambda: self.on_draw_start('tempTrace'))
+        self.tool_bar.get_action("DrawPolygon").toggled.connect(lambda: self.on_draw_start('tempPolygon'))
+        self.tool_bar.get_action("DrawCircle").toggled.connect(lambda: self.on_draw_start('circle'))
+        self.tool_bar.get_action("DrawRectangle").toggled.connect(lambda: self.on_draw_start('rectangle'))
+        self.tool_bar.get_action("QuitProgram").triggered.connect(self.close)
 
         # ContextMenu
         self.image_display.scene.sRequestContextMenu.connect(self.on_request_shape_menu)
@@ -173,15 +171,14 @@ class MainLogic(LabelingMainWindow):
         """enables the specified actions. If no actions are specified, enable all"""
         if actions:
             for act in actions:
-                self.toolBar.get_widget_for_action(act).setEnabled(True)
+                self.tool_bar.get_widget_for_action(act).setEnabled(True)
         else:
-            for act in self.toolBar.actions():
-                self.toolBar.widgetForAction(act).setEnabled(True)
+            self.tool_bar.disable_drawing(False)
 
         # TODO: this disables the Open & New Database Button as i only need it once
         #   and currently it crashes everything if clicked again
-        self.toolBar.get_widget_for_action('NewProject').setEnabled(False)
-        self.toolBar.get_widget_for_action('OpenProject').setEnabled(False)
+        self.tool_bar.get_widget_for_action('NewProject').setEnabled(False)
+        self.tool_bar.get_widget_for_action('OpenProject').setEnabled(False)
 
     def get_color_for_label(self, label_name: str):
         r"""Get a Color based on a label_name"""
@@ -279,14 +276,12 @@ class MainLogic(LabelingMainWindow):
                                      "Delete Label Class",
                                      self.on_delete_class,
                                      icon="trash",
-                                     tip="Delete Label Class",
-                                     enabled=True)
+                                     tip="Delete Label Class")
         action_delete_file = Action(self,
                                     "Delete File",
                                     self.on_delete_file,
                                     icon="trash",
-                                    tip="Delete file",
-                                    enabled=True)
+                                    tip="Delete file")
 
         self.context_menu.addActions((action_edit_label,
                                       action_delete_label,
@@ -340,7 +335,7 @@ class MainLogic(LabelingMainWindow):
         self.init_classes()
         self.init_file_list(True)
         self.enable_actions(['Save', 'Import', 'QuitProgram'])
-
+        self.tool_bar.disable_drawing(True)
         if self.images:
             self.image_display.set_initialized()
             self.init_image()
@@ -401,7 +396,7 @@ class MainLogic(LabelingMainWindow):
                 if not self.images:
                     self.image_display.clear()
                     self.init_labels()
-                    for act in self.toolBar.actions():
+                    for act in self.tool_bar.actions():
                         act.setEnabled(False)
 
                 # else switch to the previous/next file
@@ -443,20 +438,18 @@ class MainLogic(LabelingMainWindow):
             self.update_labels(shape)
 
         self.image_display.set_temp_label()
-        self.set_buttons_unchecked()
         self.image_display.set_mode(self.EDIT)
 
     def on_drawing(self, points: List[QPointF], shape_type: str):
         r"""Function to handle the drawing event"""
         action = f'Draw{shape_type.replace("temp", "").capitalize()}'
-        if self.toolBar.get_widget_for_action(action).isChecked():
+        if self.tool_bar.get_widget_for_action(action).isChecked():
             if points:
                 self.image_display.set_temp_label(points, shape_type)
 
     def on_draw_start(self, shape_type: str):
         r"""Function to enable the drawing but also uncheck all other buttons"""
-        action = self.toolBar.get_widget_for_action(f'Draw{shape_type.replace("temp", "").capitalize()}')
-        self.set_other_buttons_unchecked(action)
+        action = self.tool_bar.get_widget_for_action(f'Draw{shape_type.replace("temp", "").capitalize()}')
         if action.isChecked():
             self.image_display.set_mode(self.CREATE)
             self.image_display.set_shape_type(shape_type)
@@ -547,7 +540,6 @@ class MainLogic(LabelingMainWindow):
         direction = 1 if forwards else -1
         self.img_idx = (self.img_idx + direction) % len(self.images)
         self.init_image()
-        self.set_buttons_unchecked()
         self.image_display.set_mode(self.EDIT)
 
     def on_open_project(self, fd_directory, fd_options):
@@ -623,18 +615,6 @@ class MainLogic(LabelingMainWindow):
             else:
                 action.setVisible(False)
         self.context_menu.exec(contextmenu_pos)
-
-    def set_other_buttons_unchecked(self, action: str):
-        """Set all buttons except the button defined by the action into the unchecked state"""
-        for act in self.toolBar.actions():
-            if not self.toolBar.widgetForAction(act) == action:
-                self.toolBar.widgetForAction(act).setChecked(Qt.Unchecked)
-
-    def set_buttons_unchecked(self):
-        """Set all Buttons into the Unchecked state"""
-        for act in self.toolBar.actions():
-            if self.toolBar.widgetForAction(act).isChecked():
-                self.toolBar.widgetForAction(act).setChecked(Qt.Unchecked)
 
     def update_labels(self, shapes: Union[Shape, List[Shape], Tuple[int, Shape]] = None):
         """Updates the current displayed label/canvas in multiple ways. If no argument is given,
