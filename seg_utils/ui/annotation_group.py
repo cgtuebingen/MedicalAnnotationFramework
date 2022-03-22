@@ -31,12 +31,10 @@ class AnnotationGroup(QGraphicsObject, QGraphicsItem):
     @pyqtSlot(int)
     def on_hover_enter(self, shape_id: int):
         self.item_highlighted.emit(self.annotations[shape_id])
-        self.update()
 
     @pyqtSlot(int)
     def on_hover_leave(self, shape_id: int):
         self.item_dehighlighted.emit(self.annotations[shape_id])
-        self.update()
 
     def add_shapes(self, new_shapes: Union[Shape, List[Shape]]):
         """
@@ -71,12 +69,15 @@ class AnnotationGroup(QGraphicsObject, QGraphicsItem):
                 self.annotations[shape_id].setParentItem(None)
         [self.annotations.pop(x) for x in ids_to_remove]
 
+    @pyqtSlot(QGraphicsSceneHoverEvent)
     def hoverMoveEvent(self, event: QGraphicsSceneHoverEvent, **kwargs):
         [x.hoverMoveEvent(event) for x in self.childItems()]
 
+    @pyqtSlot(QGraphicsSceneHoverEvent)
     def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent, **kwargs):
         [x.hoverEnterEvent(event) for x in self.childItems()]
 
+    @pyqtSlot(QGraphicsSceneHoverEvent)
     def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent, **kwargs):
         [x.hoverLeaveEvent(event) for x in self.childItems()]
 

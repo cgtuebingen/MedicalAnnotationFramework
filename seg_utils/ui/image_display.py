@@ -75,11 +75,15 @@ class CenterDisplayWidget(QWidget):
 
     def set_temp_label(self, points: List[QPointF] = None, shape_type: str = None):
         if points and shape_type:
-            self.temp_label = Shape(image_size=self.pixmap.pixmap().size(),
-                                    points=points,
-                                    shape_type=shape_type,
-                                    color=self.draw_new_color)
-            self.annotations.add_shapes(self.temp_label)
+            if self.temp_label is not None:
+                self.temp_label.vertices._points = QPolygonF(points)
+                self.temp_label.update()
+            else:
+                self.temp_label = Shape(image_size=self.pixmap.pixmap().size(),
+                                        points=points,
+                                        shape_type=shape_type,
+                                        color=self.draw_new_color)
+                self.annotations.add_shapes(self.temp_label)
         else:
             self.annotations.remove_shapes(self.temp_label)
-            self.temp_label = None
+            self.temp_label = None  # type: Shape

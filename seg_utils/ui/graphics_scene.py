@@ -53,33 +53,6 @@ class ImageViewerScene(QGraphicsScene):
         """Returns true if currently in drawing mode"""
         return self.mode == self.CREATE
 
-    def is_mouse_on_shape(self, event: QGraphicsSceneMouseEvent) -> Tuple[int, int, int]:
-        r"""Check if event position is within the boundaries of a shape
-
-            :param event: Mouse Event on scene
-            :returns: hovered shape index, closest shape index, vertex index
-        """
-
-        selected_shape = -1
-        is_on_vertex = []
-        closest_vertex = []
-        # only contains one item which is the proxy item aka the canvas
-
-        # TODO: This shouldn't be done here...
-        # for _item_idx, _item in enumerate(self.items()):
-        #     if isinstance(_item, Shape):
-        #         if _item.contains(event.scenePos()):
-        #             selected_shape = _item_idx
-        #         _isOnVert, _cVert = _item.vertices.is_on_vertex(event.scenePos())
-        #         is_on_vertex.append(_isOnVert)
-        #         closest_vertex.append(_cVert)
-
-        # check if any of them are True, i.e. the vertex is highlighted
-        if any(is_on_vertex):
-            return selected_shape, int(np.argmax(is_on_vertex)), closest_vertex[np.argmax(is_on_vertex)]
-        else:
-            return selected_shape, -1, -1
-
     def is_on_beginning(self, point: QPointF) -> bool:
         """Check if a point is within the area around the starting point"""
         if self.poly_points:
