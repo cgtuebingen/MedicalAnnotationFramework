@@ -1,3 +1,5 @@
+import math
+
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
@@ -80,8 +82,13 @@ class ImageViewerScene(QGraphicsScene):
                 else:
                     if self._startButtonPressed:
                         if self.shape_type in ['tempTrace']:
-                            self.poly_points.append(self.check_out_of_bounds(event.scenePos()))
-                            self.sDrawing.emit(self.poly_points, self.shape_type)
+                            if self.poly_points:
+                                delta = self.poly_points[-1] - event.scenePos()
+                            else:
+                                delta = event.scenePos()
+                            if math.sqrt(delta.x()**2 + delta.y()**2) > 3:
+                                self.poly_points.append(self.check_out_of_bounds(event.scenePos()))
+                                self.sDrawing.emit(self.poly_points, self.shape_type)
                         elif self.shape_type in ['circle', 'rectangle']:
                             self.sDrawing.emit([self.starting_point, self.check_out_of_bounds(event.scenePos())],
                                                self.shape_type)

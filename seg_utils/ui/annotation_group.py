@@ -71,14 +71,17 @@ class AnnotationGroup(QGraphicsObject, QGraphicsItem):
 
     @pyqtSlot(QGraphicsSceneHoverEvent)
     def hoverMoveEvent(self, event: QGraphicsSceneHoverEvent, **kwargs):
+        # TODO: only pass to child if mouse in its bounding box
         [x.hoverMoveEvent(event) for x in self.childItems()]
 
     @pyqtSlot(QGraphicsSceneHoverEvent)
     def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent, **kwargs):
+        # TODO: only pass to child if mouse in its bounding box
         [x.hoverEnterEvent(event) for x in self.childItems()]
 
     @pyqtSlot(QGraphicsSceneHoverEvent)
     def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent, **kwargs):
+        # TODO: only pass to child if mouse in its bounding box
         [x.hoverLeaveEvent(event) for x in self.childItems()]
 
     def clear(self):
