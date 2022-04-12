@@ -39,9 +39,9 @@ class ListWidget(QListWidget):
         for i in range(self.count()):
             item = self.item(i)
             if item.data(Qt.UserRole) == shape:
-                item.data(Qt.UserRole).is_selected = True
+                item.data(Qt.UserRole).setSelected(True)
             else:
-                item.data(Qt.UserRole).is_selected = False
+                item.data(Qt.UserRole).setSelected(False)
 
     @pyqtSlot()
     def on_shape_selected(self):

@@ -5,7 +5,6 @@ from PyQt5.QtCore import *
 
 from seg_utils.config import VERTEX_SIZE
 
-from typing import *
 import numpy as np
 
 
@@ -16,8 +15,6 @@ class ImageViewerScene(QGraphicsScene):
 
     sDrawing = pyqtSignal(list, str)
     sDrawingDone = pyqtSignal(list, str)
-    sMoveVertex = pyqtSignal(int, int, QPointF)
-    sMoveShape = pyqtSignal(int, QPointF)
 
     sResetSelAndHigh = pyqtSignal()
 
@@ -73,37 +70,13 @@ class ImageViewerScene(QGraphicsScene):
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         r"""Handle the event for moving the mouse"""
         if self.b_isInitialized:
-            if self.is_in_drawing_mode():
-                if self.shape_type in ['tempPolygon']:
-                    # intermediate points are rendered but only as temporary shapes
-                    # this allows the clicking for new points which are then saved
-                    intermediate_points = self.poly_points + [self.check_out_of_bounds(event.scenePos())]
-                    self.sDrawing.emit(intermediate_points, self.shape_type)
-                else:
-                    if self._startButtonPressed:
-                        if self.shape_type in ['tempTrace']:
-                            if self.poly_points:
-                                delta = self.poly_points[-1] - event.scenePos()
-                            else:
-                                delta = event.scenePos()
-                            if math.sqrt(delta.x()**2 + delta.y()**2) > 3:
-                                self.poly_points.append(self.check_out_of_bounds(event.scenePos()))
-                                self.sDrawing.emit(self.poly_points, self.shape_type)
-                        elif self.shape_type in ['circle', 'rectangle']:
-                            self.sDrawing.emit([self.starting_point, self.check_out_of_bounds(event.scenePos())],
-                                               self.shape_type)
-            else:
-                # Here is the handling for the highlighting (if no start button is pressed)
-                # of shapes but also if one moves vertices or the entire shape
+            if not self.is_in_drawing_mode():
                 if self._startButtonPressed:
                     # TODO: maybe change the ordering as then the vertex move has priority compared to shape move
                     # this discriminates between whether one moves the entire shape of only a vertex
                     if self.hShape != -1:
-                        self.sMoveShape.emit(self.hShape, self.check_out_of_bounds(event.scenePos()) - self.last_point)
                         self.last_point = self.check_out_of_bounds(event.scenePos())
-                    else:
-                        self.sMoveVertex.emit(self.vShape, self.vNum, self.check_out_of_bounds(event.scenePos()))
-        QGraphicsScene.mouseMoveEvent(self, event)
+        super(ImageViewerScene, self).mouseMoveEvent(event)
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         r"""Handle the event for pressing the mouse. Handling of shape selection and of drawing for various shapes
@@ -113,12 +86,12 @@ class ImageViewerScene(QGraphicsScene):
                 if self.is_in_drawing_mode():
                     self._startButtonPressed = True
                     self.starting_point = self.check_out_of_bounds(event.scenePos())
-                    if self.shape_type in ['tempPolygon']:
-                        if self.is_on_beginning(self.starting_point) and len(self.poly_points) > 1:
-                            self.set_closed_path()
-                        else:
-                            self.poly_points.append(self.starting_point)
-                            self.sDrawing.emit(self.poly_points, self.shape_type)
+                    # if self.shape_type in ['tempPolygon']:
+                    #     if self.is_on_beginning(self.starting_point) and len(self.poly_points) > 1:
+                    #         self.set_closed_path()
+                    #     else:
+                    #         self.poly_points.append(self.starting_point)
+                    #         self.sDrawing.emit(self.poly_points, self.shape_type)
                 else:
                     self._startButtonPressed = True
                     self.starting_point = self.check_out_of_bounds(event.scenePos())

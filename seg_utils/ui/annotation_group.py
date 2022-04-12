@@ -1,7 +1,9 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 from typing import *
 
+from seg_utils.utils.qt import colormap_rgb
 from seg_utils.ui.shape import Shape
 
 
@@ -16,17 +18,26 @@ class AnnotationGroup(QGraphicsObject, QGraphicsItem):
         QGraphicsItem.__init__(self)
         self.annotations = {}  # type: Dict[int, Shape]
         self.setAcceptHoverEvents(True)
+        self.temp_shape: Shape = None
+        self._num_colors = 10  # TODO: This needs to be updated based on what's in the image.
+        self.color_map, new_color = colormap_rgb(n=self._num_colors)  # have a buffer for new classes
+        self.draw_new_color = new_color
 
     def boundingRect(self):
         return self.childrenBoundingRect()
-    
+
     def paint(self, *args):
         pass
 
-    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        for annotation in self.annotations:
-            self.annotations[annotation].is_selected = self.annotations[annotation].is_highlighted
-        super(AnnotationGroup, self).mousePressEvent(event)
+    @pyqtSlot()
+    def create_shape(self):
+        s = self.scene()  # type: QGraphicsScene
+        self.temp_shape = Shape(image_size=QSize(s.width(), s.height()),
+                                shape_type='tempTrace',
+                                mode=Shape.ShapeMode.CREATE,
+                                color=self.draw_new_color)
+        self.add_shapes(self.temp_shape)
+        self.temp_shape.grabMouse()
 
     @pyqtSlot(int)
     def on_hover_enter(self, shape_id: int):
@@ -51,6 +62,9 @@ class AnnotationGroup(QGraphicsObject, QGraphicsItem):
             shape.hover_enter.connect(lambda: self.on_hover_enter(new_id))
             shape.hover_exit.connect(lambda: self.on_hover_leave(new_id))
             shape.clicked.connect(lambda x: self.item_clicked.emit(self.annotations[new_id], x))
+            shape.deleted.connect(lambda: self.remove_shapes(shape))
+            shape.mode_changed.connect(self.shape_mode_changed)
+            self.update()
 
     def remove_shapes(self, shapes: Union[Shape, List[Shape]]):
         """
@@ -67,10 +81,11 @@ class AnnotationGroup(QGraphicsObject, QGraphicsItem):
             if self.annotations[shape_id] in shapes:
                 ids_to_remove.append(shape_id)
                 self.annotations[shape_id].setParentItem(None)
-        [self.annotations.pop(x) for x in ids_to_remove]
+        [(self.annotations[x].disconnect(), self.annotations.pop(x)) for x in ids_to_remove]
 
     @pyqtSlot(QGraphicsSceneHoverEvent)
     def hoverMoveEvent(self, event: QGraphicsSceneHoverEvent, **kwargs):
+        # print('group hover')
         # TODO: only pass to child if mouse in its bounding box
         [x.hoverMoveEvent(event) for x in self.childItems()]
 
@@ -84,9 +99,18 @@ class AnnotationGroup(QGraphicsObject, QGraphicsItem):
         # TODO: only pass to child if mouse in its bounding box
         [x.hoverLeaveEvent(event) for x in self.childItems()]
 
+    def sceneEvent(self, *args, **kwargs):
+        return super(AnnotationGroup, self).sceneEvent(*args, **kwargs)
+
     def clear(self):
         """
         Clears the group and scene of shapes
         :return:
         """
         self.remove_shapes(list(self.annotations.values()))
+
+    @pyqtSlot(int)
+    def shape_mode_changed(self, mode: Union[int, Shape.ShapeMode]):
+        shape = self.sender()  # type: Shape
+        if mode == Shape.ShapeMode.FIXED:
+            shape.update_color(self.color_map[0])  # TODO: use label id for index

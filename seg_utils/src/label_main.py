@@ -137,8 +137,6 @@ class MainLogic(LabelingMainWindow):
         self.image_display.scene.sDrawingDone.connect(self.on_draw_end)
 
         # Altering Shape Events
-        self.image_display.scene.sMoveVertex.connect(self.on_move_vertex)
-        self.image_display.scene.sMoveShape.connect(self.on_move_shape)
         self.image_display.scene.sRequestAnchorReset.connect(self.on_anchor_rest)
 
     def create_annotation_entry(self, label_dict: dict, label_class: str) -> dict:
@@ -462,16 +460,6 @@ class MainLogic(LabelingMainWindow):
                 else:
                     self.img_idx = self.images.index(cur_image)
                 self.init_file_list(True)
-
-    def on_move_shape(self, h_shape: int, displacement: QPointF):
-        self.current_labels[h_shape].move_shape(displacement)
-        self.image_display.set_labels(self.current_labels)
-
-    def on_move_vertex(self, v_shape: int, v_num: int, new_pos: QPointF):
-        if v_shape != -1:
-            if self.current_labels[v_shape].vertices.selected_vertex != -1:
-                self.current_labels[v_shape].move_vertex(v_num, new_pos)
-                self.image_display.set_labels(self.current_labels)
 
     def on_new_project(self):
         """This function is the handle for creating a new project"""

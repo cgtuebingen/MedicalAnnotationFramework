@@ -29,7 +29,6 @@ class CenterDisplayWidget(QWidget):
         self.scene.addItem(self.pixmap)
         self.annotations = AnnotationGroup()
         self.scene.addItem(self.annotations)
-        self.scene.mouse_pressed.connect(self.annotations.mousePressEvent)  # needed for deselecting shapes
 
         # put the viewer in the ImageDisplay-Frame
         self.image_viewer.setFrameShape(QFrame.NoFrame)
@@ -39,6 +38,11 @@ class CenterDisplayWidget(QWidget):
         self.labels = []  # type: List[Shape]
         self.temp_label = None  # type: Shape
         self.draw_new_color = None  # type: QColor
+
+    def mousePressEvent(self, event: QMouseEvent):
+        # TODO: add the drawing mode control. right now this will create a new shape on every click
+        self.annotations.create_shape()
+        event.accept()
 
     def clear(self):
         """This function deletes all currently stored labels
@@ -75,15 +79,12 @@ class CenterDisplayWidget(QWidget):
 
     def set_temp_label(self, points: List[QPointF] = None, shape_type: str = None):
         if points and shape_type:
-            if self.temp_label is not None:
-                self.temp_label.vertices._points = QPolygonF(points)
-                self.temp_label.update()
-            else:
-                self.temp_label = Shape(image_size=self.pixmap.pixmap().size(),
-                                        points=points,
-                                        shape_type=shape_type,
-                                        color=self.draw_new_color)
-                self.annotations.add_shapes(self.temp_label)
+            print('setting shape')
+            s = Shape(image_size=self.pixmap.pixmap().size(),
+                      points=points,
+                      shape_type=shape_type,
+                      color=self.draw_new_color,
+                      mode=Shape.ShapeMode.CREATE)
+            self.annotations.add_shapes(s)
         else:
-            self.annotations.remove_shapes(self.temp_label)
             self.temp_label = None  # type: Shape

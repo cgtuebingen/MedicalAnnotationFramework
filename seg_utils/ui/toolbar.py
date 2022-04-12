@@ -37,7 +37,7 @@ class Toolbar(QToolBar):
         if isinstance(action, QWidgetAction):
             return super(Toolbar, self).addAction(action)
         btn = QToolButton()
-        btn.setAutoRaise(True)
+        # btn.setAutoRaise(True)
         btn.setCheckable(action.isCheckable())
         if action.isCheckable():
             self.button_group.addButton(btn)
