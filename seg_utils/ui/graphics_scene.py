@@ -1,9 +1,5 @@
-import math
-
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-
-from seg_utils.config import VERTEX_SIZE
 
 import numpy as np
 
@@ -11,10 +7,6 @@ import numpy as np
 class ImageViewerScene(QGraphicsScene):
     mouse_pressed = pyqtSignal(QGraphicsSceneMouseEvent)
     sRequestContextMenu = pyqtSignal(int, QPoint)
-    sRequestAnchorReset = pyqtSignal(int)
-
-    sDrawing = pyqtSignal(list, str)
-    sDrawingDone = pyqtSignal(list, str)
 
     sResetSelAndHigh = pyqtSignal()
 
@@ -41,89 +33,37 @@ class ImageViewerScene(QGraphicsScene):
         pixmap_size = np.array((rect.width(), rect.height()))
         scene_pos = np.clip(np.array((scene_pos.x(), scene_pos.y())), np.array((0, 0)), pixmap_size)
         return QPointF(scene_pos[0], scene_pos[1])
-
-    def highlighted_shape(self):
-        """returns the index of the shape which is highlighted
-        or -1 if no shape is currently highlighted"""
-        i, shape = self.annotations.get_hovered_item()
-        return i
         
     def is_in_drawing_mode(self) -> bool:
         """Returns true if currently in drawing mode"""
         return self.mode == self.CREATE
 
-    def is_on_beginning(self, point: QPointF) -> bool:
-        """Check if a point is within the area around the starting point"""
-        if self.poly_points:
-            vertex_center = self.poly_points[0]
-            size = VERTEX_SIZE / 2
-            vertex_rect = QRectF(vertex_center - QPointF(size, size),
-                                 vertex_center + QPointF(size, size))
-
-            if vertex_rect.contains(point):
-                return True
-            else:
-                return False
-        else:
-            return False
+    # def is_on_beginning(self, point: QPointF) -> bool:
+    #     """Check if a point is within the area around the starting point"""
+    #     if self.poly_points:
+    #         vertex_center = self.poly_points[0]
+    #         size = VERTEX_SIZE / 2
+    #         vertex_rect = QRectF(vertex_center - QPointF(size, size),
+    #                              vertex_center + QPointF(size, size))
+    #
+    #         if vertex_rect.contains(point):
+    #             return True
+    #         else:
+    #             return False
+    #     else:
+    #         return False
 
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         r"""Handle the event for moving the mouse"""
-        if self.b_isInitialized:
-            if not self.is_in_drawing_mode():
-                if self._startButtonPressed:
-                    # TODO: maybe change the ordering as then the vertex move has priority compared to shape move
-                    # this discriminates between whether one moves the entire shape of only a vertex
-                    if self.hShape != -1:
-                        self.last_point = self.check_out_of_bounds(event.scenePos())
         super(ImageViewerScene, self).mouseMoveEvent(event)
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         r"""Handle the event for pressing the mouse. Handling of shape selection and of drawing for various shapes
         """
-        if self.b_isInitialized:
-            if event.button() == Qt.MouseButton.LeftButton:
-                if self.is_in_drawing_mode():
-                    self._startButtonPressed = True
-                    self.starting_point = self.check_out_of_bounds(event.scenePos())
-                    # if self.shape_type in ['tempPolygon']:
-                    #     if self.is_on_beginning(self.starting_point) and len(self.poly_points) > 1:
-                    #         self.set_closed_path()
-                    #     else:
-                    #         self.poly_points.append(self.starting_point)
-                    #         self.sDrawing.emit(self.poly_points, self.shape_type)
-                else:
-                    self._startButtonPressed = True
-                    self.starting_point = self.check_out_of_bounds(event.scenePos())
-                    self.last_point = self.starting_point
-
-            elif event.button() == Qt.MouseButton.RightButton:
-                # Context Menu
-                if not self.is_in_drawing_mode():
-                    # if user right-clicked a shape, put it in 'selected' state (makes things easier)
-                    # evoke context menu
-                    shape_idx, _, _ = self.is_mouse_on_shape(event)
-                    self.sResetSelAndHigh.emit()
-                    self.sRequestContextMenu.emit(shape_idx, event.screenPos())
         QGraphicsScene.mousePressEvent(self, event)
         self.mouse_pressed.emit(event)
 
     def mouseReleaseEvent(self, event) -> None:
-        if self.b_isInitialized:
-            if event.button() == Qt.MouseButton.LeftButton:
-                if self.is_in_drawing_mode():
-                    if self.shape_type in ['circle', 'rectangle']:
-                        # this ends the drawing for the above shapes
-                        self._startButtonPressed = False
-                        self.sDrawingDone.emit([self.starting_point,
-                                                self.check_out_of_bounds(event.scenePos())],
-                                               self.shape_type)
-                        self.starting_point = QPointF()
-                    elif self.shape_type in ['tempTrace']:
-                        self.set_closed_path()
-                else:
-                    self.sRequestAnchorReset.emit(self.vShape)
-                    self._startButtonPressed = False
         QGraphicsScene.mouseReleaseEvent(self, event)
 
     def selected_shape(self):

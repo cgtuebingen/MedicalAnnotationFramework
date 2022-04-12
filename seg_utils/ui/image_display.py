@@ -2,7 +2,6 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
-
 from seg_utils.ui.image_viewer import ImageViewer
 from seg_utils.ui.graphics_scene import ImageViewerScene
 from seg_utils.ui.shape import Shape

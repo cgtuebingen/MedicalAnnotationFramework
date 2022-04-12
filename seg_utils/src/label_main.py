@@ -123,21 +123,10 @@ class MainLogic(LabelingMainWindow):
         self.tool_bar.get_action("Import").triggered.connect(lambda: self.on_import(self._FD_Dir, self._FD_Opt))
         self.tool_bar.get_action("NextImage").triggered.connect(lambda: self.on_next_image(True))
         self.tool_bar.get_action("PreviousImage").triggered.connect(lambda: self.on_next_image(False))
-        self.tool_bar.get_action("DrawTrace").triggered.connect(lambda: self.on_draw_start('tempTrace'))
-        self.tool_bar.get_action("DrawPolygon").triggered.connect(lambda: self.on_draw_start('tempPolygon'))
-        self.tool_bar.get_action("DrawCircle").triggered.connect(lambda: self.on_draw_start('circle'))
-        self.tool_bar.get_action("DrawRectangle").triggered.connect(lambda: self.on_draw_start('rectangle'))
         self.tool_bar.get_action("QuitProgram").triggered.connect(self.close)
 
         # ContextMenu
         self.image_display.scene.sRequestContextMenu.connect(self.on_request_shape_menu)
-
-        # Drawing Events
-        self.image_display.scene.sDrawing.connect(self.on_drawing)
-        self.image_display.scene.sDrawingDone.connect(self.on_draw_end)
-
-        # Altering Shape Events
-        self.image_display.scene.sRequestAnchorReset.connect(self.on_anchor_rest)
 
     def create_annotation_entry(self, label_dict: dict, label_class: str) -> dict:
         """
@@ -215,7 +204,6 @@ class MainLogic(LabelingMainWindow):
     def init_colors(self):
         r"""Initialise the colors for plotting and for the individual lists """
         self.colorMap, new_color = qt.colormap_rgb(n=self._num_colors)  # have a buffer for new classes
-        self.image_display.draw_new_color = new_color
 
     def init_context_menu(self):
         """ Initializes the functionality of the context_menu"""
@@ -379,40 +367,6 @@ class MainLogic(LabelingMainWindow):
             # Delete the shape
             self.current_labels.pop(self._selection_idx)
             self.update_labels()
-
-    def on_draw_end(self, points: List[QPointF], shape_type: str):
-        """function to handle the end of a drawing event; let user assign a label to the annotation"""
-        d = NewLabelDialog(self)
-        d.exec()
-        if d.class_name:
-            # traces are also polygons so i am going to store them as such
-            if shape_type in ['tempTrace', "tempPolygon"]:
-                shape_type = 'polygon'
-            shape = Shape(image_size=self.image_size,
-                          label=d.class_name, points=points,
-                          color=self.get_color_for_label(d.class_name),
-                          shape_type=shape_type)
-            self.update_labels(shape)
-
-        self.image_display.set_temp_label()
-        self.image_display.set_mode(self.EDIT)
-
-    def on_drawing(self, points: List[QPointF], shape_type: str):
-        r"""Function to handle the drawing event"""
-        action = f'Draw{shape_type.replace("temp", "").capitalize()}'
-        if self.tool_bar.get_widget_for_action(action).isChecked():
-            if points:
-                self.image_display.set_temp_label(points, shape_type)
-
-    def on_draw_start(self, shape_type: str):
-        r"""Function to enable the drawing but also uncheck all other buttons"""
-        action = self.tool_bar.get_widget_for_action(f'Draw{shape_type.replace("temp", "").capitalize()}')
-        if action.isChecked():
-            self.image_display.set_mode(self.CREATE)
-            self.image_display.set_shape_type(shape_type)
-        else:
-            self.image_display.set_temp_label()
-            self.image_display.set_mode(self.EDIT)
 
     def on_edit_label(self):
         d = NewLabelDialog(self)
