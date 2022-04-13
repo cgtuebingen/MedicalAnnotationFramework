@@ -110,7 +110,6 @@ class Shape(QGraphicsObject):
 
     @pyqtSlot(QGraphicsSceneMouseEvent)
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
-        super(Shape, self).mouseMoveEvent(event)
         if self.mode == Shape.ShapeMode.CREATE:
             if len(self.vertices.vertices) > 0:
                 delta = self.vertices.vertices[-1] - event.scenePos()
@@ -119,6 +118,7 @@ class Shape(QGraphicsObject):
             if math.sqrt(delta.x() ** 2 + delta.y() ** 2) > 3:
                 self.vertices.vertices.append(self.check_out_of_bounds(event.scenePos()))
                 self.update()
+        super(Shape, self).mouseMoveEvent(event)
 
     def check_out_of_bounds(self, pos: QPointF):
         scene_pos = np.clip(np.array((pos.x(), pos.y())),
@@ -131,11 +131,16 @@ class Shape(QGraphicsObject):
         if self.contains(event.pos()):
             self.setSelected(True)
             self.clicked.emit(event)
+        else:
+            event.ignore()
         super(Shape, self).mousePressEvent(event)
 
     def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent):
         if self.contains(event.pos()):
             self.set_mode(Shape.ShapeMode.EDIT)
+        else:
+            event.ignore()
+        super(Shape, self).mouseDoubleClickEvent(event)
 
     @pyqtSlot(QGraphicsSceneMouseEvent)
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
@@ -154,6 +159,7 @@ class Shape(QGraphicsObject):
 
     @pyqtSlot(QGraphicsSceneHoverEvent)
     def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent):
+        event.ignore()
         super(Shape, self).hoverEnterEvent(event)
 
     @pyqtSlot(QGraphicsSceneHoverEvent)
@@ -171,6 +177,7 @@ class Shape(QGraphicsObject):
                     self.is_highlighted = False
                     self.hover_exit.emit()
                     self.update()
+        event.ignore()
         super(Shape, self).hoverMoveEvent(event)
 
     @pyqtSlot(QGraphicsSceneHoverEvent)
@@ -179,6 +186,8 @@ class Shape(QGraphicsObject):
             self.is_highlighted = False
             self.hover_exit.emit()
             self.update()
+        event.ignore()
+        super(Shape, self).hoverLeaveEvent(event)
 
     def boundingRect(self) -> QRectF:
         if self.mode == Shape.ShapeMode.CREATE:
@@ -235,6 +244,7 @@ class Shape(QGraphicsObject):
                 return True
             else:
                 return False
+        return False
 
     def init_color(self, color: QColor):
         if color:
