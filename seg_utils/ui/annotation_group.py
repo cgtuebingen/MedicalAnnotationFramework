@@ -6,7 +6,7 @@ from seg_utils.utils.qt import colormap_rgb
 from seg_utils.ui.shape import Shape
 
 
-class AnnotationGroup(QGraphicsObject, QGraphicsItem):
+class AnnotationGroup(QGraphicsObject):
     """ A group for managing annotation objects and their signals with a scene """
     item_highlighted = pyqtSignal(Shape)
     item_dehighlighted = pyqtSignal(Shape)
@@ -14,7 +14,6 @@ class AnnotationGroup(QGraphicsObject, QGraphicsItem):
 
     def __init__(self):
         QGraphicsObject.__init__(self)
-        QGraphicsItem.__init__(self)
         self.annotations = {}  # type: Dict[int, Shape]
         self.setAcceptHoverEvents(True)
         self.temp_shape: Shape = None
