@@ -4,10 +4,8 @@ from PyQt5.QtGui import *
 
 from seg_utils.ui.image_viewer import ImageViewer
 from seg_utils.ui.graphics_scene import ImageViewerScene
-from seg_utils.ui.shape import Shape
 from seg_utils.ui.annotation_group import AnnotationGroup
-
-from typing import List
+from typing import *
 
 
 class CenterDisplayWidget(QWidget):
@@ -33,10 +31,6 @@ class CenterDisplayWidget(QWidget):
         self.image_viewer.setFrameShape(QFrame.NoFrame)
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.image_viewer)
-
-        self.labels = []  # type: List[Shape]
-        self.temp_label = None  # type: Shape
-        self.draw_new_color = None  # type: QColor
 
     def mousePressEvent(self, event: QMouseEvent):
         # TODO: add the drawing mode control. right now this will create a new shape on every click
@@ -65,25 +59,6 @@ class CenterDisplayWidget(QWidget):
         self.scene.b_isInitialized = True
         self.image_viewer.b_isEmpty = False
 
-    def set_labels(self, labels: List[Shape]):
-        self.annotations.clear()
-        self.annotations.add_shapes(labels)
-
     def set_mode(self, mode: int):
         assert mode in [self.CREATE, self.EDIT]
         self.scene.mode = mode
-
-    def set_shape_type(self, shape_type):
-        self.scene.shape_type = shape_type
-
-    def set_temp_label(self, points: List[QPointF] = None, shape_type: str = None):
-        if points and shape_type:
-            print('setting shape')
-            s = Shape(image_size=self.pixmap.pixmap().size(),
-                      points=points,
-                      shape_type=shape_type,
-                      color=self.draw_new_color,
-                      mode=Shape.ShapeMode.CREATE)
-            self.annotations.add_shapes(s)
-        else:
-            self.temp_label = None  # type: Shape

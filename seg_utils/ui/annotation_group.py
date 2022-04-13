@@ -96,3 +96,24 @@ class AnnotationGroup(QGraphicsObject, QGraphicsItem):
             shape.update_color(self.color_map[0])  # TODO: use label id for index
 
 
+if __name__ == '__main__':
+    from PyQt5.QtGui import *
+    import numpy as np
+    from PIL.ImageQt import ImageQt
+    from PIL import Image
+
+    app = QApplication([])
+    scene = QGraphicsScene()
+    viewer = QGraphicsView(scene)
+
+    anno_group = AnnotationGroup()
+    pixmap = QPixmap.fromImage(ImageQt(Image.fromarray(np.random.randint(0, 150, (400, 600), np.uint8))))
+    scene.addItem(QGraphicsPixmapItem(pixmap))
+    scene.addItem(anno_group)
+
+    def mousePressEvent(event):
+        anno_group.create_shape()
+    scene.mousePressEvent = mousePressEvent
+
+    viewer.show()
+    app.exec()

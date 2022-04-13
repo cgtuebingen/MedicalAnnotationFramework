@@ -125,9 +125,6 @@ class MainLogic(LabelingMainWindow):
         self.tool_bar.get_action("PreviousImage").triggered.connect(lambda: self.on_next_image(False))
         self.tool_bar.get_action("QuitProgram").triggered.connect(self.close)
 
-        # ContextMenu
-        self.image_display.scene.sRequestContextMenu.connect(self.on_request_shape_menu)
-
     def create_annotation_entry(self, label_dict: dict, label_class: str) -> dict:
         """
         creates a dictionary that can be used as an entry for the annotations table in the database
@@ -285,11 +282,6 @@ class MainLogic(LabelingMainWindow):
             self.image_display.set_initialized()
             self.init_image()
             self.enable_actions()
-
-    def on_anchor_rest(self, v_shape: int):
-        """Handles the reset of the anchor upon the mouse release within the respective label/shape"""
-        if self.current_labels:
-            self.current_labels[v_shape].reset_anchor()
 
     def on_delete_class(self):
         """This function is the handle for deleting a user-specified label class"""

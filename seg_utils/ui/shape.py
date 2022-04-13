@@ -117,11 +117,11 @@ class Shape(QGraphicsObject):
             else:
                 delta = event.scenePos()
             if math.sqrt(delta.x() ** 2 + delta.y() ** 2) > 3:
-                self.vertices.vertices.append(self.scene().check_out_of_bounds(event.scenePos()))
+                self.vertices.vertices.append(self.check_out_of_bounds(event.scenePos()))
                 self.update()
 
     def check_out_of_bounds(self, pos: QPointF):
-        scene_pos = np.clip(np.array(pos.x(), pos.y()),
+        scene_pos = np.clip(np.array((pos.x(), pos.y())),
                             np.array((0, 0)),
                             (self.image_size.width(), self.image_size.height()))
         return QPointF(scene_pos[0], scene_pos[1])
