@@ -3,9 +3,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 from seg_utils.ui.image_viewer import ImageViewer
-from seg_utils.ui.graphics_scene import ImageViewerScene
 from seg_utils.ui.annotation_group import AnnotationGroup
-from typing import *
 
 
 class CenterDisplayWidget(QWidget):
@@ -19,7 +17,7 @@ class CenterDisplayWidget(QWidget):
         super(CenterDisplayWidget, self).__init__(*args)
 
         # main components of the display
-        self.scene = ImageViewerScene()
+        self.scene = QGraphicsScene()
         self.image_viewer = ImageViewer(self.scene)
 
         self.pixmap = QGraphicsPixmapItem()
@@ -50,7 +48,7 @@ class CenterDisplayWidget(QWidget):
 
     def init_image(self, pixmap: QPixmap, labels):
         self.pixmap.setPixmap(pixmap)
-        self.set_labels(labels)
+        # self.set_labels(labels)
 
     def is_empty(self):
         return self.image_viewer.b_isEmpty
