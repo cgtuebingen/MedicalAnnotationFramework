@@ -27,6 +27,12 @@ class Shape(QGraphicsObject):
         EDIT: int = 1
         CREATE: int = 2
 
+    @dataclass
+    class ShapeType:
+        POLYGON: str = 'polygon'
+        RECTANGLE: str = 'rectangle'
+        CIRCLE: str = 'circle'
+
     def __init__(self,
                  image_size: QSize,
                  label: str = None,
@@ -100,8 +106,6 @@ class Shape(QGraphicsObject):
         return QPointF(scene_pos[0], scene_pos[1])
 
     def sceneEvent(self, event: QEvent) -> bool:
-        # if self.mode == Shape.ShapeMode.CREATE:
-        # print(event.type())
         return super(Shape, self).sceneEvent(event)
 
     @pyqtSlot(QGraphicsSceneMouseEvent)
@@ -178,6 +182,8 @@ class Shape(QGraphicsObject):
 
     def boundingRect(self) -> QRectF:
         if self.mode == Shape.ShapeMode.CREATE:
+            # if creating the shape we need to ensure the mouse events get called, so we find the biggest boundingRect
+            # in the scene. This could probably be done cleaner
             left_most = 0
             top_most = 0
             width = 0
@@ -270,12 +276,6 @@ class Shape(QGraphicsObject):
     def is_highlighted(self, value: bool):
         self._isHighlighted = value
 
-    def move_shape(self, displacement: QPointF) -> None:
-        r"""Moves the shape by the given displacement"""
-        displacement = self.check_displacement(displacement)
-        if self.shape_type in ['polygon', 'rectangle', 'circle']:
-            self.vertices.vertices.translate(displacement)
-
     def move_vertex(self, v_num: int, new_pos: QPointF):
         """Handles the movement of one vertex"""
         if self.shape_type == 'polygon':
@@ -320,19 +320,6 @@ class Shape(QGraphicsObject):
                 painter.drawEllipse(QRectF(self.vertices.vertices[0], self.vertices.vertices[2]))
                 if self.isSelected or self.is_highlighted or self.vertices.selected_vertex != -1:
                     self.vertices.paint(painter)
-
-    def reset_anchor(self):
-        """Resets the anchor set """
-        self._anchorPoint = None
-
-    def set_scaling(self, zoom: int, max_size: int):
-        r"""Sets the zoom coming from the image_viewer as the vertices can be displayed with different size.
-        Currently, the max size is not used but is left in for future iterations"""
-        if zoom <= 5:
-            _scaling = SCALING_INITIAL/zoom
-        else:
-            _scaling = 1
-        self.vertices._scaling = _scaling
 
     def to_dict(self) -> Tuple[dict, str]:
         r"""Returns a dict and a string from a shape item as those can be easier serialized

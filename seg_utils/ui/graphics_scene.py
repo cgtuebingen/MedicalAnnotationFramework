@@ -8,8 +8,6 @@ class ImageViewerScene(QGraphicsScene):
     mouse_pressed = pyqtSignal(QGraphicsSceneMouseEvent)
     sRequestContextMenu = pyqtSignal(int, QPoint)
 
-    sResetSelAndHigh = pyqtSignal()
-
     CREATE, EDIT = 0, 1
 
     def __init__(self, *args):

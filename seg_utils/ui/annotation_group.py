@@ -1,6 +1,5 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from PyQt5.QtGui import *
 from typing import *
 
 from seg_utils.utils.qt import colormap_rgb
@@ -83,25 +82,6 @@ class AnnotationGroup(QGraphicsObject, QGraphicsItem):
                 self.annotations[shape_id].setParentItem(None)
         [(self.annotations[x].disconnect(), self.annotations.pop(x)) for x in ids_to_remove]
 
-    @pyqtSlot(QGraphicsSceneHoverEvent)
-    def hoverMoveEvent(self, event: QGraphicsSceneHoverEvent, **kwargs):
-        # print('group hover')
-        # TODO: only pass to child if mouse in its bounding box
-        [x.hoverMoveEvent(event) for x in self.childItems()]
-
-    @pyqtSlot(QGraphicsSceneHoverEvent)
-    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent, **kwargs):
-        # TODO: only pass to child if mouse in its bounding box
-        [x.hoverEnterEvent(event) for x in self.childItems()]
-
-    @pyqtSlot(QGraphicsSceneHoverEvent)
-    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent, **kwargs):
-        # TODO: only pass to child if mouse in its bounding box
-        [x.hoverLeaveEvent(event) for x in self.childItems()]
-
-    def sceneEvent(self, *args, **kwargs):
-        return super(AnnotationGroup, self).sceneEvent(*args, **kwargs)
-
     def clear(self):
         """
         Clears the group and scene of shapes
@@ -114,3 +94,5 @@ class AnnotationGroup(QGraphicsObject, QGraphicsItem):
         shape = self.sender()  # type: Shape
         if mode == Shape.ShapeMode.FIXED:
             shape.update_color(self.color_map[0])  # TODO: use label id for index
+
+
