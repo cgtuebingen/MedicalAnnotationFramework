@@ -5,6 +5,7 @@ from typing import List
 
 from seg_utils.ui.shape import Shape
 from seg_utils.utils.qt import createListWidgetItemWithSquareIcon
+from seg_utils.ui.misc_dialogs import CommentDialog
 
 
 STYLESHEET = """QListWidget {
@@ -18,7 +19,7 @@ STYLESHEET = """QListWidget {
 
 
 class ListWidget(QListWidget):
-    sRequestContextMenu = pyqtSignal(int, QPoint)
+    # TODO: change this to a QTreeWidget with 2 columns
 
     def __init__(self, *args, is_comment_list=False):
         super(ListWidget, self).__init__(*args)
@@ -26,11 +27,43 @@ class ListWidget(QListWidget):
         self.is_comment_list = is_comment_list
         if self.is_comment_list:
             self.setStyleSheet(STYLESHEET)
+            self.itemClicked.connect(self.handle_click)
+        self.itemClicked.connect(self.item_selected)
+
+    @pyqtSlot(QListWidgetItem)
+    def item_selected(self, item: QListWidgetItem):
+        shape = item.data(Qt.UserRole)
+        # TODO: This check needs to be deleted once this widget isn't used for a lot of different things
+        if shape is None:
+            return
+        for i in range(self.count()):
+            item = self.item(i)
+            if item.data(Qt.UserRole) == shape:
+                item.data(Qt.UserRole).setSelected(True)
+            else:
+                item.data(Qt.UserRole).setSelected(False)
+
+    @pyqtSlot()
+    def on_shape_selected(self):
+        shape = self.sender()
+        for i in range(self.count()):
+            item = self.item(i)
+            if item.data(Qt.UserRole) == shape:
+                item.setSelected(True)
+                break
+
+    @pyqtSlot()
+    def on_shape_deselected(self):
+        shape = self.sender()
+        for i in range(self.count()):
+            item = self.item(i)
+            if item.data(Qt.UserRole) == shape:
+                item.setSelected(False)
+                break
 
     def contextMenuEvent(self, event) -> None:
         pos = event.pos()
         idx = self.row(self.itemAt(pos))
-        self.sRequestContextMenu.emit(idx, self.mapToGlobal(pos))
 
     def update_list(self, current_label: List[Shape]):
         self.clear()
@@ -38,6 +71,7 @@ class ListWidget(QListWidget):
             for lbl in current_label:
                 text = "Details" if lbl.comment else "Add comment"
                 item = QListWidgetItem()
+                item.setData(Qt.UserRole, lbl)  # store reference to shape so it can be used later
                 item.setText(text)
                 self.addItem(item)
         else:
@@ -45,7 +79,27 @@ class ListWidget(QListWidget):
                 txt = lbl.label
                 col = lbl.line_color
                 item = createListWidgetItemWithSquareIcon(txt, col, self._icon_size)
+                item.setData(Qt.UserRole, lbl)    # store reference to shape so it can be used later
                 self.addItem(item)
+
+        for lbl in current_label:
+            lbl.selected.connect(self.on_shape_selected)
+            lbl.deselected.connect(self.on_shape_deselected)
+
+    def handle_click(self, item: QListWidgetItem):
+        """Either shows a blank comment window or the previously written comment for this label"""
+        comment = ""
+        data = item.data(Qt.UserRole)
+        if data is not None:
+            if item.text() != "Add comment" and item.data(Qt.UserRole).comment is not None:
+                comment = item.data(Qt.UserRole).comment
+
+        dlg = CommentDialog(comment)
+        dlg.exec()
+
+        text = "Details" if dlg.comment else "Add comment"
+        item.setText(text)
+        item.data(Qt.UserRole).comment = dlg.comment
 
 
 class LabelsViewingWidget(QWidget):

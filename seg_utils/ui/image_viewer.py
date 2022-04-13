@@ -6,9 +6,6 @@ PLACEHOLDER_TEXT = "No files to display"
 
 
 class ImageViewer(QGraphicsView):
-    sZoomLevelChanged = pyqtSignal(int)
-    sRequestFitInView = pyqtSignal()
-
     def __init__(self, *args):
         super(ImageViewer, self).__init__(*args)
         self.b_isEmpty = True
@@ -18,9 +15,9 @@ class ImageViewer(QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+        self.setMouseTracking(True)
 
         # Protected Item
-        self._zoom = 1
         self._scaling_factor = 5 / 4
         self._enableZoomPan = False
 
@@ -35,7 +32,6 @@ class ImageViewer(QGraphicsView):
                 factor = min(view_rect.width() / scene_rect.width(),
                              view_rect.height() / scene_rect.height())
                 self.scale(factor, factor)
-            self._zoom = 1
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         bounds = self.scene().itemsBoundingRect()
@@ -45,22 +41,8 @@ class ImageViewer(QGraphicsView):
         """Responsible for Zoom.Redefines base function"""
         if not self.b_isEmpty:
             if self._enableZoomPan:
-                if event.angleDelta().y() > 0:
-                    # Forward Scroll
-                    factor = self._scaling_factor
-                    self._zoom *= self._scaling_factor
-                else:
-                    # Backwards scroll
-                    factor = 1/self._scaling_factor
-                    self._zoom /= self._scaling_factor
-
-                if self._zoom > 1:
-                    self.scale(factor, factor)
-                elif self._zoom == 1:
-                    self.sRequestFitInView.emit()
-                else:
-                    self._zoom = 1
-            self.sZoomLevelChanged.emit(self._zoom)
+                factor = self._scaling_factor if event.angleDelta().y() > 0 else 1/self._scaling_factor
+                self.scale(factor, factor)
 
     def keyPressEvent(self, event) -> None:
         if not self.b_isEmpty:

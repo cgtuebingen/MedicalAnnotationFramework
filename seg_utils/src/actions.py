@@ -12,7 +12,6 @@ class Action(QAction):
                  icon=None,
                  tip=None,
                  checkable=False,
-                 enabled=False,
                  checked=False,
                  ):
         super(Action, self).__init__(text, parent)
@@ -31,5 +30,4 @@ class Action(QAction):
             self.triggered.connect(event)
         if checkable:
             self.setCheckable(True)
-        self.setEnabled(enabled)
-        self.setChecked(checked)
+            self.setChecked(checked)

@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
-from seg_utils.ui.image_display import ImageDisplay
+from seg_utils.ui.image_display import CenterDisplayWidget
 from seg_utils.ui.toolbar import Toolbar
 from seg_utils.ui.poly_frame import PolyFrame
 from seg_utils.src.actions import Action
@@ -12,9 +12,8 @@ class LabelingMainWindow(QMainWindow):
     """ The main window for the application """
     def __init__(self):
         super(LabelingMainWindow, self).__init__()
+        self.setWindowTitle("The All-Purpose Labeling Tool")
         self.resize(1276, 968)
-        self.setTabShape(QTabWidget.Rounded)
-
         # The main widget set as focus. Based on a horizontal layout
         self.main_widget = QWidget()
         self.main_widget.setLayout(QHBoxLayout())
@@ -23,16 +22,12 @@ class LabelingMainWindow(QMainWindow):
 
         # Center Frame of the body where the image will be displayed in
         self.center_frame = QFrame()
-        self.center_frame.setAutoFillBackground(False)
-        self.center_frame.setFrameShape(QFrame.NoFrame)
-        self.center_frame.setFrameShadow(QFrame.Raised)
         self.center_frame.setLayout(QVBoxLayout())
         self.center_frame.layout().setContentsMargins(0, 0, 0, 0)
         self.center_frame.layout().setSpacing(0)
         # TODO: The center frame should be given a widget to say "No files to display". This should not be handled
         #       within the ImageDisplay widget
-        self.image_display = ImageDisplay()
-        self.image_display.setFrameShape(QFrame.NoFrame)
+        self.image_display = CenterDisplayWidget()
         self.center_frame.layout().addWidget(self.image_display)
 
         # Right Menu
@@ -62,9 +57,9 @@ class LabelingMainWindow(QMainWindow):
         self.statusbar = QStatusBar()
         self.setStatusBar(self.statusbar)
 
-        self.toolBar = Toolbar(self)
-        self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.toolBar)
-        self.toolBar.init_margins()
+        self.tool_bar = Toolbar(self)
+        self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.tool_bar)
+        self.tool_bar.init_margins()
         self.init_toolbar_actions(self)
 
     def init_toolbar_actions(self, parent):
@@ -76,15 +71,13 @@ class LabelingMainWindow(QMainWindow):
                                     None,
                                     'Ctrl+N',
                                     "new",
-                                    "New project",
-                                    enabled=True)
+                                    "New project")
         action_open_project = Action(parent,
                                      "Open\nProject",
                                      None,
                                      'Ctrl+O',
                                      "open",
-                                     "Open project",
-                                     enabled=True)
+                                     "Open project")
         action_save = Action(parent,
                              "Save",
                              None,
@@ -138,8 +131,7 @@ class LabelingMainWindow(QMainWindow):
                              None,
                              icon="quit",
                              tip="Quit Program",
-                             checkable=True,
-                             enabled=True)
+                             checkable=True)
 
         actions = ((action_new_project,
                     action_open_project,
@@ -154,4 +146,4 @@ class LabelingMainWindow(QMainWindow):
                     action_quit))
 
         # Init Toolbar
-        self.toolBar.addActions(actions)
+        self.tool_bar.addActions(actions)

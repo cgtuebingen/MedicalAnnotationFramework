@@ -1,16 +1,38 @@
-from PyQt5.QtWidgets import QGraphicsItem
-from PyQt5.QtGui import QColor, QPainter, QPen, QBrush, QPainterPath, QPolygonF
-from PyQt5.QtCore import QPointF, Qt, QRectF, QSize
-
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from dataclasses import dataclass
+import math
 from copy import deepcopy
-from typing import Tuple, List, Optional
+from typing import *
 import numpy as np
 from seg_utils.config import VERTEX_SIZE, SCALING_INITIAL
 
 from seg_utils.utils.qt import closest_euclidean_distance
 
 
-class Shape(QGraphicsItem):
+class Shape(QGraphicsObject):
+    # TODO: Maybe we should make these QGraphicsItems again to reduce overhead.
+    hover_enter = pyqtSignal()
+    hover_exit = pyqtSignal()
+    clicked = pyqtSignal(QGraphicsSceneMouseEvent)
+    selected = pyqtSignal()
+    deselected = pyqtSignal()
+    mode_changed = pyqtSignal(int)
+    deleted = pyqtSignal()
+
+    @dataclass
+    class ShapeMode:
+        FIXED: int = 0
+        EDIT: int = 1
+        CREATE: int = 2
+
+    @dataclass
+    class ShapeType:
+        POLYGON: str = 'polygon'
+        RECTANGLE: str = 'rectangle'
+        CIRCLE: str = 'circle'
+
     def __init__(self,
                  image_size: QSize,
                  label: str = None,
@@ -19,12 +41,17 @@ class Shape(QGraphicsItem):
                  shape_type: str = None,
                  flags=None,
                  group_id=None,
-                 label_dict: Optional[dict] = None):
+                 label_dict: Optional[dict] = None,
+                 mode: ShapeMode = ShapeMode.FIXED):
         super(Shape, self).__init__()
+
         _points = points if points else []
         self.image_size = image_size
         self.image_rect = QRectF(0, 0, self.image_size.width(), self.image_size.height())
         self.vertex_size = VERTEX_SIZE
+        self.mode = mode
+        self.setFlag(QGraphicsItem.ItemIsSelectable)
+        self.setAcceptHoverEvents(True)
 
         # prioritize label dict
         if label_dict:
@@ -57,20 +84,127 @@ class Shape(QGraphicsItem):
         # distinction between highlighted (hovering over it) and selecting it (click)
         self._isHighlighted = False
         self._isClosedPath = False
-        self._isSelected = False
         self.init_shape()
+        self.scene_size: Tuple[float, float] = (1e7, 1e7)
+        self.set_mode(mode)
 
-    def __repr__(self):
-        return f"Shape [{self.label.capitalize()}, {self.shape_type.capitalize()}]"
-
-    def __eq__(self, other):
-        if self.vertices.vertices == other.vertices.vertices and self.label == other.label:
-            return True
+    def set_mode(self, mode: Union[ShapeMode, int]):
+        self.mode = mode
+        if self.mode == Shape.ShapeMode.EDIT:
+            self.setFlag(QGraphicsItem.ItemIsMovable, True)
         else:
-            return False
+            self.setFlag(QGraphicsItem.ItemIsMovable, False)
+
+        if self.mode == Shape.ShapeMode.CREATE:
+            self.setSelected(True)
+        self.mode_changed.emit(self.mode)
+
+    def clip_to_scene(self, scene_pos: QPointF) -> QPointF:
+        rect = self.scene().itemsBoundingRect()  # type: QRect
+        pixmap_size = np.array((rect.width(), rect.height()))
+        scene_pos = np.clip(np.array((scene_pos.x(), scene_pos.y())), np.array((0, 0)), pixmap_size)
+        return QPointF(scene_pos[0], scene_pos[1])
+
+    def sceneEvent(self, event: QEvent) -> bool:
+        return super(Shape, self).sceneEvent(event)
+
+    @pyqtSlot(QGraphicsSceneMouseEvent)
+    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
+        super(Shape, self).mouseMoveEvent(event)
+        if self.mode == Shape.ShapeMode.CREATE:
+            if len(self.vertices.vertices) > 0:
+                delta = self.vertices.vertices[-1] - event.scenePos()
+            else:
+                delta = event.scenePos()
+            if math.sqrt(delta.x() ** 2 + delta.y() ** 2) > 3:
+                self.vertices.vertices.append(self.check_out_of_bounds(event.scenePos()))
+                self.update()
+
+    def check_out_of_bounds(self, pos: QPointF):
+        scene_pos = np.clip(np.array((pos.x(), pos.y())),
+                            np.array((0, 0)),
+                            (self.image_size.width(), self.image_size.height()))
+        return QPointF(scene_pos[0], scene_pos[1])
+
+    @pyqtSlot(QGraphicsSceneMouseEvent)
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
+        if self.contains(event.pos()):
+            self.setSelected(True)
+            self.clicked.emit(event)
+        super(Shape, self).mousePressEvent(event)
+
+    def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent):
+        if self.contains(event.pos()):
+            self.set_mode(Shape.ShapeMode.EDIT)
+
+    @pyqtSlot(QGraphicsSceneMouseEvent)
+    def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        super(Shape, self).mousePressEvent(event)
+        if self.mode == Shape.ShapeMode.EDIT:
+            self.vertices.translate(self.pos())  # shift actual points to new location
+            self.setPos(0, 0)  # reset the anchor to line up with the original origin
+            self.set_mode(Shape.ShapeMode.FIXED)
+        elif self.mode == Shape.ShapeMode.CREATE:
+            self.set_mode(Shape.ShapeMode.FIXED)
+            self.ungrabMouse()
+            self.is_closed_path = True
+            # TODO: base these off the actual values
+            self.shape_type = 'polygon'
+            self.group_id = 1
+
+    @pyqtSlot(QGraphicsSceneHoverEvent)
+    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent):
+        super(Shape, self).hoverEnterEvent(event)
+
+    @pyqtSlot(QGraphicsSceneHoverEvent)
+    def hoverMoveEvent(self, event: QGraphicsSceneHoverEvent):
+        if self.mode == Shape.ShapeMode.CREATE:
+            pass
+        else:
+            if self.contains(event.pos()):
+                if not self.is_highlighted:
+                    self.is_highlighted = True
+                    self.hover_enter.emit()
+                    self.update()
+            else:
+                if self.is_highlighted:
+                    self.is_highlighted = False
+                    self.hover_exit.emit()
+                    self.update()
+        super(Shape, self).hoverMoveEvent(event)
+
+    @pyqtSlot(QGraphicsSceneHoverEvent)
+    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent):
+        if self.is_highlighted:
+            self.is_highlighted = False
+            self.hover_exit.emit()
+            self.update()
 
     def boundingRect(self) -> QRectF:
+        if self.mode == Shape.ShapeMode.CREATE:
+            # if creating the shape we need to ensure the mouse events get called, so we find the biggest boundingRect
+            # in the scene. This could probably be done cleaner
+            left_most = 0
+            top_most = 0
+            width = 0
+            height = 0
+            for item in self.scene().items():
+                if item != self and item != self.parentItem():
+                    p = item.pos()
+                    r = item.boundingRect()
+                    left_most = p.x() if p.x() < left_most else left_most
+                    top_most = p.y() if p.y() < top_most else top_most
+                    width = r.width() if r.width() > width else width
+                    height = r.height() if r.height() > height else height
+            return QRectF(left_most, top_most, width, height)
         return self.vertices.bounding_rect()
+
+    def setSelected(self, selected: bool):
+        QGraphicsItem.setSelected(self, selected)
+        if self.isSelected():
+            self.selected.emit()
+        else:
+            self.deselected.emit()
 
     def check_displacement(self, displacement: QPointF) -> QPointF:
         """This function checks whether the bounding rect of the current shape exceeds the image if the
@@ -82,11 +216,10 @@ class Shape(QGraphicsItem):
         else:
             return QPointF(0.0, 0.0)
 
-    def contains(self, point: QPointF) -> bool:
+    def contains(self, point: QPointF, *args) -> bool:
         r"""Reimplementation as the initial method for a QGraphicsItem uses the shape,
         which results in the bounding rectangle. As both tempRectangle and tempTrace do not need
         a contain method due to being an unfinished shape, no method is here for them"""
-
         if self.shape_type in ['rectangle', 'polygon']:
             return self.vertices.vertices.containsPoint(point, Qt.OddEvenFill)
 
@@ -110,9 +243,10 @@ class Shape(QGraphicsItem):
 
     def init_path(self):
         self._path = QPainterPath()
-        self._path.moveTo(self.vertices.vertices[0])
-        for _pnt in self.vertices.vertices[1:]:
-            self._path.lineTo(_pnt)
+        if self.vertices.vertices:
+            self._path.moveTo(self.vertices.vertices[0])
+            for _pnt in self.vertices.vertices[1:]:
+                self._path.lineTo(_pnt)
 
     def init_shape(self):
         if self.shape_type not in ['polygon', 'rectangle', 'circle', 'tempTrace', 'tempPolygon']:
@@ -142,20 +276,6 @@ class Shape(QGraphicsItem):
     def is_highlighted(self, value: bool):
         self._isHighlighted = value
 
-    @property
-    def isSelected(self) -> bool:
-        return self._isSelected
-
-    @isSelected.setter
-    def isSelected(self, value: bool):
-        self._isSelected = value
-
-    def move_shape(self, displacement: QPointF) -> None:
-        r"""Moves the shape by the given displacement"""
-        displacement = self.check_displacement(displacement)
-        if self.shape_type in ['polygon', 'rectangle', 'circle']:
-            self.vertices.vertices.translate(displacement)
-
     def move_vertex(self, v_num: int, new_pos: QPointF):
         """Handles the movement of one vertex"""
         if self.shape_type == 'polygon':
@@ -173,16 +293,16 @@ class Shape(QGraphicsItem):
 
         self.vertices.update_sel_and_high(np.asarray([new_pos.x(), new_pos.y()]))
 
-    def paint(self, painter: QPainter) -> None:
+    def paint(self, painter: QPainter, *args) -> None:
         if len(self.vertices.vertices) > 0:
             # SELECTION
-            if self.isSelected:
+            if self.isSelected():
                 painter.setPen(QPen(self.selected_color, 1))
             else:
                 painter.setPen(QPen(self.line_color, 1))  # TODO: pen width depending on the image size
 
             # HIGHLIGHT BRUSH
-            if self.is_highlighted or self.isSelected:
+            if self.is_highlighted or self.isSelected():
                 painter.setBrush(QBrush(self.brush_color))
             else:
                 painter.setBrush(QBrush())
@@ -200,19 +320,6 @@ class Shape(QGraphicsItem):
                 painter.drawEllipse(QRectF(self.vertices.vertices[0], self.vertices.vertices[2]))
                 if self.isSelected or self.is_highlighted or self.vertices.selected_vertex != -1:
                     self.vertices.paint(painter)
-
-    def reset_anchor(self):
-        """Resets the anchor set """
-        self._anchorPoint = None
-
-    def set_scaling(self, zoom: int, max_size: int):
-        r"""Sets the zoom coming from the image_viewer as the vertices can be displayed with different size.
-        Currently, the max size is not used but is left in for future iterations"""
-        if zoom <= 5:
-            _scaling = SCALING_INITIAL/zoom
-        else:
-            _scaling = 1
-        self.vertices._scaling = _scaling
 
     def to_dict(self) -> Tuple[dict, str]:
         r"""Returns a dict and a string from a shape item as those can be easier serialized
@@ -235,7 +342,6 @@ class Shape(QGraphicsItem):
 
 class VertexCollection(object):
     def __init__(self, points: List[QPointF], line_color: QColor, brush_color: QColor, vertex_size):
-        # i am going to save them as a polygon as it is a representation of a vector and i can access it like a matrix
         self._points = QPolygonF(points)
         self.line_color = line_color
         self.brush_color = brush_color
@@ -251,6 +357,9 @@ class VertexCollection(object):
 
     def bounding_rect(self):
         return self._points.boundingRect()
+
+    def translate(self, offset):
+        self._points.translate(offset)
 
     def closest_vertex(self, point: np.ndarray) -> int:
         """Calculate the euclidean distance between a point and all vertices and return the index of
@@ -308,7 +417,7 @@ class VertexCollection(object):
         self.selected_vertex = self.highlighted_vertex = idx
 
     @property
-    def vertices(self):
+    def vertices(self) -> QPolygonF:
         return self._points
 
     @vertices.setter

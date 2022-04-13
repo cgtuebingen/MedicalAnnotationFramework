@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 
 from typing import Tuple, List, Union
-from numpy import argmax
 
 from seg_utils.utils.database import SQLiteDatabase
 from seg_utils.utils import qt
@@ -17,8 +16,7 @@ from seg_utils.src.actions import Action
 from seg_utils.ui.main_window import LabelingMainWindow
 from seg_utils.ui.shape import Shape
 from seg_utils.ui.dialogs import (NewLabelDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox,
-                                  CloseMessageBox, SelectPatientDialog, ProjectHandlerDialog,
-                                  CommentDialog, DeleteClassMessageBox)
+                                  CloseMessageBox, SelectPatientDialog, ProjectHandlerDialog, DeleteClassMessageBox)
 from seg_utils.config import VERTEX_SIZE
 
 
@@ -26,8 +24,6 @@ class MainLogic(LabelingMainWindow):
     """
     TODO: This logic should be made more modularized and not wrap the GUI.
     """
-    sLabelSelected = pyqtSignal(int, int, int)
-    sResetSelAndHigh = pyqtSignal()
     CREATE, EDIT = 0, 1
 
     def __init__(self):
@@ -42,10 +38,8 @@ class MainLogic(LabelingMainWindow):
         self.isLabeled = None
         self.img_idx = 0
         self.b_autoSave = True
-        # self.actions = tuple()
-        # self.actions_dict = {}
         self.context_menu = QMenu(self)
-        self._selection_idx = -1  # helpful for contextmenu references
+        self._selection_idx = -1  # helpful for context menu references
         self.image_size = QSize()
 
         # color stuff
@@ -57,6 +51,7 @@ class MainLogic(LabelingMainWindow):
 
         self.connect_events()
         self.init_context_menu()
+        self.tool_bar.disable_drawing(True)
 
         self.vertex_size = VERTEX_SIZE
 
@@ -119,41 +114,16 @@ class MainLogic(LabelingMainWindow):
         # TODO: A lot of these should be handled within their owning widgets.
         self.file_list.itemClicked.connect(self.handle_file_list_item_clicked)
         self.file_list.search_text_changed.connect(self.handle_file_list_search)
-        self.poly_frame.polygon_list.itemClicked.connect(self.handle_poly_list_selection)
-        self.poly_frame.commentList.itemClicked.connect(self.handle_comment_click)
-        self.image_display.sRequestLabelListUpdate.connect(self.handle_update_poly_list)
-        self.sLabelSelected.connect(self.image_display.shape_selected)
-        self.image_display.image_viewer.sZoomLevelChanged.connect(self.on_zoom_level_changed)
 
         # toolbar actions
-        self.toolBar.get_action("NewProject").triggered.connect(self.on_new_project)
-        self.toolBar.get_action("OpenProject").triggered.connect(lambda: self.on_open_project(self._FD_Dir,
-                                                                                              self._FD_Opt))
-        self.toolBar.get_action("Save").triggered.connect(self.on_save)
-        self.toolBar.get_action("Import").triggered.connect(lambda: self.on_import(self._FD_Dir, self._FD_Opt))
-        self.toolBar.get_action("NextImage").triggered.connect(lambda: self.on_next_image(True))
-        self.toolBar.get_action("PreviousImage").triggered.connect(lambda: self.on_next_image(False))
-        self.toolBar.get_action("DrawTrace").triggered.connect(lambda: self.on_draw_start('tempTrace'))
-        self.toolBar.get_action("DrawPolygon").triggered.connect(lambda: self.on_draw_start('tempPolygon'))
-        self.toolBar.get_action("DrawCircle").triggered.connect(lambda: self.on_draw_start('circle'))
-        self.toolBar.get_action("DrawRectangle").triggered.connect(lambda: self.on_draw_start('rectangle'))
-        self.toolBar.get_action("QuitProgram").triggered.connect(self.close)
-
-        # ContextMenu
-        self.image_display.scene.sRequestContextMenu.connect(self.on_request_shape_menu)
-        self.poly_frame.polygon_list.sRequestContextMenu.connect(self.on_request_shape_menu)
-        self.labels_list.label_list.sRequestContextMenu.connect(self.on_request_class_menu)
-        self.file_list.file_list.sRequestContextMenu.connect(self.on_request_files_menu)
-
-        # Drawing Events
-        self.image_display.scene.sDrawing.connect(self.on_drawing)
-        self.image_display.scene.sDrawingDone.connect(self.on_draw_end)
-
-        # Altering Shape Events
-        self.sResetSelAndHigh.connect(self.image_display.on_reset_sel_and_high)
-        self.image_display.scene.sMoveVertex.connect(self.on_move_vertex)
-        self.image_display.scene.sMoveShape.connect(self.on_move_shape)
-        self.image_display.scene.sRequestAnchorReset.connect(self.on_anchor_rest)
+        self.tool_bar.get_action("NewProject").triggered.connect(self.on_new_project)
+        self.tool_bar.get_action("OpenProject").triggered.connect(lambda: self.on_open_project(self._FD_Dir,
+                                                                                               self._FD_Opt))
+        self.tool_bar.get_action("Save").triggered.connect(self.on_save)
+        self.tool_bar.get_action("Import").triggered.connect(lambda: self.on_import(self._FD_Dir, self._FD_Opt))
+        self.tool_bar.get_action("NextImage").triggered.connect(lambda: self.on_next_image(True))
+        self.tool_bar.get_action("PreviousImage").triggered.connect(lambda: self.on_next_image(False))
+        self.tool_bar.get_action("QuitProgram").triggered.connect(self.close)
 
     def create_annotation_entry(self, label_dict: dict, label_class: str) -> dict:
         """
@@ -177,15 +147,14 @@ class MainLogic(LabelingMainWindow):
         """enables the specified actions. If no actions are specified, enable all"""
         if actions:
             for act in actions:
-                self.toolBar.get_widget_for_action(act).setEnabled(True)
+                self.tool_bar.get_widget_for_action(act).setEnabled(True)
         else:
-            for act in self.toolBar.actions():
-                self.toolBar.widgetForAction(act).setEnabled(True)
+            self.tool_bar.disable_drawing(False)
 
         # TODO: this disables the Open & New Database Button as i only need it once
         #   and currently it crashes everything if clicked again
-        self.toolBar.get_widget_for_action('NewProject').setEnabled(False)
-        self.toolBar.get_widget_for_action('OpenProject').setEnabled(False)
+        self.tool_bar.get_widget_for_action('NewProject').setEnabled(False)
+        self.tool_bar.get_widget_for_action('OpenProject').setEnabled(False)
 
     def get_color_for_label(self, label_name: str):
         r"""Get a Color based on a label_name"""
@@ -193,28 +162,6 @@ class MainLogic(LabelingMainWindow):
             return None
         label_index = self.classes[label_name]
         return self.colorMap[label_index]
-
-    def handle_comment_click(self, item):
-        """Either shows a blank comment window or the previously written comment for this label"""
-        comment = ""
-        _, idx = self.poly_frame.get_index_from_selected(item)
-        self.sLabelSelected.emit(idx, idx, -1)
-
-        # set comment window text, if there already is a comment
-        for lbl in self.current_labels:
-            if lbl.isSelected:
-                if item.text() != "Add comment" and lbl.comment:
-                    comment = lbl.comment
-
-        dlg = CommentDialog(comment)
-        dlg.exec()
-
-        text = "Details" if dlg.comment else "Add comment"
-        for item in self.poly_frame.commentList.selectedItems():
-            item.setText(text)
-        for lbl in self.current_labels:
-            if lbl.isSelected:
-                lbl.comment = dlg.comment
 
     def handle_file_list_item_clicked(self):
         """Tracks the changed item in the label List"""
@@ -242,17 +189,6 @@ class MainLogic(LabelingMainWindow):
             else:
                 self.file_list.item(item_idx).setHidden(False)
 
-    def handle_poly_list_selection(self, item):
-        r"""Returns the row index within the list such that the plotter in canvas can update it"""
-        idx, _ = self.poly_frame.get_index_from_selected(item)
-        self.sLabelSelected.emit(idx, idx, -1)
-
-    def handle_update_poly_list(self, _item_idx):
-        """ updates the polyList """
-        for _idx in range(self.poly_frame.polygon_list.count()):
-            self.poly_frame.polygon_list.item(_idx).setSelected(False)
-        self.poly_frame.polygon_list.item(_item_idx).setSelected(True)
-
     def init_classes(self):
         """This function initializes the available classes in the database and updates the label list"""
         self.labels_list.label_list.clear()
@@ -265,7 +201,6 @@ class MainLogic(LabelingMainWindow):
     def init_colors(self):
         r"""Initialise the colors for plotting and for the individual lists """
         self.colorMap, new_color = qt.colormap_rgb(n=self._num_colors)  # have a buffer for new classes
-        self.image_display.draw_new_color = new_color
 
     def init_context_menu(self):
         """ Initializes the functionality of the context_menu"""
@@ -283,14 +218,12 @@ class MainLogic(LabelingMainWindow):
                                      "Delete Label Class",
                                      self.on_delete_class,
                                      icon="trash",
-                                     tip="Delete Label Class",
-                                     enabled=True)
+                                     tip="Delete Label Class")
         action_delete_file = Action(self,
                                     "Delete File",
                                     self.on_delete_file,
                                     icon="trash",
-                                    tip="Delete file",
-                                    enabled=True)
+                                    tip="Delete file")
 
         self.context_menu.addActions((action_edit_label,
                                       action_delete_label,
@@ -317,7 +250,6 @@ class MainLogic(LabelingMainWindow):
         self.init_labels()
         self.image_display.init_image(image, self.current_labels)
         self.file_list.file_list.setCurrentRow(self.img_idx)
-        self.on_zoom_level_changed(1)
 
     def init_labels(self):
         r"""This function initializes the labels for the current image. Necessary to have only one call to the database
@@ -345,16 +277,11 @@ class MainLogic(LabelingMainWindow):
         self.init_classes()
         self.init_file_list(True)
         self.enable_actions(['Save', 'Import', 'QuitProgram'])
-
+        self.tool_bar.disable_drawing(True)
         if self.images:
             self.image_display.set_initialized()
             self.init_image()
             self.enable_actions()
-
-    def on_anchor_rest(self, v_shape: int):
-        """Handles the reset of the anchor upon the mouse release within the respective label/shape"""
-        if self.current_labels:
-            self.current_labels[v_shape].reset_anchor()
 
     def on_delete_class(self):
         """This function is the handle for deleting a user-specified label class"""
@@ -406,7 +333,7 @@ class MainLogic(LabelingMainWindow):
                 if not self.images:
                     self.image_display.clear()
                     self.init_labels()
-                    for act in self.toolBar.actions():
+                    for act in self.tool_bar.actions():
                         act.setEnabled(False)
 
                 # else switch to the previous/next file
@@ -432,43 +359,6 @@ class MainLogic(LabelingMainWindow):
             # Delete the shape
             self.current_labels.pop(self._selection_idx)
             self.update_labels()
-
-    def on_draw_end(self, points: List[QPointF], shape_type: str):
-        """function to handle the end of a drawing event; let user assign a label to the annotation"""
-        d = NewLabelDialog(self)
-        d.exec()
-        if d.class_name:
-            # traces are also polygons so i am going to store them as such
-            if shape_type in ['tempTrace', "tempPolygon"]:
-                shape_type = 'polygon'
-            shape = Shape(image_size=self.image_size,
-                          label=d.class_name, points=points,
-                          color=self.get_color_for_label(d.class_name),
-                          shape_type=shape_type)
-            self.update_labels(shape)
-
-        self.image_display.set_temp_label()
-        self.set_buttons_unchecked()
-        self.image_display.set_mode(self.EDIT)
-
-    def on_drawing(self, points: List[QPointF], shape_type: str):
-        r"""Function to handle the drawing event"""
-        action = f'Draw{shape_type.replace("temp", "").capitalize()}'
-        if self.toolBar.get_widget_for_action(action).isChecked():
-            if points:
-                self.image_display.set_temp_label(points, shape_type)
-
-    def on_draw_start(self, shape_type: str):
-        r"""Function to enable the drawing but also uncheck all other buttons"""
-        action = self.toolBar.get_widget_for_action(f'Draw{shape_type.replace("temp", "").capitalize()}')
-        self.set_other_buttons_unchecked(action)
-        self.sResetSelAndHigh.emit()
-        if action.isChecked():
-            self.image_display.set_mode(self.CREATE)
-            self.image_display.set_shape_type(shape_type)
-        else:
-            self.image_display.set_temp_label()
-            self.image_display.set_mode(self.EDIT)
 
     def on_edit_label(self):
         d = NewLabelDialog(self)
@@ -517,16 +407,6 @@ class MainLogic(LabelingMainWindow):
                     self.img_idx = self.images.index(cur_image)
                 self.init_file_list(True)
 
-    def on_move_shape(self, h_shape: int, displacement: QPointF):
-        self.current_labels[h_shape].move_shape(displacement)
-        self.image_display.set_labels(self.current_labels)
-
-    def on_move_vertex(self, v_shape: int, v_num: int, new_pos: QPointF):
-        if v_shape != -1:
-            if self.current_labels[v_shape].vertices.selected_vertex != -1:
-                self.current_labels[v_shape].move_vertex(v_num, new_pos)
-                self.image_display.set_labels(self.current_labels)
-
     def on_new_project(self):
         """This function is the handle for creating a new project"""
 
@@ -553,7 +433,6 @@ class MainLogic(LabelingMainWindow):
         direction = 1 if forwards else -1
         self.img_idx = (self.img_idx + direction) % len(self.images)
         self.init_image()
-        self.set_buttons_unchecked()
         self.image_display.set_mode(self.EDIT)
 
     def on_open_project(self, fd_directory, fd_options):
@@ -608,11 +487,6 @@ class MainLogic(LabelingMainWindow):
         if self.images:
             self.database.update_image_annotations(image_name=self.images[self.img_idx], entries=entries)
 
-    def on_zoom_level_changed(self, zoom: int):
-        for shape in self.current_labels:
-            size = self.image_display.get_pixmap_dimensions()
-            shape.set_scaling(zoom, size[argmax(size)])
-
     def open_context_menu(self, selection_idx, contextmenu_pos, actions=None):
         """This opens the context menu, uses only the suitable actions
         (shape actions if menu_type == 'shape', otherwise, actions regarding the lists at the right)"""
@@ -634,18 +508,6 @@ class MainLogic(LabelingMainWindow):
             else:
                 action.setVisible(False)
         self.context_menu.exec(contextmenu_pos)
-
-    def set_other_buttons_unchecked(self, action: str):
-        """Set all buttons except the button defined by the action into the unchecked state"""
-        for act in self.toolBar.actions():
-            if not self.toolBar.widgetForAction(act) == action:
-                self.toolBar.widgetForAction(act).setChecked(Qt.Unchecked)
-
-    def set_buttons_unchecked(self):
-        """Set all Buttons into the Unchecked state"""
-        for act in self.toolBar.actions():
-            if self.toolBar.widgetForAction(act).isChecked():
-                self.toolBar.widgetForAction(act).setChecked(Qt.Unchecked)
 
     def update_labels(self, shapes: Union[Shape, List[Shape], Tuple[int, Shape]] = None):
         """Updates the current displayed label/canvas in multiple ways. If no argument is given,
