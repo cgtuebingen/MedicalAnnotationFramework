@@ -22,10 +22,11 @@ class LabelList(QListWidget):
         idx = self.row(self.itemAt(pos))
         self.sRequestContextMenu.emit(idx, self.mapToGlobal(pos))
 
-    def update_with_classes(self, classes: List[str], colors: List[QColor]):
+    def update_with_classes(self, classes: List[str], color_map: List[QColor]):
         """ fills the list widget with the given class names and their corresponding colors"""
+        self.clear()
         for idx, _class in enumerate(classes):
-            item = createListWidgetItemWithSquareIcon(_class, colors[idx], self._icon_size)
+            item = createListWidgetItemWithSquareIcon(_class, color_map[idx], self._icon_size)
             self.addItem(item)
 
     def update_with_labels(self, labels: List[Shape]):
