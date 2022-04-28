@@ -15,6 +15,27 @@ def test_comment_list():
     app.exec()
 
 
+def test_dialog_close():
+    # done
+    dlg = CloseMessageBox()
+    dlg.exec()
+    print(dlg.result())
+
+
+def test_dialog_comment():
+    # done
+    dlg = CommentDialog("")
+    dlg.exec()
+    print(dlg.comment)
+
+
+def test_dialog_delete_class():
+    # done
+    dlg = DeleteClassMessageBox("tumour")
+    dlg.exec()
+    print(dlg.answer)
+
+
 def test_dialog_delete_shape():
     # done
     dlg = DeleteShapeMessageBox("tumour")
@@ -25,6 +46,7 @@ def test_dialog_forgot_to_save():
     # done
     dlg = ForgotToSaveMessageBox()
     dlg.exec()
+    print(dlg.result())
 
 
 def test_dialog_new_label():
@@ -33,6 +55,25 @@ def test_dialog_new_label():
     classes = ["Tumour", "Blood", "Vein", "Healthy Tissue"]
     dlg = NewLabelDialog(classes, colors)
     dlg.exec()
+    print(dlg.result)
+
+
+def test_dialog_project_handler():
+    # done
+    dlg = ProjectHandlerDialog()
+    dlg.exec()
+    print("Project Path: {}\n".format(dlg.project_path))
+    print("Created Patients:\n")
+    for p in dlg.patients:
+        print(p)
+
+
+def test_dialog_select_patient():
+    # done
+    existing_patients = ["Alex", "Mark", "Clara"]
+    dlg = SelectPatientDialog(existing_patients)
+    dlg.exec()
+    print(dlg.result)
 
 
 def test_file_viewing_widget():
@@ -76,9 +117,14 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     # test_main_window()
-    test_dialog_new_label()
-    test_dialog_delete_shape()
-    test_dialog_forgot_to_save()
+    # test_dialog_new_label()
+    # test_dialog_delete_shape()
+    # test_dialog_forgot_to_save()
+    # test_dialog_close()
+    # test_dialog_delete_class()
+    # test_dialog_select_patient()
+    # test_dialog_project_handler()
+    test_dialog_comment()
     # test_label_list()
     # test_comment_list()
     # test_label_viewing_widget()
