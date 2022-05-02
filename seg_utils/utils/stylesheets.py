@@ -7,7 +7,7 @@ COMMENT_LIST = """QListWidget {
                   color: blue;
                   } """
 
-STYLESHEET = """QPushButton {
+BUTTON_STYLESHEET = """QPushButton {
                 background-color: lightgray;
                 color: black;
                 min-height: 2em;
@@ -16,7 +16,6 @@ STYLESHEET = """QPushButton {
                 border-color: black;
                 font: bold 12px;
                 padding: 2px;
-                %s
                 }
                 QPushButton::hover {
                 background-color: gray;
@@ -24,5 +23,3 @@ STYLESHEET = """QPushButton {
                 QPushButton::pressed {
                 border-style: outset;
                 }"""
-BUTTON_STYLESHEET = STYLESHEET % ""
-BUTTON_SELECTED_STYLESHEET = STYLESHEET % "border-style: outset;\nbackground-color: gray;"

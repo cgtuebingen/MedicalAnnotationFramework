@@ -9,6 +9,7 @@ from seg_utils.ui.image_display import ImageDisplay
 from seg_utils.ui.poly_frame import PolyFrame
 from seg_utils.ui.shape import Shape
 from seg_utils.utils.qt import colormap_rgb
+from seg_utils.ui.toolbar import Toolbar
 
 
 COLORS, _ = colormap_rgb(25)
@@ -125,8 +126,20 @@ def test_main_window():
 
 
 def test_poly_frame():
+    # done
     window = PolyFrame()
     window.update_frame(SHAPES)
+    window.show()
+    app.exec()
+
+
+def test_toolbar():
+    window = QMainWindow()
+    window.setFixedSize(150, 800)
+    tb = Toolbar(window)
+    window.addToolBar(Qt.ToolBarArea.LeftToolBarArea, tb)
+    tb.init_margins()
+    tb.init_actions(window)
     window.show()
     app.exec()
 
@@ -148,4 +161,5 @@ if __name__ == "__main__":
     # test_label_viewing_widget()
     # test_file_viewing_widget()
     # test_image_display()
-    test_poly_frame()
+    # test_poly_frame()
+    test_toolbar()
