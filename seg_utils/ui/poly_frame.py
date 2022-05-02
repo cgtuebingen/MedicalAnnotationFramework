@@ -17,7 +17,7 @@ class PolyFrame(QWidget):
     Provides a clickable "Add comment" text next to each polygon item.
     """
 
-    sUpdateLabels = pyqtSignal(List[Shape])
+    sUpdateLabels = pyqtSignal(list)
 
     def __init__(self, *args):
         super(PolyFrame, self).__init__(*args)

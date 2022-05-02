@@ -62,6 +62,18 @@ class LabelingMainWindow(QMainWindow):
         self.main_widget.layout().addWidget(self.right_menu_widget)
         self.setCentralWidget(self.main_widget)
 
+        self.menubar = QMenuBar()
+        self.menubar.setGeometry(QRect(0, 0, 1276, 22))
+        self.setMenuBar(self.menubar)
+
+        self.statusbar = QStatusBar()
+        self.setStatusBar(self.statusbar)
+
+        self.toolBar = Toolbar(self)
+        self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.toolBar)
+        self.toolBar.init_margins()
+        self.toolBar.init_actions(self)
+
     def set_default(self, is_empty: bool):
         """ either hides the default label or the image display"""
         self.image_display.setHidden(is_empty)
