@@ -21,4 +21,49 @@ class LabelingMainWindow(QMainWindow):
         self.main_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.main_widget.layout().setSpacing(0)
 
+        # Center Frame of the body where the image will be displayed in
+        self.center_frame = QFrame()
+        self.center_frame.setAutoFillBackground(False)
+        self.center_frame.setFrameShape(QFrame.NoFrame)
+        self.center_frame.setFrameShadow(QFrame.Raised)
+        self.center_frame.setLayout(QVBoxLayout())
+        self.center_frame.layout().setContentsMargins(0, 0, 0, 0)
+        self.center_frame.layout().setSpacing(0)
+
+        # TODO: The center frame should be given a widget to say "No files to display". This should not be handled
+        #       within the ImageDisplay widget
+        self.no_files = QLabel()
+        self.no_files.setText("No files to display")
+        self.no_files.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.image_display = ImageDisplay()
+        self.image_display.setFrameShape(QFrame.NoFrame)
+        self.image_display.setHidden(True)
+        self.image_display.sSetDefault.connect(self.set_default)
+
+        self.center_frame.layout().addWidget(self.image_display)
+        self.center_frame.layout().addWidget(self.no_files)
+
+        # Right Menu
+        self.right_menu_widget = QWidget()
+        self.right_menu_widget.setMaximumWidth(200)
+        self.right_menu_widget.setLayout(QVBoxLayout())
+        self.right_menu_widget.layout().setContentsMargins(0, 0, 0, 0)
+        self.right_menu_widget.layout().setSpacing(0)
+
+        # the labels, polygon amd file lists
+        self.labels_list = LabelsViewingWidget()
+        self.poly_frame = PolyFrame()
+        self.file_list = FileViewingWidget()
+        self.right_menu_widget.layout().addWidget(self.labels_list)
+        self.right_menu_widget.layout().addWidget(self.poly_frame)
+        self.right_menu_widget.layout().addWidget(self.file_list)
+
+        self.main_widget.layout().addWidget(self.center_frame)
+        self.main_widget.layout().addWidget(self.right_menu_widget)
         self.setCentralWidget(self.main_widget)
+
+    def set_default(self, is_empty: bool):
+        """ either hides the default label or the image display"""
+        self.image_display.setHidden(is_empty)
+        self.no_files.setHidden(not is_empty)
+
