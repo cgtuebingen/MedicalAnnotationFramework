@@ -120,7 +120,7 @@ class MainLogic(LabelingMainWindow):
         self.file_list.itemClicked.connect(self.handle_file_list_item_clicked)
         self.file_list.search_text_changed.connect(self.handle_file_list_search)
         self.poly_frame.polygon_list.itemClicked.connect(self.handle_poly_list_selection)
-        self.poly_frame.commentList.itemClicked.connect(self.handle_comment_click)
+        self.poly_frame.comment_list.itemClicked.connect(self.handle_comment_click)
         self.image_display.sRequestLabelListUpdate.connect(self.handle_update_poly_list)
         self.sLabelSelected.connect(self.image_display.shape_selected)
         self.image_display.image_viewer.sZoomLevelChanged.connect(self.on_zoom_level_changed)
@@ -210,7 +210,7 @@ class MainLogic(LabelingMainWindow):
         dlg.exec()
 
         text = "Details" if dlg.comment else "Add comment"
-        for item in self.poly_frame.commentList.selectedItems():
+        for item in self.poly_frame.comment_list.selectedItems():
             item.setText(text)
         for lbl in self.current_labels:
             if lbl.isSelected:

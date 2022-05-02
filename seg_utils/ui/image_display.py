@@ -15,6 +15,7 @@ class ImageDisplay(QFrame):
     controls a QGraphicsView, a QGraphicsScene, a QPixmap and a QWidget for drawing (canvas)"""
 
     sRequestLabelListUpdate = pyqtSignal(int)
+    sSetDefault = pyqtSignal(bool)
     CREATE, EDIT = 0, 1
 
     def __init__(self, *args):
@@ -54,6 +55,7 @@ class ImageDisplay(QFrame):
         self.image_viewer.b_isEmpty = True
         self.canvas.pixmap = None
         self.set_labels([])
+        self.sSetDefault.emit(True)
 
     def get_pixmap_dimensions(self):
         return [self.pixmap.width(), self.pixmap.height()]
@@ -62,6 +64,7 @@ class ImageDisplay(QFrame):
         self.pixmap = pixmap
         self.canvas.set_pixmap(self.pixmap)
         self.set_labels(labels)
+        self.sSetDefault.emit(False)
 
     def is_empty(self):
         return self.image_viewer.b_isEmpty
