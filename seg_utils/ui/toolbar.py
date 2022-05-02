@@ -1,12 +1,16 @@
-from PyQt5.QtWidgets import QWidgetAction, QToolButton, QToolBar
-from PyQt5.QtCore import QSize, Qt
+from PyQt5.QtWidgets import QWidgetAction, QToolButton, QToolBar, QFileDialog
+from PyQt5.QtCore import QSize, Qt, pyqtSignal
 from typing import Iterable
 
 from seg_utils.src.actions import Action
 from seg_utils.ui.tool_button import ToolbarButton
+from seg_utils.ui.dialogs_new import ProjectHandlerDialog
 
 
 class Toolbar(QToolBar):
+
+    sCreateNewProject = pyqtSignal(list)
+
     def __init__(self, parent):
         super(Toolbar, self).__init__(parent)
         self.actionsDict = {}  # This is a lookup table to match the buttons to the numbers they got added
@@ -61,7 +65,7 @@ class Toolbar(QToolBar):
         # TODO: Figure out a more modular way to set up these actions
         action_new_project = Action(parent,
                                     "New\nProject",
-                                    None,
+                                    self.new_project,
                                     'Ctrl+N',
                                     "new",
                                     "New project",
@@ -165,3 +169,9 @@ class Toolbar(QToolBar):
         self.setContentsMargins(*m)
         self.layout().setSpacing(2)
         self.layout().setContentsMargins(*m)
+
+    def new_project(self):
+        dlg = ProjectHandlerDialog()
+        dlg.exec()
+        if dlg.project_path:
+            self.sCreateNewProject.emit([dlg.project_path, dlg.files])

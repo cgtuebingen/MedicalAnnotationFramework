@@ -5,7 +5,7 @@ from seg_utils.ui.image_display import ImageDisplay
 from seg_utils.ui.toolbar import Toolbar
 from seg_utils.ui.poly_frame import PolyFrame
 from seg_utils.src.actions import Action
-from seg_utils.ui.list_widgets import FileViewingWidget, LabelsViewingWidget
+from seg_utils.ui.list_widgets_new import FileViewingWidget, LabelsViewingWidget
 
 
 class LabelingMainWindow(QMainWindow):

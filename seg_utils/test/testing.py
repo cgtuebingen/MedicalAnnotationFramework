@@ -10,6 +10,7 @@ from seg_utils.ui.poly_frame import PolyFrame
 from seg_utils.ui.shape import Shape
 from seg_utils.utils.qt import colormap_rgb
 from seg_utils.ui.toolbar import Toolbar
+from seg_utils.src.main_logic import MainLogic
 
 
 COLORS, _ = colormap_rgb(25)
@@ -17,6 +18,11 @@ CLASSES = ["Tumour", "Blood", "Vein", "Healthy Tissue"]
 SHAPES = [Shape(QSize(10, 10), _class, color=_color, shape_type='polygon')
           for _class, _color in zip(CLASSES, COLORS)]
 PATIENTS = ["Alex", "Mark", "Clara"]
+
+
+def test_all():
+    gui = MainLogic()
+    app.exec()
 
 
 def test_comment_list():
@@ -147,7 +153,7 @@ def test_toolbar():
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    test_main_window()
+    # test_main_window()
     # test_dialog_new_label()
     # test_dialog_delete_shape()
     # test_dialog_forgot_to_save()
@@ -162,4 +168,5 @@ if __name__ == "__main__":
     # test_file_viewing_widget()
     # test_image_display()
     # test_poly_frame()
-    test_toolbar()
+    # test_toolbar()
+    test_all()
