@@ -8,9 +8,10 @@ from seg_utils.ui.list_widgets_new import *
 from seg_utils.ui.image_display import ImageDisplay
 from seg_utils.ui.poly_frame import PolyFrame
 from seg_utils.ui.shape import Shape
-from seg_utils.utils.qt import colormap_rgb
 from seg_utils.ui.toolbar import Toolbar
 from seg_utils.src.main_logic import MainLogic
+from seg_utils.utils.qt import colormap_rgb
+from seg_utils.utils.stylesheets import TAB_STYLESHEET
 
 
 COLORS, _ = colormap_rgb(25)
@@ -139,6 +140,21 @@ def test_poly_frame():
     app.exec()
 
 
+def test_tab():
+    tab = QTabWidget()
+    w1 = QWidget()
+    w2 = QWidget()
+    w1.setLayout(QVBoxLayout())
+    w2.setLayout(QVBoxLayout())
+    w1.layout().addWidget(QLabel("Widget 1"))
+    w2.layout().addWidget(QLabel("Widget 2"))
+    tab.addTab(w1, 'First')
+    tab.addTab(w2, 'Second')
+    tab.setStyleSheet(TAB_STYLESHEET)
+    tab.show()
+    app.exec()
+
+
 def test_toolbar():
     window = QMainWindow()
     window.setFixedSize(150, 800)
@@ -170,3 +186,4 @@ if __name__ == "__main__":
     # test_poly_frame()
     # test_toolbar()
     test_all()
+    # test_tab()
