@@ -5,7 +5,7 @@ from typing import List
 
 from seg_utils.ui.shape import Shape
 from seg_utils.utils.qt import createListWidgetItemWithSquareIcon
-from seg_utils.utils.stylesheets import COMMENT_LIST
+from seg_utils.utils.stylesheets import COMMENT_LIST, TAB_STYLESHEET
 
 
 class LabelList(QListWidget):
@@ -78,6 +78,7 @@ class LabelsViewingWidget(QWidget):
 
 
 class FileViewingWidget(QWidget):
+    """ holds a QTabWidget to be able to display both images and whole slide images"""
     itemClicked = pyqtSignal(QListWidgetItem)
 
     def __init__(self):
@@ -90,6 +91,10 @@ class FileViewingWidget(QWidget):
         self.file_label.setText("File List")
         self.file_label.setAlignment(Qt.AlignCenter)
         self.layout().addWidget(self.file_label)
+
+        self.tab = QTabWidget()
+        self.tab.setContentsMargins(0, 0, 0, 0)
+        self.tab.setStyleSheet(TAB_STYLESHEET)
         self.search_field = QTextEdit()
 
         # Size Policy
@@ -113,21 +118,35 @@ class FileViewingWidget(QWidget):
         self.search_field.setObjectName("fileSearch")
         self.layout().addWidget(self.search_field)
 
-        self.file_list = QListWidget()
-        self.file_list.setIconSize(QSize(7, 7))
-        self.file_list.setItemAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.file_list.setObjectName("fileList")
-        self.layout().addWidget(self.file_list)
+        self.image_list = QListWidget()
+        self.image_list.setIconSize(QSize(7, 7))
+        self.image_list.setContentsMargins(0, 0, 0, 0)
+        self.image_list.setFrameShape(QFrame.NoFrame)
+        self.image_list.setItemAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.image_list.setObjectName("imageList")
+
+        self.wsi_list = QListWidget()
+        self.wsi_list.setIconSize(QSize(7, 7))
+        self.wsi_list.setContentsMargins(0, 0, 0, 0)
+        self.wsi_list.setFrameShape(QFrame.NoFrame)
+        self.wsi_list.setItemAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.wsi_list.setObjectName("wsiList")
+
+        self.tab.addTab(self.image_list, 'Images')
+        self.tab.addTab(self.wsi_list, 'WSI')
+        self.layout().addWidget(self.tab)
 
         # TODO: This should all be done within this widget. There should be little need for outside connections
-        self.file_list.itemClicked.connect(self.itemClicked.emit)
+        self.image_list.itemClicked.connect(self.itemClicked.emit)
         self.search_field.textChanged.connect(self.search_text_changed)
 
     def search_text_changed(self):
         """ filters the list regarding the user input in the search field"""
         cur_text = self.search_field.toPlainText()
-        for idx in range(self.file_list.count()):
-            item = self.file_list.item(idx)
+        cur_list = self.tab.currentWidget()
+
+        for idx in range(cur_list.count()):
+            item = cur_list.item(idx)
             if cur_text not in item.text():
                 item.setHidden(True)
             else:
