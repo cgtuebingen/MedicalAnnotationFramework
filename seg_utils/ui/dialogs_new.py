@@ -133,7 +133,6 @@ class SelectionDialog(QDialog):
         self.info = QLabel()
         self.info.setContentsMargins(0, 0, 0, 0)
         self.info.setFrameShape(QFrame.NoFrame)
-        self.info.setStyleSheet("color: red")
         self.info.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # list widget with the already existing classes
@@ -169,6 +168,7 @@ class SelectionDialog(QDialog):
 
         # option to create a new label class
         if matches == 0 and text:
+            self.info.setStyleSheet("color: green;")
             self.info.setText("Create new: {}".format(text))
             self.result = text
 
@@ -182,6 +182,7 @@ class SelectionDialog(QDialog):
         if self.result:
             self.close()
         else:
+            self.info.setStyleSheet("color: red;")
             self.info.setText("Please select or create an item")
 
     def on_list_selection(self, item: QListWidgetItem):
