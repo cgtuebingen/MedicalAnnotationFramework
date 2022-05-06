@@ -49,7 +49,7 @@ def test_dialog_comment():
 
 def test_dialog_delete_class():
     # done
-    dlg = DeleteClassMessageBox("tumour")
+    dlg = DeleteClassMessageBox("Gesundes Gewebe")
     dlg.exec()
     print(dlg.answer)
 
@@ -94,10 +94,13 @@ def test_dialog_select_patient():
 def test_file_viewing_widget():
     # done
     file_widget = FileViewingWidget()
-    filenames = ["Picture1", "Picture2", "Video1", "Vid2", "SpecialFile"]
-    for fn in filenames:
-        item = QListWidgetItem(fn)
-        file_widget.file_list.addItem(item)
+    images = ["Picture1", "Picture2", "PicThree", "importantPicture"]
+    wsi = ["WholeSlideImage0001", "WholeSlideImage0002", "anotherWSI"]
+    for i, w in zip(images, wsi):
+        item1 = QListWidgetItem(i)
+        file_widget.image_list.addItem(item1)
+        item2 = QListWidgetItem(w)
+        file_widget.wsi_list.addItem(item2)
     file_widget.show()
     app.exec()
 
@@ -169,21 +172,22 @@ def test_toolbar():
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    # test_main_window()
-    # test_dialog_new_label()
     # test_dialog_delete_shape()
     # test_dialog_forgot_to_save()
     # test_dialog_close()
-    # test_dialog_delete_class()
     # test_dialog_select_patient()
     # test_dialog_project_handler()
     # test_dialog_comment()
-    # test_label_list()
     # test_comment_list()
     # test_label_viewing_widget()
-    # test_file_viewing_widget()
-    # test_image_display()
-    # test_poly_frame()
-    # test_toolbar()
-    test_all()
+    # test_all()
     # test_tab()
+
+    """test_label_list()
+    test_dialog_delete_class()
+    test_file_viewing_widget()
+    test_poly_frame()
+    test_dialog_new_label()
+    test_image_display()
+    test_toolbar()"""
+    test_main_window()
