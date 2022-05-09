@@ -4,7 +4,7 @@ from PyQt5.QtGui import QCursor
 from seg_utils.ui.list_widgets import ListWidget
 from seg_utils.ui.list_widgets_new import LabelList, CommentList
 from seg_utils.ui.shape import Shape
-from seg_utils.ui.dialogs import CommentDialog
+from seg_utils.ui.dialogs_new import CommentDialog
 
 from typing import List
 
