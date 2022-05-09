@@ -1,7 +1,11 @@
 import sqlite3
 import pickle
+import pathlib
+import shutil
+import os
 
 from typing import List, Union
+from seg_utils.utils.project_structure import modality, create_project_structure, Structure
 
 # TODO: 'file' value references the uid in either 'videos', 'images', or 'whole slide images'
 #  (depends on 'modality' value),
@@ -45,6 +49,8 @@ CREATE_WSI_TABLE = """
     institution TEXT,
     FOREIGN KEY (patient) REFERENCES patients(uid));"""
 
+FILE_TABLES = ['videos', 'images', "'whole slide images'"]
+
 CREATE_PATIENTS_TABLE = """
     CREATE TABLE IF NOT EXISTS patients (
     uid INTEGER PRIMARY KEY,
@@ -68,32 +74,21 @@ DELETE_FILE_ANNOTATIONS = "DELETE FROM annotations WHERE modality = ? AND file =
 
 class SQLiteDatabase:
     """class to control an SQL database"""
-    def __init__(self, database_path: str, new_db: bool = False):
-        """
-        Connect to database as initialization
-        :param database_path: path to the database
-        :param new_db: indicates whether the database already exists or not
-        """
-        self.connection = sqlite3.connect(database_path)
-        self.cursor = self.connection.cursor()
-        self.file_tables = ['videos', 'images', "'whole slide images'"]
-
-        if new_db:
-            self.create_initial_tables()
-
-        with self.connection:
-            self.cursor.execute(f"PRAGMA foreign_keys = ON;")
+    def __init__(self):
+        self.connection = None
+        self.cursor = None
+        self.location = ""
+        self.file_tables = FILE_TABLES
 
     def add_annotation(self, modality: int, file: int, patient: int, shape: bytes, label: int):
         """ adds an entry to the annotation table using the parameter values"""
         with self.connection:
             self.cursor.execute(ADD_ANNOTATION, (modality, file, patient, shape, label))
 
-    def add_file(self, filename: str, modality: int, patient: str):
+    def add_file(self, filepath: str, patient: str):
         """
         adds a file to the database
-        :param filename: the name of the file to be added
-        :param modality: indicates whether it is a video (0), image (1) or whole slide image (2)
+        :param filepath: the name of the file to be added
         :param patient: a patient id which may be added to the database
         """
         with self.connection:
@@ -101,12 +96,18 @@ class SQLiteDatabase:
             # check if patient already exists, add if necessary
             p = self.cursor.execute("""SELECT uid FROM patients WHERE some_id = ?""", (patient,)).fetchone()
             patient = p[0] if p else self.add_patient(patient)
+            mod = modality(filepath)
+            filename = os.path.basename(filepath)
 
-            if modality == 0:
+            # copy to project location and add to database
+            if mod == 0:
+                shutil.copy(filepath, self.location + Structure.VIDEOS_DIR)
                 self.cursor.execute(ADD_VIDEO, (filename, patient))
-            elif modality == 1:
+            elif mod == 1:
+                shutil.copy(filepath, self.location + Structure.IMAGES_DIR)
                 self.cursor.execute(ADD_IMAGE, (filename, patient))
-            elif modality == 2:
+            elif mod == 2:
+                shutil.copy(filepath, self.location + Structure.WSI_DIR)
                 self.cursor.execute(ADD_WSI, (filename, patient))
 
     def add_label(self, label_class: str):
@@ -226,6 +227,25 @@ class SQLiteDatabase:
             self.cursor.execute("""SELECT uid FROM labels WHERE label_class = ?""", (label,))
             result = self.cursor.fetchone()
         return result[0] if result is not None else None
+
+    def initialize(self, database_path: str, new_db: bool = False):
+        """
+        Connect to database as initialization
+        :param database_path: path to the database
+        :param new_db: indicates whether the database already exists or not
+        """
+        if new_db:
+            self.location = str(pathlib.Path(database_path).parents[0])
+            create_project_structure(self.location)
+
+        self.connection = sqlite3.connect(database_path)
+        self.cursor = self.connection.cursor()
+
+        if new_db:
+            self.create_initial_tables()
+
+        with self.connection:
+            self.cursor.execute(f"PRAGMA foreign_keys = ON;")
 
     def update_image_annotations(self, image_name: str, entries: list):
         """

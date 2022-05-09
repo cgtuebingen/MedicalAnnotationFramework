@@ -5,11 +5,13 @@ from typing import *
 
 from seg_utils.src.actions import Action
 from seg_utils.ui.dialogs_new import ProjectHandlerDialog
+from seg_utils.utils.project_structure import Structure
 
 
 class Toolbar(QToolBar):
 
-    sCreateNewProject = pyqtSignal(list)
+    sCreateNewProject = pyqtSignal(str, bool)
+    sAddFile = pyqtSignal(str, str)
 
     def __init__(self, parent):
         super(Toolbar, self).__init__(parent)
@@ -179,4 +181,7 @@ class Toolbar(QToolBar):
         dlg = ProjectHandlerDialog()
         dlg.exec()
         if dlg.project_path:
-            self.sCreateNewProject.emit([dlg.project_path, dlg.files])
+            database_path = dlg.project_path + Structure.DATABASE_DEFAULT_NAME
+            self.sCreateNewProject.emit(database_path, True)
+            for file, patient in dlg.files.items():
+                self.sAddFile.emit(file, patient)

@@ -12,6 +12,7 @@ class LabelingMainWindow(QMainWindow):
     """The main window for the application"""
     def __init__(self):
         super(LabelingMainWindow, self).__init__()
+        self.setWindowTitle("The All-Purpose Labeling Tool")
         self.resize(1276, 968)
         self.setTabShape(QTabWidget.Rounded)
 
@@ -36,6 +37,7 @@ class LabelingMainWindow(QMainWindow):
         self.no_files.setText("No files to display")
         self.no_files.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.image_display = CenterDisplayWidget()
+        self.image_display.setHidden(True)
 
         self.center_frame.layout().addWidget(self.image_display)
         self.center_frame.layout().addWidget(self.no_files)
@@ -47,7 +49,7 @@ class LabelingMainWindow(QMainWindow):
         self.right_menu_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.right_menu_widget.layout().setSpacing(0)
 
-        # the labels, polygon amd file lists
+        # the labels, polygon and file lists
         self.labels_list = LabelsViewingWidget()
         self.poly_frame = PolyFrame()
         self.file_list = FileViewingWidget()

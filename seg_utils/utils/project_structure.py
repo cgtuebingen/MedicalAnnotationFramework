@@ -1,7 +1,6 @@
 import os
 import shutil
 import filetype
-from seg_utils.utils.database import SQLiteDatabase
 
 
 class Structure:
@@ -30,8 +29,6 @@ def create_project_structure(project_path: str):
     os.makedirs(project_path)
     for file_dir in Structure.FILE_DIRS:
         os.makedirs(project_path + file_dir)
-    database_path = project_path + Structure.DATABASE_DEFAULT_NAME
-    _ = SQLiteDatabase(database_path, True)
 
 
 def modality(filepath: str):

@@ -180,7 +180,7 @@ if __name__ == "__main__":
     # test_dialog_comment()
     # test_comment_list()
     # test_label_viewing_widget()
-    # test_all()
+    test_all()
     # test_tab()
 
     """test_label_list()
@@ -190,4 +190,4 @@ if __name__ == "__main__":
     test_dialog_new_label()
     test_image_display()
     test_toolbar()"""
-    test_main_window()
+    # test_main_window()
