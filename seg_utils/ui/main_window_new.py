@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
-from seg_utils.ui.image_display import ImageDisplay
+from seg_utils.ui.image_display import CenterDisplayWidget
 from seg_utils.ui.toolbar import Toolbar
 from seg_utils.ui.poly_frame import PolyFrame
 from seg_utils.src.actions import Action
@@ -35,7 +35,7 @@ class LabelingMainWindow(QMainWindow):
         self.no_files = QLabel()
         self.no_files.setText("No files to display")
         self.no_files.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.image_display = ImageDisplay()
+        self.image_display = CenterDisplayWidget()
         self.image_display.setFrameShape(QFrame.NoFrame)
         self.image_display.setHidden(True)
         self.image_display.sSetDefault.connect(self.set_default)
