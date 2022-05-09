@@ -5,7 +5,7 @@ import sys
 from seg_utils.ui.main_window_new import LabelingMainWindow
 from seg_utils.ui.dialogs_new import *
 from seg_utils.ui.list_widgets_new import *
-from seg_utils.ui.image_display import ImageDisplay
+from seg_utils.ui.image_display import CenterDisplayWidget
 from seg_utils.ui.poly_frame import PolyFrame
 from seg_utils.ui.shape import Shape
 from seg_utils.ui.toolbar import Toolbar
@@ -106,7 +106,7 @@ def test_file_viewing_widget():
 
 
 def test_image_display():
-    window = ImageDisplay()
+    window = CenterDisplayWidget()
     pm = QPixmap("../examples/images/video0001_0001.png")
     window.init_image(pm, None)
     window.show()

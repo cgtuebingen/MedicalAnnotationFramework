@@ -76,15 +76,13 @@ class Toolbar(QToolBar):
                                     self.new_project,
                                     'Ctrl+N',
                                     "new",
-                                    "New project",
-                                    enabled=True)
+                                    "New project")
         action_open_project = Action(parent,
                                      "Open\nProject",
                                      None,
                                      'Ctrl+O',
                                      "open",
-                                     "Open project",
-                                     enabled=True)
+                                     "Open project")
         action_save = Action(parent,
                              "Save",
                              None,
@@ -138,8 +136,7 @@ class Toolbar(QToolBar):
                              None,
                              icon="quit",
                              tip="Quit Program",
-                             checkable=True,
-                             enabled=True)
+                             checkable=True)
 
         actions = ((action_new_project,
                     action_open_project,

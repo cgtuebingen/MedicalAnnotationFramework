@@ -36,9 +36,6 @@ class LabelingMainWindow(QMainWindow):
         self.no_files.setText("No files to display")
         self.no_files.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.image_display = CenterDisplayWidget()
-        self.image_display.setFrameShape(QFrame.NoFrame)
-        self.image_display.setHidden(True)
-        self.image_display.sSetDefault.connect(self.set_default)
 
         self.center_frame.layout().addWidget(self.image_display)
         self.center_frame.layout().addWidget(self.no_files)
