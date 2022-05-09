@@ -1,13 +1,9 @@
-from PyQt5.QtWidgets import QWidgetAction, QToolButton, QToolBar, QFileDialog
-from PyQt5.QtCore import QSize, Qt, pyqtSignal
-from typing import Iterable
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from typing import *
 
 from seg_utils.src.actions import Action
-from seg_utils.ui.tool_button import ToolbarButton
 from seg_utils.ui.dialogs_new import ProjectHandlerDialog
 
 
