@@ -4,8 +4,9 @@ from PyQt5.QtGui import *
 from typing import List
 
 from seg_utils.ui.shape import Shape
-from seg_utils.utils.qt import createListWidgetItemWithSquareIcon
+from seg_utils.utils.qt import createListWidgetItemWithSquareIcon, get_icon
 from seg_utils.utils.stylesheets import COMMENT_LIST, TAB_STYLESHEET
+from seg_utils.utils.project_structure import Structure
 
 
 class LabelList(QListWidget):
@@ -139,6 +140,18 @@ class FileViewingWidget(QWidget):
         # TODO: This should all be done within this widget. There should be little need for outside connections
         self.image_list.itemClicked.connect(self.itemClicked.emit)
         self.search_field.textChanged.connect(self.search_text_changed)
+
+    def update_list(self, filenames, show_check_box: bool = False):
+        """ clears the list widget and fills it again with the provided filenames"""
+        self.image_list.clear()
+        for fn in filenames:
+            fn = fn.replace(Structure.IMAGES_DIR, "")
+            if show_check_box:
+                icon = get_icon("checked")
+                item = QListWidgetItem(icon, fn)
+            else:
+                item = QListWidgetItem(fn)
+            self.image_list.addItem(item)
 
     def search_text_changed(self):
         """ filters the list regarding the user input in the search field"""

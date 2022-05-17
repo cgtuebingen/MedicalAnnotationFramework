@@ -35,3 +35,5 @@ class MainLogic:
     def connect_events(self):
         self.main_window.toolBar.sCreateNewProject.connect(self.database.initialize)
         self.main_window.toolBar.sAddFile.connect(self.database.add_file)
+
+        self.database.sInitialized.connect(self.main_window.initialize)

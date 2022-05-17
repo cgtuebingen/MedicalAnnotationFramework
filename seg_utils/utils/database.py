@@ -7,6 +7,9 @@ import os
 from typing import List, Union
 from seg_utils.utils.project_structure import modality, create_project_structure, Structure
 
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import QObject
+
 # TODO: 'file' value references the uid in either 'videos', 'images', or 'whole slide images'
 #  (depends on 'modality' value),
 #  therefore no foreign key constraint here; need to implement it somewhere else (?)
@@ -72,9 +75,12 @@ ADD_LABEL = "INSERT INTO labels (label_class) VALUES (?);"
 DELETE_FILE_ANNOTATIONS = "DELETE FROM annotations WHERE modality = ? AND file = ?"
 
 
-class SQLiteDatabase:
-    """class to control an SQL database"""
+class SQLiteDatabase(QObject):
+    """class to control an SQL database. inherits a QObject to enable pyqt-signal transfer"""
+    sInitialized = pyqtSignal(list, list)
+
     def __init__(self):
+        super(SQLiteDatabase, self).__init__()
         self.connection = None
         self.cursor = None
         self.location = ""
@@ -228,24 +234,32 @@ class SQLiteDatabase:
             result = self.cursor.fetchone()
         return result[0] if result is not None else None
 
-    def initialize(self, database_path: str, new_db: bool = False):
+    def initialize(self, database_path: str, files: dict = None):
         """
         Connect to database as initialization
         :param database_path: path to the database
-        :param new_db: indicates whether the database already exists or not
+        :param files: initially added files in case of newly created project
         """
-        if new_db:
+        # indicates a new project - set up project location
+        if files:
             self.location = str(pathlib.Path(database_path).parents[0])
             create_project_structure(self.location)
 
         self.connection = sqlite3.connect(database_path)
         self.cursor = self.connection.cursor()
 
-        if new_db:
+        # indicates a new project - add initial files
+        if files:
             self.create_initial_tables()
+            for file, patient in files.items():
+                self.add_file(file, patient)
 
         with self.connection:
             self.cursor.execute(f"PRAGMA foreign_keys = ON;")
+
+        classes = self.get_label_classes()
+        files = self.get_images()
+        self.sInitialized.emit(files, classes)
 
     def update_image_annotations(self, image_name: str, entries: list):
         """

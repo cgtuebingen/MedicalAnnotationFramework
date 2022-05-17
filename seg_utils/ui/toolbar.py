@@ -10,7 +10,7 @@ from seg_utils.utils.project_structure import Structure
 
 class Toolbar(QToolBar):
 
-    sCreateNewProject = pyqtSignal(str, bool)
+    sCreateNewProject = pyqtSignal(str, dict)
     sAddFile = pyqtSignal(str, str)
 
     def __init__(self, parent):
@@ -182,6 +182,4 @@ class Toolbar(QToolBar):
         dlg.exec()
         if dlg.project_path:
             database_path = dlg.project_path + Structure.DATABASE_DEFAULT_NAME
-            self.sCreateNewProject.emit(database_path, True)
-            for file, patient in dlg.files.items():
-                self.sAddFile.emit(file, patient)
+            self.sCreateNewProject.emit(database_path, dlg.files)

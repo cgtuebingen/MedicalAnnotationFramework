@@ -6,6 +6,9 @@ from seg_utils.ui.toolbar import Toolbar
 from seg_utils.ui.poly_frame import PolyFrame
 from seg_utils.src.actions import Action
 from seg_utils.ui.list_widgets_new import FileViewingWidget, LabelsViewingWidget
+from seg_utils.utils.qt import colormap_rgb
+
+NUM_COLORS = 25
 
 
 class LabelingMainWindow(QMainWindow):
@@ -72,6 +75,11 @@ class LabelingMainWindow(QMainWindow):
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.toolBar)
         self.toolBar.init_margins()
         self.toolBar.init_actions(self)
+
+    def initialize(self, files: list, classes: list):
+        color_map, new_color = colormap_rgb(n=NUM_COLORS)
+        self.labels_list.label_list.update_with_classes(classes, color_map)
+        self.file_list.update_list(files)
 
     def set_default(self, is_empty: bool):
         """ either hides the default label or the image display"""
