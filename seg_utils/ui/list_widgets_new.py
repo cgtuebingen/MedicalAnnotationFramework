@@ -141,7 +141,7 @@ class FileViewingWidget(QWidget):
         self.image_list.itemClicked.connect(self.itemClicked.emit)
         self.search_field.textChanged.connect(self.search_text_changed)
 
-    def update_list(self, filenames, show_check_box: bool = False):
+    def update_list(self, filenames, img_idx: int, show_check_box: bool = False):
         """ clears the list widget and fills it again with the provided filenames"""
         self.image_list.clear()
         for fn in filenames:
@@ -152,6 +152,7 @@ class FileViewingWidget(QWidget):
             else:
                 item = QListWidgetItem(fn)
             self.image_list.addItem(item)
+        self.image_list.setCurrentRow(img_idx)
 
     def search_text_changed(self):
         """ filters the list regarding the user input in the search field"""

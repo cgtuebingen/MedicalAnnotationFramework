@@ -183,11 +183,11 @@ if __name__ == "__main__":
     test_all()
     # test_tab()
 
-    """test_label_list()
-    test_dialog_delete_class()
-    test_file_viewing_widget()
-    test_poly_frame()
-    test_dialog_new_label()
-    test_image_display()
-    test_toolbar()"""
+    # test_label_list()
+    # test_dialog_delete_class()
+    # test_file_viewing_widget()
+    # test_poly_frame()
+    # test_dialog_new_label()
+    # test_image_display()
+    # test_toolbar()
     # test_main_window()

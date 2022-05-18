@@ -4,9 +4,11 @@ from PyQt5.QtCore import *
 from seg_utils.ui.image_display import CenterDisplayWidget
 from seg_utils.ui.toolbar import Toolbar
 from seg_utils.ui.poly_frame import PolyFrame
+from seg_utils.ui.shape import Shape
 from seg_utils.src.actions import Action
 from seg_utils.ui.list_widgets_new import FileViewingWidget, LabelsViewingWidget
 from seg_utils.utils.qt import colormap_rgb
+from seg_utils.utils.project_structure import Structure
 
 NUM_COLORS = 25
 
@@ -76,10 +78,23 @@ class LabelingMainWindow(QMainWindow):
         self.toolBar.init_margins()
         self.toolBar.init_actions(self)
 
-    def initialize(self, files: list, classes: list):
+        # TODO: if possible, get rid of such variables
+        self.img_idx = 0
+
+    def initialize(self, files: list, classes: list, labels: list, location: str):
         color_map, new_color = colormap_rgb(n=NUM_COLORS)
         self.labels_list.label_list.update_with_classes(classes, color_map)
-        self.file_list.update_list(files)
+        if files:
+            self.file_list.update_list(files, self.img_idx)
+            self.image_display.set_initialized()
+
+            filepath = location + Structure.IMAGES_DIR + files[0]
+            current_labels = [Shape(image_size=self.image_size, label_dict=_label,
+                                    color=self.get_color_for_label(_label['label']))
+                              for _label in labels]
+            self.poly_frame.update_frame(current_labels)
+            self.image_display.init_image(filepath, current_labels)
+            self.set_default(False)
 
     def set_default(self, is_empty: bool):
         """ either hides the default label or the image display"""

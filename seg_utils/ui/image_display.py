@@ -25,6 +25,8 @@ class CenterDisplayWidget(QWidget):
         self.annotations = AnnotationGroup()
         self.scene.addItem(self.annotations)
 
+        self.image_size = QSize()
+
         # put the viewer in the ImageDisplay-Frame
         self.image_viewer.setFrameShape(QFrame.NoFrame)
         self.layout = QVBoxLayout(self)
@@ -46,7 +48,9 @@ class CenterDisplayWidget(QWidget):
     def get_pixmap_dimensions(self):
         return [self.pixmap.pixmap().width(), self.pixmap.pixmap().height()]
 
-    def init_image(self, pixmap: QPixmap, labels):
+    def init_image(self, filepath: str, labels):
+        pixmap = QPixmap(filepath)
+        self.image_size = pixmap.size()
         self.pixmap.setPixmap(pixmap)
         # self.set_labels(labels)
 

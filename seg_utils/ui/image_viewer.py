@@ -2,8 +2,6 @@ from PyQt5.QtWidgets import QGraphicsView
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 
-PLACEHOLDER_TEXT = "No files to display"
-
 
 class ImageViewer(QGraphicsView):
     def __init__(self, *args):
@@ -56,7 +54,7 @@ class ImageViewer(QGraphicsView):
                 self._enableZoomPan = False
                 self.setDragMode(QGraphicsView.NoDrag)
 
-    def paintEvent(self, event):
+        """    def paintEvent(self, event):
         super().paintEvent(event)
         if self.b_isEmpty:
             painter = QPainter(self.viewport())
@@ -68,4 +66,4 @@ class ImageViewer(QGraphicsView):
                 PLACEHOLDER_TEXT, Qt.ElideRight, self.viewport().width()
             )
             painter.drawText(self.viewport().rect(), Qt.AlignCenter, elided_text)
-            painter.restore()
+            painter.restore()"""

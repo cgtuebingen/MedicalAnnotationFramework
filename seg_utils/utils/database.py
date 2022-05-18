@@ -77,7 +77,7 @@ DELETE_FILE_ANNOTATIONS = "DELETE FROM annotations WHERE modality = ? AND file =
 
 class SQLiteDatabase(QObject):
     """class to control an SQL database. inherits a QObject to enable pyqt-signal transfer"""
-    sInitialized = pyqtSignal(list, list)
+    sInitialized = pyqtSignal(list, list, list, str)
 
     def __init__(self):
         super(SQLiteDatabase, self).__init__()
@@ -259,7 +259,8 @@ class SQLiteDatabase(QObject):
 
         classes = self.get_label_classes()
         files = self.get_images()
-        self.sInitialized.emit(files, classes)
+        labels = self.get_label_from_imagepath(files[0]) if files else []
+        self.sInitialized.emit(files, classes, labels, self.location)
 
     def update_image_annotations(self, image_name: str, entries: list):
         """
