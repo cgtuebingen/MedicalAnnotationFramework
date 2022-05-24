@@ -77,7 +77,8 @@ DELETE_FILE_ANNOTATIONS = "DELETE FROM annotations WHERE modality = ? AND file =
 
 class SQLiteDatabase(QObject):
     """class to control an SQL database. inherits a QObject to enable pyqt-signal transfer"""
-    sInitialized = pyqtSignal(list, list, list, str)
+    sUpdate = pyqtSignal(list, list, list)
+    sImportFile = pyqtSignal(list)
 
     def __init__(self):
         super(SQLiteDatabase, self).__init__()
@@ -103,18 +104,20 @@ class SQLiteDatabase(QObject):
             p = self.cursor.execute("""SELECT uid FROM patients WHERE some_id = ?""", (patient,)).fetchone()
             patient = p[0] if p else self.add_patient(patient)
             mod = modality(filepath)
-            filename = os.path.basename(filepath)
 
             # copy to project location and add to database
             if mod == 0:
                 shutil.copy(filepath, self.location + Structure.VIDEOS_DIR)
-                self.cursor.execute(ADD_VIDEO, (filename, patient))
+                filepath_new = self.location + Structure.VIDEOS_DIR + os.path.basename(filepath)
+                self.cursor.execute(ADD_VIDEO, (filepath_new, patient))
             elif mod == 1:
                 shutil.copy(filepath, self.location + Structure.IMAGES_DIR)
-                self.cursor.execute(ADD_IMAGE, (filename, patient))
+                filepath_new = self.location + Structure.IMAGES_DIR + os.path.basename(filepath)
+                self.cursor.execute(ADD_IMAGE, (filepath_new, patient))
             elif mod == 2:
                 shutil.copy(filepath, self.location + Structure.WSI_DIR)
-                self.cursor.execute(ADD_WSI, (filename, patient))
+                filepath_new = self.location + Structure.WSI_DIR + os.path.basename(filepath)
+                self.cursor.execute(ADD_WSI, (filepath_new, patient))
 
     def add_label(self, label_class: str):
         """ add a new label class to database"""
@@ -240,16 +243,16 @@ class SQLiteDatabase(QObject):
         :param database_path: path to the database
         :param files: initially added files in case of newly created project
         """
-        # indicates a new project - set up project location
-        if files:
-            self.location = str(pathlib.Path(database_path).parents[0])
+        self.location = str(pathlib.Path(database_path).parents[0])
+        # indicates a new project - set up project environment
+        if files is not None:
             create_project_structure(self.location)
 
         self.connection = sqlite3.connect(database_path)
         self.cursor = self.connection.cursor()
 
         # indicates a new project - add initial files
-        if files:
+        if files is not None:
             self.create_initial_tables()
             for file, patient in files.items():
                 self.add_file(file, patient)
@@ -257,10 +260,11 @@ class SQLiteDatabase(QObject):
         with self.connection:
             self.cursor.execute(f"PRAGMA foreign_keys = ON;")
 
-        classes = self.get_label_classes()
-        files = self.get_images()
-        labels = self.get_label_from_imagepath(files[0]) if files else []
-        self.sInitialized.emit(files, classes, labels, self.location)
+        self.update_gui()
+
+    def send_import_info(self):
+        existing_patients = self.get_patients()
+        self.sImportFile.emit(existing_patients)
 
     def update_image_annotations(self, image_name: str, entries: list):
         """
@@ -279,6 +283,13 @@ class SQLiteDatabase(QObject):
             for entry in entries:
                 self.cursor.execute("""INSERT INTO annotations (modality, file, patient, shape, label) 
                     VALUES (:modality, :file, :patient, :shape, :label)""", entry)
+
+    def update_gui(self):
+        """gathers all information about the project and updates the database"""
+        files = self.get_images()
+        classes = self.get_label_classes()
+        labels = self.get_label_from_imagepath(files[0]) if files else []
+        self.sUpdate.emit(files, classes, labels)
 
     def update_labels(self, classes: list):
         """

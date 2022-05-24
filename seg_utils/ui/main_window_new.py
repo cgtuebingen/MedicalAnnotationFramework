@@ -1,10 +1,13 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
+from pathlib import Path
+
 from seg_utils.ui.image_display import CenterDisplayWidget
 from seg_utils.ui.toolbar import Toolbar
 from seg_utils.ui.poly_frame import PolyFrame
 from seg_utils.ui.shape import Shape
+from seg_utils.ui.dialogs_new import SelectPatientDialog
 from seg_utils.src.actions import Action
 from seg_utils.ui.list_widgets_new import FileViewingWidget, LabelsViewingWidget
 from seg_utils.utils.qt import colormap_rgb
@@ -15,6 +18,11 @@ NUM_COLORS = 25
 
 class LabelingMainWindow(QMainWindow):
     """The main window for the application"""
+
+    sAddPatient = pyqtSignal(str)
+    sAddFile = pyqtSignal(str, str)
+    sRequestUpdate = pyqtSignal()
+
     def __init__(self):
         super(LabelingMainWindow, self).__init__()
         self.setWindowTitle("The All-Purpose Labeling Tool")
@@ -81,23 +89,43 @@ class LabelingMainWindow(QMainWindow):
         # TODO: if possible, get rid of such variables
         self.img_idx = 0
 
-    def initialize(self, files: list, classes: list, labels: list, location: str):
-        color_map, new_color = colormap_rgb(n=NUM_COLORS)
-        self.labels_list.label_list.update_with_classes(classes, color_map)
-        if files:
-            self.file_list.update_list(files, self.img_idx)
-            self.image_display.set_initialized()
+    def change_file(self, img_idx: int):
+        """changes the displayed file to the specified file"""
+        self.img_idx = img_idx
+        self.sRequestUpdate.emit()
 
-            filepath = location + Structure.IMAGES_DIR + files[0]
-            current_labels = [Shape(image_size=self.image_size, label_dict=_label,
-                                    color=self.get_color_for_label(_label['label']))
-                              for _label in labels]
-            self.poly_frame.update_frame(current_labels)
-            self.image_display.init_image(filepath, current_labels)
-            self.set_default(False)
+    def import_file(self, existing_patients: list):
+        """executes a dialog to let the user enter all information regarding file import"""
+        dlg = SelectPatientDialog(existing_patients)
+        dlg.exec()
+        patient = dlg.result
+
+        if patient:
+            filepath, _ = QFileDialog.getOpenFileName(self,
+                                                      caption="Select File",
+                                                      directory=str(Path.home()),
+                                                      options=QFileDialog.DontUseNativeDialog)
+            if filepath:
+                self.sAddFile.emit(filepath, patient)
+                self.sRequestUpdate.emit()
 
     def set_default(self, is_empty: bool):
         """ either hides the default label or the image display"""
         self.image_display.setHidden(is_empty)
         self.no_files.setHidden(not is_empty)
 
+    def update_window(self, files: list, classes: list, labels: list):
+        color_map, new_color = colormap_rgb(n=NUM_COLORS)
+        self.labels_list.label_list.update_with_classes(classes, color_map)
+        self.file_list.update_list(files, self.img_idx)
+        current_labels = [Shape(image_size=self.image_size, label_dict=_label,
+                                color=self.get_color_for_label(_label['label']))
+                          for _label in labels]
+        self.poly_frame.update_frame(current_labels)
+
+        if files:
+            self.image_display.set_initialized()
+            self.set_default(False)
+            self.image_display.init_image(files[self.img_idx], current_labels)
+        else:
+            self.set_default(True)

@@ -1,6 +1,8 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
+
+import os
 from typing import List
 
 from seg_utils.ui.shape import Shape
@@ -81,6 +83,7 @@ class LabelsViewingWidget(QWidget):
 class FileViewingWidget(QWidget):
     """ holds a QTabWidget to be able to display both images and whole slide images"""
     itemClicked = pyqtSignal(QListWidgetItem)
+    sRequestFileChange = pyqtSignal(int)
 
     def __init__(self):
         super(FileViewingWidget, self).__init__()
@@ -137,22 +140,27 @@ class FileViewingWidget(QWidget):
         self.tab.addTab(self.wsi_list, 'WSI')
         self.layout().addWidget(self.tab)
 
-        # TODO: This should all be done within this widget. There should be little need for outside connections
-        self.image_list.itemClicked.connect(self.itemClicked.emit)
+        self.image_list.itemClicked.connect(self.file_selected)
         self.search_field.textChanged.connect(self.search_text_changed)
+
+    def file_selected(self):
+        """gets the index of the selected file and emits a signal"""
+        idx2 = self.image_list.currentRow()
+        self.sRequestFileChange.emit(idx2)
 
     def update_list(self, filenames, img_idx: int, show_check_box: bool = False):
         """ clears the list widget and fills it again with the provided filenames"""
         self.image_list.clear()
         for fn in filenames:
-            fn = fn.replace(Structure.IMAGES_DIR, "")
+            fn = os.path.basename(fn)
             if show_check_box:
                 icon = get_icon("checked")
                 item = QListWidgetItem(icon, fn)
             else:
                 item = QListWidgetItem(fn)
             self.image_list.addItem(item)
-        self.image_list.setCurrentRow(img_idx)
+        if self.image_list.count() > 0:
+            self.image_list.setCurrentRow(img_idx)
 
     def search_text_changed(self):
         """ filters the list regarding the user input in the search field"""

@@ -34,6 +34,13 @@ class MainLogic:
 
     def connect_events(self):
         self.main_window.toolBar.sCreateNewProject.connect(self.database.initialize)
-        self.main_window.toolBar.sAddFile.connect(self.database.add_file)
+        self.main_window.toolBar.sOpenProject.connect(self.database.initialize)
+        self.main_window.toolBar.sRequestPatients.connect(self.database.send_import_info)
 
-        self.database.sInitialized.connect(self.main_window.initialize)
+        self.main_window.file_list.sRequestFileChange.connect(self.main_window.change_file)
+        self.main_window.sAddFile.connect(self.database.add_file)
+        self.main_window.sAddPatient.connect(self.database.add_patient)
+        self.main_window.sRequestUpdate.connect(self.database.update_gui)
+
+        self.database.sUpdate.connect(self.main_window.update_window)
+        self.database.sImportFile.connect(self.main_window.import_file)
