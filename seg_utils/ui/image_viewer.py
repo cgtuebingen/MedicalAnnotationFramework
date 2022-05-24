@@ -4,6 +4,8 @@ from PyQt5.QtCore import *
 
 
 class ImageViewer(QGraphicsView):
+    sKeyPressed = pyqtSignal(QKeyEvent)
+
     def __init__(self, *args):
         super(ImageViewer, self).__init__(*args)
         self.b_isEmpty = True
@@ -67,3 +69,7 @@ class ImageViewer(QGraphicsView):
             )
             painter.drawText(self.viewport().rect(), Qt.AlignCenter, elided_text)
             painter.restore()"""
+
+    def keyPressEvent(self, event: QKeyEvent):
+        super(ImageViewer, self).keyPressEvent(event)
+        self.sKeyPressed.emit(event)

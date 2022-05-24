@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 
 from pathlib import Path
 
@@ -8,9 +9,10 @@ from seg_utils.ui.toolbar import Toolbar
 from seg_utils.ui.poly_frame import PolyFrame
 from seg_utils.ui.shape import Shape
 from seg_utils.ui.dialogs_new import SelectPatientDialog
+from seg_utils.ui.menu_bar import MenuBar
 from seg_utils.src.actions import Action
 from seg_utils.ui.list_widgets_new import FileViewingWidget, LabelsViewingWidget
-from seg_utils.utils.qt import colormap_rgb
+from seg_utils.utils.qt import colormap_rgb, get_icon
 from seg_utils.utils.project_structure import Structure
 
 NUM_COLORS = 25
@@ -51,6 +53,8 @@ class LabelingMainWindow(QMainWindow):
         self.no_files.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.image_display = CenterDisplayWidget()
         self.image_display.setHidden(True)
+        self.image_display.setFocusPolicy(Qt.ClickFocus)
+        self.image_display.image_viewer.sKeyPressed.connect(self.next_image)
 
         self.center_frame.layout().addWidget(self.image_display)
         self.center_frame.layout().addWidget(self.no_files)
@@ -74,8 +78,7 @@ class LabelingMainWindow(QMainWindow):
         self.main_widget.layout().addWidget(self.right_menu_widget)
         self.setCentralWidget(self.main_widget)
 
-        self.menubar = QMenuBar()
-        self.menubar.setGeometry(QRect(0, 0, 1276, 22))
+        self.menubar = MenuBar()
         self.setMenuBar(self.menubar)
 
         self.statusbar = QStatusBar()
@@ -85,14 +88,24 @@ class LabelingMainWindow(QMainWindow):
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.toolBar)
         self.toolBar.init_margins()
         self.toolBar.init_actions(self)
+        self.toolBar.setHidden(True)
 
         # TODO: if possible, get rid of such variables
         self.img_idx = 0
 
     def change_file(self, img_idx: int):
-        """changes the displayed file to the specified file"""
+        """changes the displayed file to the file with the specified index"""
         self.img_idx = img_idx
         self.sRequestUpdate.emit()
+
+    def hide_toolbar(self):
+        """hides or shows the toolbar"""
+        if self.toolBar.isHidden():
+            self.toolBar.setHidden(False)
+            self.image_display.hide_button.setIcon(get_icon("prev"))
+        else:
+            self.toolBar.setHidden(True)
+            self.image_display.hide_button.setIcon(get_icon("next"))
 
     def import_file(self, existing_patients: list):
         """executes a dialog to let the user enter all information regarding file import"""
@@ -108,6 +121,18 @@ class LabelingMainWindow(QMainWindow):
             if filepath:
                 self.sAddFile.emit(filepath, patient)
                 self.sRequestUpdate.emit()
+
+    def next_image(self, event):
+        if self.image_display.is_empty():
+            return
+        elif event.key() == Qt.Key_Left:
+            direction = -1
+        elif event.key() == Qt.Key_Right:
+            direction = 1
+        else:
+            return
+        self.img_idx = (self.img_idx + direction) % self.file_list.image_list.count()
+        self.sRequestUpdate.emit()
 
     def set_default(self, is_empty: bool):
         """ either hides the default label or the image display"""

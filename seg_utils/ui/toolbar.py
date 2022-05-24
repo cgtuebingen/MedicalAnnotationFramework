@@ -78,13 +78,13 @@ class Toolbar(QToolBar):
         # TODO: Figure out a more modular way to set up these actions
         action_new_project = Action(parent,
                                     "New\nProject",
-                                    self.new_project,
+                                    None,
                                     'Ctrl+N',
                                     "new",
                                     "New project")
         action_open_project = Action(parent,
                                      "Open\nProject",
-                                     self.open_project,
+                                     None,
                                      'Ctrl+O',
                                      "open",
                                      "Open project")
@@ -96,7 +96,7 @@ class Toolbar(QToolBar):
                              "Save current state to database")
         action_import = Action(parent,
                                "Import",
-                               self.sRequestPatients.emit,
+                               None,
                                'Ctrl+I',
                                "import",
                                "Import a new file to database")
@@ -143,13 +143,7 @@ class Toolbar(QToolBar):
                              tip="Quit Program",
                              checkable=True)
 
-        actions = ((action_new_project,
-                    action_open_project,
-                    action_save,
-                    action_import,
-                    action_next_image,
-                    action_prev_image,
-                    action_draw_poly,
+        actions = ((action_draw_poly,
                     action_trace_outline,
                     action_draw_circle,
                     action_draw_rectangle,
@@ -179,33 +173,3 @@ class Toolbar(QToolBar):
         self.setContentsMargins(*m)
         self.layout().setSpacing(2)
         self.layout().setContentsMargins(*m)
-
-    def import_file(self):
-        self.sRequestPatients.emit()
-
-    def new_project(self):
-        """executes a dialog prompting the user to enter information about the new project"""
-        dlg = ProjectHandlerDialog()
-        dlg.exec()
-        if dlg.project_path:
-            database_path = dlg.project_path + Structure.DATABASE_DEFAULT_NAME
-            self.sCreateNewProject.emit(database_path, dlg.files)
-
-    def open_project(self):
-        """executes a dialog prompting the user to select a database"""
-        database, _ = QFileDialog.getOpenFileName(self,
-                                                  caption="Select Database",
-                                                  directory=str(Path.home()),
-                                                  filter="Database (*.db)",
-                                                  options=QFileDialog.DontUseNativeDialog)
-        if database:
-
-            # make sure the database is inside a project environment
-            if check_environment(str(Path(database).parents[0])):
-                self.sOpenProject.emit(database)
-            else:
-                msg = QMessageBox()
-                msg.setIcon(QMessageBox.Information)
-                msg.setText("Invalid Project Location")
-                msg.setStandardButtons(QMessageBox.Ok)
-                msg.exec()

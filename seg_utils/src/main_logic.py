@@ -33,11 +33,14 @@ class MainLogic:
         self.main_window.show()
 
     def connect_events(self):
-        self.main_window.toolBar.sCreateNewProject.connect(self.database.initialize)
-        self.main_window.toolBar.sOpenProject.connect(self.database.initialize)
-        self.main_window.toolBar.sRequestPatients.connect(self.database.send_import_info)
+        self.main_window.menubar.sCreateNewProject.connect(self.database.initialize)
+        self.main_window.menubar.sOpenProject.connect(self.database.initialize)
+        self.main_window.menubar.sRequestImport.connect(self.database.send_import_info)
 
         self.main_window.file_list.sRequestFileChange.connect(self.main_window.change_file)
+
+        self.main_window.image_display.hide_button.clicked.connect(self.main_window.hide_toolbar)
+
         self.main_window.sAddFile.connect(self.database.add_file)
         self.main_window.sAddPatient.connect(self.database.add_patient)
         self.main_window.sRequestUpdate.connect(self.database.update_gui)

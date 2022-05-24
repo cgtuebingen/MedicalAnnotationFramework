@@ -4,6 +4,7 @@ from PyQt5.QtGui import *
 
 from seg_utils.ui.image_viewer import ImageViewer
 from seg_utils.ui.annotation_group import AnnotationGroup
+from seg_utils.utils.qt import get_icon
 
 
 class CenterDisplayWidget(QWidget):
@@ -26,6 +27,9 @@ class CenterDisplayWidget(QWidget):
         self.scene.addItem(self.annotations)
 
         self.image_size = QSize()
+
+        self.hide_button = QPushButton(get_icon("next"), "", self)
+        self.hide_button.setGeometry(0, 0, 40, 40)
 
         # put the viewer in the ImageDisplay-Frame
         self.image_viewer.setFrameShape(QFrame.NoFrame)
@@ -53,6 +57,7 @@ class CenterDisplayWidget(QWidget):
         self.image_size = pixmap.size()
         self.pixmap.setPixmap(pixmap)
         # self.set_labels(labels)
+        self.hide_button.raise_()
 
     def is_empty(self):
         return self.image_viewer.b_isEmpty
