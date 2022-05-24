@@ -4,7 +4,7 @@ from PyQt5.QtCore import *
 
 
 class ImageViewer(QGraphicsView):
-    sKeyPressed = pyqtSignal(QKeyEvent)
+    sNextFile = pyqtSignal(int)
 
     def __init__(self, *args):
         super(ImageViewer, self).__init__(*args)
@@ -49,6 +49,10 @@ class ImageViewer(QGraphicsView):
             if event.key() == Qt.Key.Key_Control:
                 self._enableZoomPan = True
                 self.setDragMode(QGraphicsView.ScrollHandDrag)
+            elif event.key() == Qt.Key_Left:
+                self.sNextFile.emit(-1)
+            elif event.key() == Qt.Key_Right:
+                self.sNextFile.emit(1)
 
     def keyReleaseEvent(self, event) -> None:
         if not self.b_isEmpty:
@@ -69,7 +73,3 @@ class ImageViewer(QGraphicsView):
             )
             painter.drawText(self.viewport().rect(), Qt.AlignCenter, elided_text)
             painter.restore()"""
-
-    def keyPressEvent(self, event: QKeyEvent):
-        super(ImageViewer, self).keyPressEvent(event)
-        self.sKeyPressed.emit(event)

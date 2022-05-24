@@ -79,6 +79,7 @@ class SQLiteDatabase(QObject):
     """class to control an SQL database. inherits a QObject to enable pyqt-signal transfer"""
     sUpdate = pyqtSignal(list, list, list)
     sImportFile = pyqtSignal(list)
+    sNewLabel = pyqtSignal(list)
 
     def __init__(self):
         super(SQLiteDatabase, self).__init__()
@@ -265,6 +266,11 @@ class SQLiteDatabase(QObject):
     def send_import_info(self):
         existing_patients = self.get_patients()
         self.sImportFile.emit(existing_patients)
+
+    def send_label_info(self, img_idx: int):
+        cur_image = self.get_images()[img_idx]
+        existing_labels = self.get_label_from_imagepath(cur_image)
+        self.sNewLabel.emit(existing_labels)
 
     def update_image_annotations(self, image_name: str, entries: list):
         """

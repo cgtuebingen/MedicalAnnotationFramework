@@ -8,7 +8,7 @@ from seg_utils.ui.image_display import CenterDisplayWidget
 from seg_utils.ui.toolbar import Toolbar
 from seg_utils.ui.poly_frame import PolyFrame
 from seg_utils.ui.shape import Shape
-from seg_utils.ui.dialogs_new import SelectPatientDialog
+from seg_utils.ui.dialogs_new import SelectPatientDialog, NewLabelDialog
 from seg_utils.ui.menu_bar import MenuBar
 from seg_utils.src.actions import Action
 from seg_utils.ui.list_widgets_new import FileViewingWidget, LabelsViewingWidget
@@ -24,6 +24,7 @@ class LabelingMainWindow(QMainWindow):
     sAddPatient = pyqtSignal(str)
     sAddFile = pyqtSignal(str, str)
     sRequestUpdate = pyqtSignal()
+    sRequestLabelInfo = pyqtSignal(int)
 
     def __init__(self):
         super(LabelingMainWindow, self).__init__()
@@ -54,7 +55,8 @@ class LabelingMainWindow(QMainWindow):
         self.image_display = CenterDisplayWidget()
         self.image_display.setHidden(True)
         self.image_display.setFocusPolicy(Qt.ClickFocus)
-        self.image_display.image_viewer.sKeyPressed.connect(self.next_image)
+        self.image_display.image_viewer.sNextFile.connect(self.next_image)
+        # self.image_display.annotations.shapeCreated.connect(self.shape_created)
 
         self.center_frame.layout().addWidget(self.image_display)
         self.center_frame.layout().addWidget(self.no_files)
@@ -122,22 +124,23 @@ class LabelingMainWindow(QMainWindow):
                 self.sAddFile.emit(filepath, patient)
                 self.sRequestUpdate.emit()
 
-    def next_image(self, event):
-        if self.image_display.is_empty():
-            return
-        elif event.key() == Qt.Key_Left:
-            direction = -1
-        elif event.key() == Qt.Key_Right:
-            direction = 1
-        else:
-            return
-        self.img_idx = (self.img_idx + direction) % self.file_list.image_list.count()
-        self.sRequestUpdate.emit()
+    def new_label(self, existing_labels: list):
+        color_map, _ = colormap_rgb(n=NUM_COLORS)
+        dlg = NewLabelDialog(existing_labels, color_map)
+        dlg.exec()
+
+    def next_image(self, direction: int):
+        if not self.image_display.is_empty():
+            self.img_idx = (self.img_idx + direction) % self.file_list.image_list.count()
+            self.sRequestUpdate.emit()
 
     def set_default(self, is_empty: bool):
         """ either hides the default label or the image display"""
         self.image_display.setHidden(is_empty)
         self.no_files.setHidden(not is_empty)
+
+    def shape_created(self):
+        self.sRequestLabelInfo.emit(self.img_idx)
 
     def update_window(self, files: list, classes: list, labels: list):
         color_map, new_color = colormap_rgb(n=NUM_COLORS)

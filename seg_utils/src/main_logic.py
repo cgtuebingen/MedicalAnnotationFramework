@@ -44,6 +44,8 @@ class MainLogic:
         self.main_window.sAddFile.connect(self.database.add_file)
         self.main_window.sAddPatient.connect(self.database.add_patient)
         self.main_window.sRequestUpdate.connect(self.database.update_gui)
+        self.main_window.sRequestLabelInfo.connect(self.database.send_label_info)
 
         self.database.sUpdate.connect(self.main_window.update_window)
         self.database.sImportFile.connect(self.main_window.import_file)
+        self.database.sNewLabel.connect(self.main_window.new_label)

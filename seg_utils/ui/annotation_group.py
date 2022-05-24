@@ -4,6 +4,7 @@ from typing import *
 
 from seg_utils.utils.qt import colormap_rgb
 from seg_utils.ui.shape import Shape
+from seg_utils.ui.dialogs_new import NewLabelDialog
 
 
 class AnnotationGroup(QGraphicsObject):
@@ -11,6 +12,7 @@ class AnnotationGroup(QGraphicsObject):
     item_highlighted = pyqtSignal(Shape)
     item_dehighlighted = pyqtSignal(Shape)
     item_clicked = pyqtSignal(Shape, QGraphicsSceneMouseEvent)
+    shapeCreated = pyqtSignal()
 
     def __init__(self):
         QGraphicsObject.__init__(self)
@@ -36,6 +38,16 @@ class AnnotationGroup(QGraphicsObject):
                                 color=self.draw_new_color)
         self.add_shapes(self.temp_shape)
         self.temp_shape.grabMouse()
+
+        """color_map, _ = colormap_rgb(n=self._num_colors)
+        existing_classes = list()
+        for a in self.annotations.values():
+            lbl = a.label
+            if lbl not in existing_classes:
+                existing_classes.append(lbl)
+        dlg = NewLabelDialog(existing_classes, color_map)
+        dlg.exec()
+        self.shapeCreated.emit()"""
 
     @pyqtSlot(int)
     def on_hover_enter(self, shape_id: int):
