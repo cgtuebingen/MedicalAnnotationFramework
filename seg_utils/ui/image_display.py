@@ -41,6 +41,7 @@ class CenterDisplayWidget(QWidget):
         self.annotations.create_shape()
         event.accept()
 
+
     def clear(self):
         """This function deletes all currently stored labels
         and triggers the image_viewer to display a default image"""
@@ -58,6 +59,8 @@ class CenterDisplayWidget(QWidget):
         self.pixmap.setPixmap(pixmap)
         # self.set_labels(labels)
         self.hide_button.raise_()
+        rect = self.scene.itemsBoundingRect()
+        self.image_viewer.fitInView(rect)
 
     def is_empty(self):
         return self.image_viewer.b_isEmpty
