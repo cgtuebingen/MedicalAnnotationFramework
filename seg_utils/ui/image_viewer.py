@@ -59,17 +59,3 @@ class ImageViewer(QGraphicsView):
             if event.key() == Qt.Key.Key_Control:
                 self._enableZoomPan = False
                 self.setDragMode(QGraphicsView.NoDrag)
-
-        """    def paintEvent(self, event):
-        super().paintEvent(event)
-        if self.b_isEmpty:
-            painter = QPainter(self.viewport())
-            painter.save()
-            col = self.palette().placeholderText().color()
-            painter.setPen(col)
-            fm = self.fontMetrics()
-            elided_text = fm.elidedText(
-                PLACEHOLDER_TEXT, Qt.ElideRight, self.viewport().width()
-            )
-            painter.drawText(self.viewport().rect(), Qt.AlignCenter, elided_text)
-            painter.restore()"""

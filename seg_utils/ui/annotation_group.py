@@ -17,6 +17,7 @@ class AnnotationGroup(QGraphicsObject):
     def __init__(self):
         QGraphicsObject.__init__(self)
         self.annotations = {}  # type: Dict[int, Shape]
+        self.classes = list()
         self.setAcceptHoverEvents(True)
         self.temp_shape: Shape = None
         self._num_colors = 10  # TODO: This needs to be updated based on what's in the image.
@@ -36,18 +37,9 @@ class AnnotationGroup(QGraphicsObject):
                                 shape_type='tempTrace',
                                 mode=Shape.ShapeMode.CREATE,
                                 color=self.draw_new_color)
+        self.temp_shape.drawingDone.connect(self.set_label)
         self.add_shapes(self.temp_shape)
         self.temp_shape.grabMouse()
-
-        """color_map, _ = colormap_rgb(n=self._num_colors)
-        existing_classes = list()
-        for a in self.annotations.values():
-            lbl = a.label
-            if lbl not in existing_classes:
-                existing_classes.append(lbl)
-        dlg = NewLabelDialog(existing_classes, color_map)
-        dlg.exec()
-        self.shapeCreated.emit()"""
 
     @pyqtSlot(int)
     def on_hover_enter(self, shape_id: int):
@@ -104,7 +96,28 @@ class AnnotationGroup(QGraphicsObject):
     def shape_mode_changed(self, mode: Union[int, Shape.ShapeMode]):
         shape = self.sender()  # type: Shape
         if mode == Shape.ShapeMode.FIXED:
-            shape.update_color(self.color_map[0])  # TODO: use label id for index
+            shape.update_color(self.color_map[shape.group_id])  # TODO: use label id for index
+
+    def set_label(self):
+        """
+        opens a dialog to let user enter a label
+        :return: None
+        """
+        dlg = NewLabelDialog(self.classes, self.color_map)
+        dlg.exec()
+        label = dlg.result
+
+        # set the label, add to classes if necessary
+        if label:
+            if label not in self.classes:
+                self.classes.append(label)
+            self.temp_shape.group_id = self.classes.index(label)
+            self.temp_shape.label = label
+            self.temp_shape.set_mode(Shape.ShapeMode.FIXED)
+        # if user entered no label, remove shape
+        else:
+            self.remove_shapes(self.temp_shape)
+            self.scene().removeItem(self.temp_shape)
 
 
 if __name__ == '__main__':
