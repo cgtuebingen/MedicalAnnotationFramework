@@ -13,6 +13,7 @@ class MenuBar(QMenuBar):
     sCreateNewProject = pyqtSignal(str, dict)
     sOpenProject = pyqtSignal(str)
     sRequestImport = pyqtSignal()
+    sRequestSave = pyqtSignal()
 
     def __init__(self):
         super(MenuBar, self).__init__()
@@ -33,7 +34,7 @@ class MenuBar(QMenuBar):
                                      "Open project")
         action_save = Action(self,
                              "Save",
-                             None,
+                             self.sRequestSave.emit,
                              'Ctrl+S',
                              "save",
                              "Save current state to database")

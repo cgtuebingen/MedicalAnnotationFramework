@@ -40,12 +40,13 @@ class MainLogic:
         self.main_window.file_list.sRequestFileChange.connect(self.main_window.change_file)
 
         self.main_window.image_display.hide_button.clicked.connect(self.main_window.hide_toolbar)
+        self.main_window.sSaveToDatabase.connect(self.database.save)
 
         self.main_window.sAddFile.connect(self.database.add_file)
         self.main_window.sAddPatient.connect(self.database.add_patient)
         self.main_window.sRequestUpdate.connect(self.database.update_gui)
-        self.main_window.sRequestLabelInfo.connect(self.database.send_label_info)
+        self.main_window.sRequestCheckForChanges.connect(self.database.send_changes_info)
 
         self.database.sUpdate.connect(self.main_window.update_window)
         self.database.sImportFile.connect(self.main_window.import_file)
-        self.database.sNewLabel.connect(self.main_window.new_label)
+        self.database.sCheckForChanges.connect(self.main_window.image_display.check_for_changes)

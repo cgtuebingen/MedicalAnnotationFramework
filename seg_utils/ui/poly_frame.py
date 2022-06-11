@@ -18,6 +18,7 @@ class PolyFrame(QWidget):
     """
 
     sUpdateLabels = pyqtSignal(list)
+    itemClicked = pyqtSignal(int)
 
     def __init__(self, *args):
         super(PolyFrame, self).__init__(*args)
@@ -57,11 +58,8 @@ class PolyFrame(QWidget):
         self.layout().addWidget(self.label)
         self.layout().addWidget(self.subFrame)
 
+        self.polygon_list.itemClicked.connect(self.handle_poly_click)
         self.comment_list.itemClicked.connect(self.handle_comment_click)
-
-    def get_index_from_selected(self, item):
-        """returns the indices of the selected items in polyList and comment_list, respectively"""
-        return self.polygon_list.row(item), self.comment_list.row(item)
 
     def handle_comment_click(self, item: QListWidgetItem):
         """ opens up a dialog and stores the entered text as a comment"""
@@ -76,6 +74,15 @@ class PolyFrame(QWidget):
         item.setText(text)
         self.current_labels[idx].comment = dlg.comment
         self.sUpdateLabels.emit(self.current_labels)
+
+    def handle_poly_click(self, item: QListWidgetItem):
+        """gets the index of the selected item and emits a signal"""
+        idx = self.polygon_list.row(item)
+        self.itemClicked.emit(idx)
+
+    def shape_selected(self, idx: int):
+        """selects the item with the corresponding index in the poly list"""
+        self.polygon_list.item(idx).setSelected(True)
 
     def update_frame(self, current_labels: List[Shape]):
         """updates the polyList and comment_list with the specified labels"""

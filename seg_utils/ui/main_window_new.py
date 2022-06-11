@@ -3,6 +3,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 from pathlib import Path
+from typing import List
 
 from seg_utils.ui.image_display import CenterDisplayWidget
 from seg_utils.ui.toolbar import Toolbar
@@ -24,7 +25,8 @@ class LabelingMainWindow(QMainWindow):
     sAddPatient = pyqtSignal(str)
     sAddFile = pyqtSignal(str, str)
     sRequestUpdate = pyqtSignal()
-    sRequestLabelInfo = pyqtSignal(int)
+    sRequestCheckForChanges = pyqtSignal(int, int)
+    sSaveToDatabase = pyqtSignal(list, int)
 
     def __init__(self):
         super(LabelingMainWindow, self).__init__()
@@ -54,9 +56,6 @@ class LabelingMainWindow(QMainWindow):
         self.no_files.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.image_display = CenterDisplayWidget()
         self.image_display.setHidden(True)
-        self.image_display.setFocusPolicy(Qt.ClickFocus)
-        self.image_display.image_viewer.sNextFile.connect(self.next_image)
-        # self.image_display.annotations.shapeCreated.connect(self.shape_created)
 
         self.center_frame.layout().addWidget(self.image_display)
         self.center_frame.layout().addWidget(self.no_files)
@@ -95,6 +94,14 @@ class LabelingMainWindow(QMainWindow):
         # TODO: if possible, get rid of such variables
         self.img_idx = 0
 
+        self.image_display.sRequestSave.connect(self.save_to_database)
+        self.image_display.sChangeFile.connect(self.change_file)
+        self.image_display.image_viewer.sNextFile.connect(self.next_image)
+        self.image_display.annotations.shapeCreated.connect(self.poly_frame.update_frame)
+        self.image_display.annotations.shapeSelected.connect(self.poly_frame.shape_selected)
+        self.poly_frame.itemClicked.connect(self.image_display.annotations.label_selected)
+        self.menubar.sRequestSave.connect(self.save_to_database)
+
     def change_file(self, img_idx: int):
         """changes the displayed file to the file with the specified index"""
         self.img_idx = img_idx
@@ -124,36 +131,34 @@ class LabelingMainWindow(QMainWindow):
                 self.sAddFile.emit(filepath, patient)
                 self.sRequestUpdate.emit()
 
-    def new_label(self, existing_labels: list):
-        color_map, _ = colormap_rgb(n=NUM_COLORS)
-        dlg = NewLabelDialog(existing_labels, color_map)
-        dlg.exec()
-
     def next_image(self, direction: int):
         if not self.image_display.is_empty():
-            self.img_idx = (self.img_idx + direction) % self.file_list.image_list.count()
-            self.sRequestUpdate.emit()
+            new_img_idx = (self.img_idx + direction) % self.file_list.image_list.count()
+            self.sRequestCheckForChanges.emit(self.img_idx, new_img_idx)
+            # self.sRequestUpdate.emit()
+
+    def save_to_database(self):
+        annotations = list(self.image_display.annotations.annotations.values())
+        self.sSaveToDatabase.emit(annotations, self.img_idx)
 
     def set_default(self, is_empty: bool):
         """ either hides the default label or the image display"""
         self.image_display.setHidden(is_empty)
         self.no_files.setHidden(not is_empty)
 
-    def shape_created(self):
-        self.sRequestLabelInfo.emit(self.img_idx)
-
     def update_window(self, files: list, classes: list, labels: list):
         color_map, new_color = colormap_rgb(n=NUM_COLORS)
         self.labels_list.label_list.update_with_classes(classes, color_map)
         self.file_list.update_list(files, self.img_idx)
-        current_labels = [Shape(image_size=self.image_size, label_dict=_label,
-                                color=self.get_color_for_label(_label['label']))
+        self.image_display.annotations.classes = classes
+        current_labels = [Shape(image_size=self.image_display.image_size, label_dict=_label,
+                                color=self.image_display.annotations.get_color_for_label(_label['label']))
                           for _label in labels]
         self.poly_frame.update_frame(current_labels)
 
         if files:
             self.image_display.set_initialized()
             self.set_default(False)
-            self.image_display.init_image(files[self.img_idx], current_labels)
+            self.image_display.init_image(files[self.img_idx], current_labels, classes)
         else:
             self.set_default(True)

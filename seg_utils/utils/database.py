@@ -79,7 +79,7 @@ class SQLiteDatabase(QObject):
     """class to control an SQL database. inherits a QObject to enable pyqt-signal transfer"""
     sUpdate = pyqtSignal(list, list, list)
     sImportFile = pyqtSignal(list)
-    sNewLabel = pyqtSignal(list)
+    sCheckForChanges = pyqtSignal(list, int)
 
     def __init__(self):
         super(SQLiteDatabase, self).__init__()
@@ -123,6 +123,9 @@ class SQLiteDatabase(QObject):
     def add_label(self, label_class: str):
         """ add a new label class to database"""
         with self.connection:
+            # make sure label does not already exist
+            if self.cursor.execute("SELECT uid FROM labels WHERE label_class = ?", (label_class,)).fetchone():
+                return
             self.cursor.execute(ADD_LABEL, (label_class,))
 
     def add_patient(self, some_id: str, another_id: str = "2"):
@@ -135,6 +138,20 @@ class SQLiteDatabase(QObject):
             self.cursor.execute(ADD_PATIENT, (some_id, another_id))
             result = self.cursor.execute("SELECT uid FROM patients WHERE some_id = ?", (some_id,)).fetchone()
         return result[0]
+
+    def create_annotation_entry(self, label_dict: dict, img_idx: int, label_class: str):
+        cur_image = self.get_images()[img_idx]
+        mod, file = self.get_uids_from_filename(cur_image)
+        patient = self.get_patient_by_filename(cur_image)
+        label_class = self.get_uid_from_label(label_class)
+
+        annotation_entry = {'modality': mod,
+                            'file': file,
+                            'patient': patient,
+                            'shape': pickle.dumps(label_dict),
+                            'label': label_class}
+
+        return annotation_entry
 
     def create_initial_tables(self):
         """
@@ -263,14 +280,23 @@ class SQLiteDatabase(QObject):
 
         self.update_gui()
 
+    def save(self, current_labels: list, img_idx: int):
+        entries = list()
+        for lbl in current_labels:
+            label_dict, label_class = lbl.to_dict()
+            self.add_label(label_class)
+            entries.append(self.create_annotation_entry(label_dict, img_idx, label_class))
+        self.update_image_annotations(image_name=self.get_images()[img_idx], entries=entries)
+
     def send_import_info(self):
         existing_patients = self.get_patients()
         self.sImportFile.emit(existing_patients)
 
-    def send_label_info(self, img_idx: int):
+    def send_changes_info(self, img_idx: int, new_img_idx: int):
+        """collects the information about the annotations in the image with the given index and emits a signal"""
         cur_image = self.get_images()[img_idx]
-        existing_labels = self.get_label_from_imagepath(cur_image)
-        self.sNewLabel.emit(existing_labels)
+        current_labels = self.get_label_from_imagepath(cur_image)
+        self.sCheckForChanges.emit(current_labels, new_img_idx)
 
     def update_image_annotations(self, image_name: str, entries: list):
         """
