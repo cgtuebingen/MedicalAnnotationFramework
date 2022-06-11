@@ -160,6 +160,7 @@ class SelectionDialog(QDialog):
         # iterate through list, display only matches
         for item_idx in range(self.selection_list.count()):
             item = self.selection_list.item(item_idx)
+            item.setSelected(False)
             if text not in item.text():
                 item.setHidden(True)
             else:
@@ -171,6 +172,14 @@ class SelectionDialog(QDialog):
             self.info.setStyleSheet("color: green;")
             self.info.setText("Create new: {}".format(text))
             self.result = text
+
+        # direct match: set selected
+        elif matches == 1:
+            for item_idx in range(self.selection_list.count()):
+                item = self.selection_list.item(item_idx)
+                if not item.isHidden():
+                    item.setSelected(True)
+                    self.on_list_selection(item)
 
     def on_cancel(self):
         """ ensures that the result is an empty string"""
