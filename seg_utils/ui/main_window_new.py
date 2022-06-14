@@ -9,7 +9,7 @@ from seg_utils.ui.image_display import CenterDisplayWidget
 from seg_utils.ui.toolbar import Toolbar
 from seg_utils.ui.poly_frame import PolyFrame
 from seg_utils.ui.shape import Shape
-from seg_utils.ui.dialogs_new import SelectPatientDialog, NewLabelDialog
+from seg_utils.ui.dialogs_new import SelectPatientDialog, NewLabelDialog, CloseMessageBox
 from seg_utils.ui.menu_bar import MenuBar
 from seg_utils.src.actions import Action
 from seg_utils.ui.list_widgets_new import FileViewingWidget, LabelsViewingWidget
@@ -93,6 +93,7 @@ class LabelingMainWindow(QMainWindow):
 
         # TODO: if possible, get rid of such variables
         self.img_idx = 0
+        self.closeMe = False
 
         self.image_display.sRequestSave.connect(self.save_to_database)
         self.image_display.sChangeFile.connect(self.change_file)
@@ -101,11 +102,26 @@ class LabelingMainWindow(QMainWindow):
         self.image_display.annotations.shapeSelected.connect(self.poly_frame.shape_selected)
         self.poly_frame.itemClicked.connect(self.image_display.annotations.label_selected)
         self.menubar.sRequestSave.connect(self.save_to_database)
+        self.toolBar.get_widget_for_action("QuitProgram").triggered.connect(self.close)
 
     def change_file(self, img_idx: int):
-        """changes the displayed file to the file with the specified index"""
-        self.img_idx = img_idx
-        self.sRequestUpdate.emit()
+        """changes the displayed file to the file with the specified index
+        a img_idx of -1 indicates a closing request"""
+        if img_idx == -1:
+            dlg = CloseMessageBox()
+            dlg.exec()
+            if dlg.result() == QMessageBox.AcceptRole:
+                self.closeMe = True
+        else:
+            self.img_idx = img_idx
+            self.sRequestUpdate.emit()
+
+    def closeEvent(self, event, final_close: bool = False):
+        self.sRequestCheckForChanges.emit(self.img_idx, -1)
+        if self.closeMe:
+            event.accept()
+        else:
+            event.ignore()
 
     def hide_toolbar(self):
         """hides or shows the toolbar"""
@@ -135,7 +151,6 @@ class LabelingMainWindow(QMainWindow):
         if not self.image_display.is_empty():
             new_img_idx = (self.img_idx + direction) % self.file_list.image_list.count()
             self.sRequestCheckForChanges.emit(self.img_idx, new_img_idx)
-            # self.sRequestUpdate.emit()
 
     def save_to_database(self):
         annotations = list(self.image_display.annotations.annotations.values())
@@ -151,14 +166,11 @@ class LabelingMainWindow(QMainWindow):
         self.labels_list.label_list.update_with_classes(classes, color_map)
         self.file_list.update_list(files, self.img_idx)
         self.image_display.annotations.classes = classes
-        current_labels = [Shape(image_size=self.image_display.image_size, label_dict=_label,
-                                color=self.image_display.annotations.get_color_for_label(_label['label']))
-                          for _label in labels]
-        self.poly_frame.update_frame(current_labels)
 
         if files:
             self.image_display.set_initialized()
             self.set_default(False)
-            self.image_display.init_image(files[self.img_idx], current_labels, classes)
+            current_labels = self.image_display.init_image(files[self.img_idx], labels, classes)
+            self.poly_frame.update_frame(current_labels)
         else:
             self.set_default(True)

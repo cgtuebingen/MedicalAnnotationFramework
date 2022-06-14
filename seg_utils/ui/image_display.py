@@ -47,7 +47,8 @@ class CenterDisplayWidget(QWidget):
 
     def check_for_changes(self, sql_labels: list, new_img_idx: int):
         """compares the annotations in the current image with the stored annotations in the database"""
-        database_labels = [Shape(image_size=self.image_size, label_dict=_label,
+        database_labels = [Shape(image_size=self.image_size,
+                                 label_dict=_label,
                                  color=self.annotations.get_color_for_label(_label['label']))
                            for _label in sql_labels]
         current_labels = list(self.annotations.annotations.values())
@@ -74,14 +75,24 @@ class CenterDisplayWidget(QWidget):
         return [self.pixmap.pixmap().width(), self.pixmap.pixmap().height()]
 
     def init_image(self, filepath: str, labels: list, classes: list):
+        """initializes the pixmap to display the image in the center widget
+        return the current labels as shape objects"""
         pixmap = QPixmap(filepath)
         self.image_size = pixmap.size()
         self.pixmap.setPixmap(pixmap)
+
+        labels = [Shape(image_size=self.image_size,
+                        label_dict=_label,
+                        color=self.annotations.get_color_for_label(_label['label']))
+                  for _label in labels]
+
         self.annotations.classes = classes
         self.annotations.add_shapes(labels)
         self.hide_button.raise_()
         rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
         self.image_viewer.fitInView(rect)
+
+        return labels
 
     def is_empty(self):
         return self.image_viewer.b_isEmpty
