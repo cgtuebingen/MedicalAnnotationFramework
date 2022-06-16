@@ -87,6 +87,7 @@ class CenterDisplayWidget(QWidget):
                   for _label in labels]
 
         self.annotations.classes = classes
+        self.annotations.clear()
         self.annotations.add_shapes(labels)
         self.hide_button.raise_()
         rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))

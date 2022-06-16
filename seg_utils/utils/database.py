@@ -316,11 +316,11 @@ class SQLiteDatabase(QObject):
                 self.cursor.execute("""INSERT INTO annotations (modality, file, patient, shape, label) 
                     VALUES (:modality, :file, :patient, :shape, :label)""", entry)
 
-    def update_gui(self):
+    def update_gui(self, img_idx: int = 0):
         """gathers all information about the project and updates the database"""
         files = self.get_images()
         classes = self.get_label_classes()
-        labels = self.get_label_from_imagepath(files[0]) if files else []
+        labels = self.get_label_from_imagepath(files[img_idx]) if files else []
         self.sUpdate.emit(files, classes, labels)
 
     def update_labels(self, classes: list):

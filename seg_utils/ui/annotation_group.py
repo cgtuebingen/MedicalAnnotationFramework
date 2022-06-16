@@ -100,6 +100,7 @@ class AnnotationGroup(QGraphicsObject):
         :return:
         """
         self.remove_shapes(list(self.annotations.values()))
+        self.temp_shape = None
 
     def shape_selected(self):
         """gets the index of the selected shape and emits it"""

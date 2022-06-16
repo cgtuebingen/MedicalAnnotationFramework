@@ -24,7 +24,7 @@ class LabelingMainWindow(QMainWindow):
 
     sAddPatient = pyqtSignal(str)
     sAddFile = pyqtSignal(str, str)
-    sRequestUpdate = pyqtSignal()
+    sRequestUpdate = pyqtSignal(int)
     sRequestCheckForChanges = pyqtSignal(int, int)
     sSaveToDatabase = pyqtSignal(list, int)
 
@@ -114,7 +114,7 @@ class LabelingMainWindow(QMainWindow):
                 self.closeMe = True
         else:
             self.img_idx = img_idx
-            self.sRequestUpdate.emit()
+            self.sRequestUpdate.emit(img_idx)
 
     def closeEvent(self, event, final_close: bool = False):
         self.sRequestCheckForChanges.emit(self.img_idx, -1)
@@ -145,7 +145,7 @@ class LabelingMainWindow(QMainWindow):
                                                       options=QFileDialog.DontUseNativeDialog)
             if filepath:
                 self.sAddFile.emit(filepath, patient)
-                self.sRequestUpdate.emit()
+                self.sRequestUpdate.emit(self.img_idx)
 
     def next_image(self, direction: int):
         if not self.image_display.is_empty():
