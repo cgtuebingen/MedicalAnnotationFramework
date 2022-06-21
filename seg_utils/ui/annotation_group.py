@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from typing import *
+from dataclasses import dataclass
 
 from seg_utils.utils.qt import colormap_rgb
 from seg_utils.ui.shape import Shape
@@ -15,6 +16,11 @@ class AnnotationGroup(QGraphicsObject):
     shapeCreated = pyqtSignal(list)
     shapeSelected = pyqtSignal(int)
 
+    @dataclass
+    class AnnotationMode:
+        EDIT: int = 0
+        DRAW: int = 1
+
     def __init__(self):
         QGraphicsObject.__init__(self)
         self.annotations = {}  # type: Dict[int, Shape]
@@ -24,6 +30,7 @@ class AnnotationGroup(QGraphicsObject):
         self._num_colors = 10  # TODO: This needs to be updated based on what's in the image.
         self.color_map, new_color = colormap_rgb(n=self._num_colors)  # have a buffer for new classes
         self.draw_new_color = new_color
+        self.mode = AnnotationGroup.AnnotationMode.EDIT
 
     def boundingRect(self):
         return self.childrenBoundingRect()
@@ -147,6 +154,9 @@ class AnnotationGroup(QGraphicsObject):
         else:
             self.remove_shapes(self.temp_shape)
             self.scene().removeItem(self.temp_shape)
+
+    def set_mode(self, mode: Union[AnnotationMode, int]):
+        self.mode = mode
 
 
 if __name__ == '__main__':

@@ -45,10 +45,20 @@ class MenuBar(QMenuBar):
                                "import",
                                "Import a new file to database")
 
+        action_save.setEnabled(False)
+        action_import.setEnabled(False)
+
         self.file.addActions((action_new_project,
                               action_open_project,
                               action_save,
                               action_import))
+
+    def enable_project_tools(self):
+        for action in self.file.actions():
+            if action.text() == "Save" or action.text() == "Import File":
+                action.setEnabled(True)
+            else:
+                action.setEnabled(False)
 
     def new_project(self):
         """executes a dialog prompting the user to enter information about the new project"""
@@ -57,6 +67,7 @@ class MenuBar(QMenuBar):
         if dlg.project_path:
             database_path = dlg.project_path + Structure.DATABASE_DEFAULT_NAME
             self.sCreateNewProject.emit(database_path, dlg.files)
+            self.enable_all()
 
     def open_project(self):
         """executes a dialog prompting the user to select a database"""
@@ -70,6 +81,7 @@ class MenuBar(QMenuBar):
             # make sure the database is inside a project environment
             if check_environment(str(Path(database).parents[0])):
                 self.sOpenProject.emit(database)
+                self.enable_project_tools()
             else:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Information)

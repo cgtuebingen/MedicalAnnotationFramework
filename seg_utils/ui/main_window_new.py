@@ -49,8 +49,6 @@ class LabelingMainWindow(QMainWindow):
         self.center_frame.layout().setContentsMargins(0, 0, 0, 0)
         self.center_frame.layout().setSpacing(0)
 
-        # TODO: The center frame should be given a widget to say "No files to display". This should not be handled
-        #       within the ImageDisplay widget
         self.no_files = QLabel()
         self.no_files.setText("No files to display")
         self.no_files.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -102,7 +100,7 @@ class LabelingMainWindow(QMainWindow):
         self.image_display.annotations.shapeSelected.connect(self.poly_frame.shape_selected)
         self.poly_frame.itemClicked.connect(self.image_display.annotations.label_selected)
         self.menubar.sRequestSave.connect(self.save_to_database)
-        self.toolBar.get_widget_for_action("QuitProgram").triggered.connect(self.close)
+        self.toolBar.sSetDrawingMode.connect(self.image_display.annotations.set_mode)
 
     def change_file(self, img_idx: int):
         """changes the displayed file to the file with the specified index

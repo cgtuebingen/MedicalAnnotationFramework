@@ -41,8 +41,8 @@ class CenterDisplayWidget(QWidget):
         self.layout.addWidget(self.image_viewer)
 
     def mousePressEvent(self, event: QMouseEvent):
-        # TODO: add the drawing mode control. right now this will create a new shape on every click
-        self.annotations.create_shape()
+        if self.annotations.mode == AnnotationGroup.AnnotationMode.DRAW:
+            self.annotations.create_shape()
         event.accept()
 
     def check_for_changes(self, sql_labels: list, new_img_idx: int):
@@ -102,6 +102,3 @@ class CenterDisplayWidget(QWidget):
         self.scene.b_isInitialized = True
         self.image_viewer.b_isEmpty = False
 
-    def set_mode(self, mode: int):
-        assert mode in [self.CREATE, self.EDIT]
-        self.scene.mode = mode

@@ -2,13 +2,12 @@ import argparse
 import sys
 
 from PyQt5.QtWidgets import QApplication
-from seg_utils.src.label_main import MainLogic
+from seg_utils.src.main_logic import MainLogic
 
 
 def main(_args):
     app = QApplication(sys.argv)
-    window = MainLogic()  # the labeling window
-    window.show()
+    _ = MainLogic()  # the labeling window
     sys.exit(app.exec_())
 
 

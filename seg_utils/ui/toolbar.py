@@ -15,6 +15,7 @@ class Toolbar(QToolBar):
     sCreateNewProject = pyqtSignal(str, dict)
     sOpenProject = pyqtSignal(str)
     sRequestPatients = pyqtSignal()
+    sSetDrawingMode = pyqtSignal(int)
 
     def __init__(self, parent):
         super(Toolbar, self).__init__(parent)
@@ -32,7 +33,7 @@ class Toolbar(QToolBar):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
         self.setObjectName("toolBar")
         self.button_group = QButtonGroup()
-        self.button_group.setExclusive(False)
+        self.button_group.setExclusive(True)
         self.button_group.buttonToggled.connect(self.exclusive_optional)
 
     def disable_drawing(self, disable: bool):
@@ -76,74 +77,46 @@ class Toolbar(QToolBar):
         """Initialise all actions present which can be connected to buttons or menu items"""
         # TODO: some shortcuts don't work
         # TODO: Figure out a more modular way to set up these actions
-        action_new_project = Action(parent,
-                                    "New\nProject",
-                                    None,
-                                    'Ctrl+N',
-                                    "new",
-                                    "New project")
-        action_open_project = Action(parent,
-                                     "Open\nProject",
-                                     None,
-                                     'Ctrl+O',
-                                     "open",
-                                     "Open project")
-        action_save = Action(parent,
-                             "Save",
-                             None,
-                             'Ctrl+S',
-                             "save",
-                             "Save current state to database")
-        action_import = Action(parent,
-                               "Import",
-                               None,
-                               'Ctrl+I',
-                               "import",
-                               "Import a new file to database")
-        action_next_image = Action(parent,
-                                   "Next\nImage",
-                                   None,
-                                   'Right',
-                                   "next",
-                                   "Go to next image")
-        action_prev_image = Action(parent,
-                                   "Previous\nImage",
-                                   None,
-                                   'Left',
-                                   "prev",
-                                   "Go to previous image")
+        action_select = Action(parent,
+                               "Select",
+                               lambda: self.sSetDrawingMode.emit(0),
+                               icon="mouse",
+                               tip="Select items in the image",
+                               checkable=True,
+                               checked=True)
         action_draw_poly = Action(parent,
                                   "Draw\nPolygon",
-                                  None,
+                                  lambda: self.sSetDrawingMode.emit(1),
                                   icon="polygon",
                                   tip="Draw Polygon (right click to show options)",
                                   checkable=True)
         action_trace_outline = Action(parent,
                                       "Draw\nTrace",
-                                      None,
+                                      lambda: self.sSetDrawingMode.emit(1),
                                       icon="outline",
                                       tip="Trace Outline",
                                       checkable=True)
         action_draw_circle = Action(parent,
                                     "Draw\nCircle",
-                                    None,
+                                    lambda: self.sSetDrawingMode.emit(1),
                                     icon="circle",
                                     tip="Draw Circle",
                                     checkable=True)
         action_draw_rectangle = Action(parent,
                                        "Draw\nRectangle",
-                                       None,
+                                       lambda: self.sSetDrawingMode.emit(1),
                                        icon="square",
                                        tip="Draw Rectangle",
                                        checkable=True)
         action_quit = Action(parent,
                              "Quit\nProgram",
-                             None,
+                             self.parent().close,
                              icon="quit",
                              tip="Quit Program",
                              checkable=True)
 
-        actions = ((action_draw_poly,
+        actions = ((action_select,
+                    action_draw_poly,
                     action_trace_outline,
                     action_draw_circle,
                     action_draw_rectangle,

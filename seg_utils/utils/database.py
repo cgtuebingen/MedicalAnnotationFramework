@@ -87,6 +87,7 @@ class SQLiteDatabase(QObject):
         self.cursor = None
         self.location = ""
         self.file_tables = FILE_TABLES
+        self.is_initialized = False
 
     def add_annotation(self, modality: int, file: int, patient: int, shape: bytes, label: int):
         """ adds an entry to the annotation table using the parameter values"""
@@ -278,6 +279,7 @@ class SQLiteDatabase(QObject):
         with self.connection:
             self.cursor.execute(f"PRAGMA foreign_keys = ON;")
 
+        self.is_initialized = True
         self.update_gui()
 
     def save(self, current_labels: list, img_idx: int):
@@ -294,8 +296,12 @@ class SQLiteDatabase(QObject):
 
     def send_changes_info(self, img_idx: int, new_img_idx: int):
         """collects the information about the annotations in the image with the given index and emits a signal"""
-        cur_image = self.get_images()[img_idx]
-        current_labels = self.get_label_from_imagepath(cur_image)
+        images = self.get_images() if self.is_initialized else None
+        if images:
+            cur_image = images[img_idx]
+            current_labels = self.get_label_from_imagepath(cur_image)
+        else:
+            current_labels = []
         self.sCheckForChanges.emit(current_labels, new_img_idx)
 
     def update_image_annotations(self, image_name: str, entries: list):
