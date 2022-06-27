@@ -67,7 +67,7 @@ class MenuBar(QMenuBar):
         if dlg.project_path:
             database_path = dlg.project_path + Structure.DATABASE_DEFAULT_NAME
             self.sCreateNewProject.emit(database_path, dlg.files)
-            self.enable_all()
+            self.enable_project_tools()
 
     def open_project(self):
         """executes a dialog prompting the user to select a database"""

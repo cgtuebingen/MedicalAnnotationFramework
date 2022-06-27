@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from PyQt5.QtGui import QCursor
+from PyQt5.QtGui import *
 from seg_utils.ui.list_widgets import ListWidget
 from seg_utils.ui.list_widgets_new import LabelList, CommentList
 from seg_utils.ui.shape import Shape
@@ -53,13 +53,39 @@ class PolyFrame(QWidget):
         self.comment_list.setSpacing(1)
         self.comment_list.setCursor((QCursor(Qt.PointingHandCursor)))
 
-        self.subFrame.layout().addWidget(self.polygon_list)
-        self.subFrame.layout().addWidget(self.comment_list)
+        self.polygons = QTreeWidget()
+        self.polygons.setColumnCount(2)
+        self.polygons.setFrameShape(QFrame.NoFrame)
+        self.polygons.setCursor((QCursor(Qt.PointingHandCursor)))
+        self.polygons.setHeaderLabels(["Annotation", "Your notes"])
+
+        # self.subFrame.layout().addWidget(self.polygon_list)
+        # self.subFrame.layout().addWidget(self.comment_list)
+        self.subFrame.layout().addWidget(self.polygons)
         self.layout().addWidget(self.label)
         self.layout().addWidget(self.subFrame)
 
         self.polygon_list.itemClicked.connect(self.handle_poly_click)
         self.comment_list.itemClicked.connect(self.handle_comment_click)
+        self.polygons.clicked.connect(self.handle_click)
+
+    def handle_click(self, idx: QModelIndex):
+        row, column = idx.row(), idx.column()
+
+        if column == 0:
+            self.itemClicked.emit(row)
+        elif column == 1:
+            lbl = self.current_labels[row]
+            comment = lbl.comment if lbl.comment else ""
+            dlg = CommentDialog(comment)
+            dlg.exec()
+
+            # store the dialog result
+            text = "Details" if dlg.comment else "Add comment"
+            item = self.polygons.itemFromIndex(idx)
+            item.setText(column, text)
+            self.current_labels[row].comment = dlg.comment
+            self.sUpdateLabels.emit(self.current_labels)
 
     def handle_comment_click(self, item: QListWidgetItem):
         """ opens up a dialog and stores the entered text as a comment"""
@@ -89,3 +115,26 @@ class PolyFrame(QWidget):
         self.current_labels = current_labels
         self.polygon_list.update_with_labels(current_labels)
         self.comment_list.update_list(current_labels)
+
+        self.polygons.clear()
+        for lbl in current_labels:
+            txt = lbl.label
+            txt2 = "Details" if lbl.comment else "Add comment"
+            col = lbl.line_color
+            icon = create_square_icon(col)
+
+            item = QTreeWidgetItem([txt, txt2])
+            item.setIcon(0, icon)
+            self.polygons.addTopLevelItem(item)
+
+
+def create_square_icon(color: QColor, size: int = 10) -> QIcon:
+    pixmap = QPixmap(size, size)
+    painter = QPainter()
+    painter.begin(pixmap)
+    painter.setPen(color)
+    painter.setBrush(color)
+    painter.drawRect(QRect(0, 0, size, size))
+    icon = QIcon(pixmap)
+    painter.end()
+    return icon
