@@ -1,8 +1,6 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-from seg_utils.ui.list_widgets import ListWidget
-from seg_utils.ui.list_widgets_new import LabelList, CommentList
 from seg_utils.ui.shape import Shape
 from seg_utils.ui.dialogs_new import CommentDialog
 
@@ -19,6 +17,7 @@ class PolyFrame(QWidget):
 
     sUpdateLabels = pyqtSignal(list)
     itemClicked = pyqtSignal(int)
+    itemDeleted = pyqtSignal()
 
     def __init__(self, *args):
         super(PolyFrame, self).__init__(*args)
@@ -35,41 +34,29 @@ class PolyFrame(QWidget):
         self.label.setText("Polygons")
         self.label.setAlignment(Qt.AlignCenter)
 
-        # subFrame comprises the polyList and commentList
-        self.subFrame = QFrame()
-        self.subFrame.setMinimumSize(QSize(0, 300))
-        self.subFrame.setFrameShape(QFrame.StyledPanel)
-        self.subFrame.setLayout(QHBoxLayout())
-        self.subFrame.layout().setContentsMargins(0, 0, 0, 0)
-        self.subFrame.layout().setSpacing(0)
-
-        # displays the created Shapes
-        self.polygon_list = LabelList()
-        self.polygon_list.setFrameShape(QFrame.NoFrame)
-
-        # places a clickable "Add comment" next to each item in the polyList
-        self.comment_list = CommentList()
-        self.comment_list.setFrameShape(QFrame.NoFrame)
-        self.comment_list.setSpacing(1)
-        self.comment_list.setCursor((QCursor(Qt.PointingHandCursor)))
-
+        # QTreeWidget for displaying annotations and comments
         self.polygons = QTreeWidget()
         self.polygons.setColumnCount(2)
         self.polygons.setFrameShape(QFrame.NoFrame)
         self.polygons.setCursor((QCursor(Qt.PointingHandCursor)))
         self.polygons.setHeaderLabels(["Annotation", "Your notes"])
-
-        # self.subFrame.layout().addWidget(self.polygon_list)
-        # self.subFrame.layout().addWidget(self.comment_list)
-        self.subFrame.layout().addWidget(self.polygons)
-        self.layout().addWidget(self.label)
-        self.layout().addWidget(self.subFrame)
-
-        self.polygon_list.itemClicked.connect(self.handle_poly_click)
-        self.comment_list.itemClicked.connect(self.handle_comment_click)
         self.polygons.clicked.connect(self.handle_click)
 
+        self.layout().addWidget(self.label)
+        self.layout().addWidget(self.polygons)
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        pos = event.pos()
+        menu = QMenu()
+
+        action = QAction("Delete")
+        action.triggered.connect(self.itemDeleted.emit)
+        menu.addAction(action)
+
+        menu.exec(pos)
+
     def handle_click(self, idx: QModelIndex):
+        """handles an item click in the QTreeWidget, if user clicked at the right part, open up a comment dialog"""
         row, column = idx.row(), idx.column()
 
         if column == 0:
@@ -87,34 +74,16 @@ class PolyFrame(QWidget):
             self.current_labels[row].comment = dlg.comment
             self.sUpdateLabels.emit(self.current_labels)
 
-    def handle_comment_click(self, item: QListWidgetItem):
-        """ opens up a dialog and stores the entered text as a comment"""
-        idx = self.comment_list.row(item)
-        lbl = self.current_labels[idx]
-        comment = lbl.comment if lbl.comment else ""
-        dlg = CommentDialog(comment)
-        dlg.exec()
-
-        # store the dialog result
-        text = "Details" if dlg.comment else "Add comment"
-        item.setText(text)
-        self.current_labels[idx].comment = dlg.comment
-        self.sUpdateLabels.emit(self.current_labels)
-
-    def handle_poly_click(self, item: QListWidgetItem):
-        """gets the index of the selected item and emits a signal"""
-        idx = self.polygon_list.row(item)
-        self.itemClicked.emit(idx)
-
     def shape_selected(self, idx: int):
         """selects the item with the corresponding index in the poly list"""
-        self.polygon_list.item(idx).setSelected(True)
+        # TODO: Does not work yet, find out how items in qtreewidget can be indexed
+        model_idx = QModelIndex()
+        item = self.polygons.itemFromIndex(model_idx)
+        # item.setSelected(True)
 
     def update_frame(self, current_labels: List[Shape]):
-        """updates the polyList and comment_list with the specified labels"""
+        """updates the treeWidget with the specified labels"""
         self.current_labels = current_labels
-        self.polygon_list.update_with_labels(current_labels)
-        self.comment_list.update_list(current_labels)
 
         self.polygons.clear()
         for lbl in current_labels:

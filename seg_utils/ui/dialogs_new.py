@@ -83,7 +83,7 @@ class DeleteShapeMessageBox(QMessageBox):
         super(DeleteShapeMessageBox, self).__init__(*args)
         if self.parentWidget():
             move_to_center(self, self.parentWidget().pos(), self.parentWidget().size())
-        reply = self.question(self, "Deleting Shape", f"You are about to delete {shape}. Continue?",
+        reply = self.question(self, "Deleting Shape", f"You are about to delete {shape}.\nContinue?",
                               QMessageBox.Yes | QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.answer = 1

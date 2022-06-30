@@ -42,7 +42,8 @@ class CenterDisplayWidget(QWidget):
 
     def mousePressEvent(self, event: QMouseEvent):
         if self.annotations.mode == AnnotationGroup.AnnotationMode.DRAW:
-            self.annotations.create_shape()
+            if event.button() == Qt.LeftButton:
+                self.annotations.create_shape()
         event.accept()
 
     def check_for_changes(self, sql_labels: list, new_img_idx: int):
@@ -87,8 +88,7 @@ class CenterDisplayWidget(QWidget):
                   for _label in labels]
 
         self.annotations.classes = classes
-        self.annotations.clear()
-        self.annotations.add_shapes(labels)
+        self.annotations.update_annotations(labels)
         self.hide_button.raise_()
         rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
         self.image_viewer.fitInView(rect)
@@ -101,4 +101,3 @@ class CenterDisplayWidget(QWidget):
     def set_initialized(self):
         self.scene.b_isInitialized = True
         self.image_viewer.b_isEmpty = False
-

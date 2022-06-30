@@ -13,6 +13,7 @@ from seg_utils.ui.dialogs_new import SelectPatientDialog, NewLabelDialog, CloseM
 from seg_utils.ui.menu_bar import MenuBar
 from seg_utils.src.actions import Action
 from seg_utils.ui.list_widgets_new import FileViewingWidget, LabelsViewingWidget
+from seg_utils.ui.tree_widget import TreeWidget
 from seg_utils.utils.qt import colormap_rgb, get_icon
 from seg_utils.utils.project_structure import Structure
 
@@ -49,6 +50,7 @@ class LabelingMainWindow(QMainWindow):
         self.center_frame.layout().setContentsMargins(0, 0, 0, 0)
         self.center_frame.layout().setSpacing(0)
 
+        # default widget while no project has been loaded
         self.no_files = QLabel()
         self.no_files.setText("No files to display")
         self.no_files.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -65,12 +67,26 @@ class LabelingMainWindow(QMainWindow):
         self.right_menu_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.right_menu_widget.layout().setSpacing(0)
 
-        # the labels, polygon and file lists
+        # the label, polygons and file lists
         self.labels_list = LabelsViewingWidget()
-        self.poly_frame = PolyFrame()
+        self.polygons = TreeWidget()
         self.file_list = FileViewingWidget()
+
+        # widget for the polygons
+        self.poly_widget = QWidget()
+        self.poly_widget.setMinimumSize(QSize(0, 300))
+        self.poly_widget.setLayout(QVBoxLayout())
+        self.poly_widget.layout().setContentsMargins(0, 0, 0, 0)
+        self.poly_widget.layout().setSpacing(0)
+        self.poly_label = QLabel(self)
+        self.poly_label.setStyleSheet("background-color: rgb(186, 189, 182);")
+        self.poly_label.setText("Polygons")
+        self.poly_label.setAlignment(Qt.AlignCenter)
+        self.poly_widget.layout().addWidget(self.poly_label)
+        self.poly_widget.layout().addWidget(self.polygons)
+
         self.right_menu_widget.layout().addWidget(self.labels_list)
-        self.right_menu_widget.layout().addWidget(self.poly_frame)
+        self.right_menu_widget.layout().addWidget(self.poly_widget)
         self.right_menu_widget.layout().addWidget(self.file_list)
 
         self.main_widget.layout().addWidget(self.center_frame)
@@ -93,12 +109,14 @@ class LabelingMainWindow(QMainWindow):
         self.img_idx = 0
         self.closeMe = False
 
+        # connect signals
         self.image_display.sRequestSave.connect(self.save_to_database)
         self.image_display.sChangeFile.connect(self.change_file)
         self.image_display.image_viewer.sNextFile.connect(self.next_image)
-        self.image_display.annotations.shapeCreated.connect(self.poly_frame.update_frame)
-        self.image_display.annotations.shapeSelected.connect(self.poly_frame.shape_selected)
-        self.poly_frame.itemClicked.connect(self.image_display.annotations.label_selected)
+        self.image_display.annotations.updateShapes.connect(self.polygons.update_polygons)
+        self.image_display.annotations.shapeSelected.connect(self.polygons.shape_selected)
+        self.polygons.sItemClicked.connect(self.image_display.annotations.label_selected)
+        self.polygons.sUpdateLabels.connect(self.image_display.annotations.update_annotations)
         self.menubar.sRequestSave.connect(self.save_to_database)
         self.toolBar.sSetDrawingMode.connect(self.image_display.annotations.set_mode)
 
@@ -169,6 +187,6 @@ class LabelingMainWindow(QMainWindow):
             self.image_display.set_initialized()
             self.set_default(False)
             current_labels = self.image_display.init_image(files[self.img_idx], labels, classes)
-            self.poly_frame.update_frame(current_labels)
+            self.polygons.update_polygons(current_labels)
         else:
             self.set_default(True)

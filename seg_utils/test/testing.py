@@ -6,7 +6,7 @@ from seg_utils.ui.main_window_new import LabelingMainWindow
 from seg_utils.ui.dialogs_new import *
 from seg_utils.ui.list_widgets_new import *
 from seg_utils.ui.image_display import CenterDisplayWidget
-from seg_utils.ui.poly_frame import PolyFrame
+from seg_utils.ui.tree_widget import TreeWidget
 from seg_utils.ui.shape import Shape
 from seg_utils.ui.toolbar import Toolbar
 from seg_utils.src.main_logic import MainLogic
@@ -135,10 +135,10 @@ def test_main_window():
     app.exec_()
 
 
-def test_poly_frame():
+def test_tree_widget():
     # done
-    window = PolyFrame()
-    window.update_frame(SHAPES)
+    window = TreeWidget()
+    window.update_polygons(SHAPES)
     window.show()
     app.exec()
 
@@ -186,7 +186,7 @@ if __name__ == "__main__":
     # test_label_list()
     # test_dialog_delete_class()
     # test_file_viewing_widget()
-    test_poly_frame()
+    test_tree_widget()
     # test_dialog_new_label()
     # test_image_display()
     # test_toolbar()

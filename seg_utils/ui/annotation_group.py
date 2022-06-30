@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from seg_utils.utils.qt import colormap_rgb
 from seg_utils.ui.shape import Shape
-from seg_utils.ui.dialogs_new import NewLabelDialog
+from seg_utils.ui.dialogs_new import NewLabelDialog, DeleteShapeMessageBox
 
 
 class AnnotationGroup(QGraphicsObject):
@@ -13,7 +13,7 @@ class AnnotationGroup(QGraphicsObject):
     item_highlighted = pyqtSignal(Shape)
     item_dehighlighted = pyqtSignal(Shape)
     # item_clicked = pyqtSignal(Shape, QGraphicsSceneMouseEvent)
-    shapeCreated = pyqtSignal(list)
+    updateShapes = pyqtSignal(list)
     shapeSelected = pyqtSignal(int)
 
     @dataclass
@@ -77,9 +77,8 @@ class AnnotationGroup(QGraphicsObject):
             self.annotations[new_id] = shape
             shape.hover_enter.connect(lambda: self.on_hover_enter(new_id))
             shape.hover_exit.connect(lambda: self.on_hover_leave(new_id))
-            # shape.clicked.connect(lambda x: self.item_clicked.emit(self.annotations[new_id], x))
             shape.selected.connect(self.shape_selected)
-            shape.deleted.connect(lambda: self.remove_shapes(shape))
+            shape.deleted.connect(lambda: self.delete_shape(shape))
             shape.mode_changed.connect(self.shape_mode_changed)
             shape.drawingDone.connect(self.set_label)
             self.update()
@@ -101,6 +100,10 @@ class AnnotationGroup(QGraphicsObject):
                 self.annotations[shape_id].setParentItem(None)
         [(self.annotations[x].disconnect(), self.annotations.pop(x)) for x in ids_to_remove]
 
+        # re-order key-ids in the dictionary
+        ids_in_order = [i for i in range(len(self.annotations))]
+        self.annotations = dict(zip(ids_in_order, list(self.annotations.values())))
+
     def clear(self):
         """
         Clears the group and scene of shapes
@@ -108,6 +111,14 @@ class AnnotationGroup(QGraphicsObject):
         """
         self.remove_shapes(list(self.annotations.values()))
         self.temp_shape = None
+
+    def delete_shape(self, shape: Shape):
+        """in-between function to open a dialog and let user confirm to delete the shape"""
+        dlg = DeleteShapeMessageBox(shape.label)
+        if dlg.answer == 1:
+            # TODO: does not work right; shape is still visible in display; may crash the program
+            self.remove_shapes(shape)
+            self.updateShapes.emit(list(self.annotations.values()))
 
     def shape_selected(self):
         """gets the index of the selected shape and emits it"""
@@ -148,7 +159,7 @@ class AnnotationGroup(QGraphicsObject):
             self.temp_shape.group_id = self.classes.index(label)
             self.temp_shape.label = label
             self.temp_shape.set_mode(Shape.ShapeMode.FIXED)
-            self.shapeCreated.emit(list(self.annotations.values()))
+            self.updateShapes.emit(list(self.annotations.values()))
 
         # if user entered no label, remove shape
         else:
@@ -157,6 +168,10 @@ class AnnotationGroup(QGraphicsObject):
 
     def set_mode(self, mode: Union[AnnotationMode, int]):
         self.mode = mode
+
+    def update_annotations(self, current_labels: List[Shape]):
+        self.clear()
+        self.add_shapes(current_labels)
 
 
 if __name__ == '__main__':
@@ -175,7 +190,8 @@ if __name__ == '__main__':
     scene.addItem(anno_group)
 
     def mousePressEvent(event):
-        anno_group.create_shape()
+        if event.button() == Qt.LeftButton:
+            anno_group.create_shape()
     scene.mousePressEvent = mousePressEvent
 
     viewer.show()

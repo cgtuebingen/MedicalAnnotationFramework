@@ -128,6 +128,17 @@ class Shape(QGraphicsObject):
                             (self.image_size.width(), self.image_size.height()))
         return QPointF(scene_pos[0], scene_pos[1])
 
+    def contextMenuEvent(self, event: QGraphicsSceneContextMenuEvent) -> None:
+        pos = event.screenPos()
+        menu = QMenu()
+
+        action = QAction("Delete")
+        action.triggered.connect(self.deleted.emit)
+        menu.addAction(action)
+
+        self.setSelected(True)
+        menu.exec(pos)
+
     @pyqtSlot(QGraphicsSceneMouseEvent)
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
         if self.contains(event.pos()):

@@ -42,27 +42,6 @@ class LabelList(QListWidget):
             self.addItem(item)
 
 
-class CommentList(QListWidget):
-    """ a list widget to hold clickable items for adding comments"""
-
-    def __init__(self, *args):
-        super(QListWidget, self).__init__(*args)
-        self._icon_size = 10
-        self.setStyleSheet(COMMENT_LIST)
-        self.setSpacing(1)
-        self.setFrameShape(QFrame.NoFrame)
-        self.setCursor((QCursor(Qt.PointingHandCursor)))
-
-    def update_list(self, labels: List[Shape]):
-        """ adds items depending on whether a label has a comment or not """
-        self.clear()
-        for lbl in labels:
-            text = "Details" if lbl.comment else "Add comment"
-            item = QListWidgetItem()
-            item.setText(text)
-            self.addItem(item)
-
-
 class LabelsViewingWidget(QWidget):
     """ a widget to hold a LabelList displaying the (unique) label class names"""
     def __init__(self):
