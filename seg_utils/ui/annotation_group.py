@@ -57,10 +57,12 @@ class AnnotationGroup(QGraphicsObject):
 
     @pyqtSlot(int)
     def on_hover_enter(self, shape_id: int):
+        # TODO: Do we need these?
         self.item_highlighted.emit(self.annotations[shape_id])
 
     @pyqtSlot(int)
     def on_hover_leave(self, shape_id: int):
+        # TODO: Do we need these?
         self.item_dehighlighted.emit(self.annotations[shape_id])
 
     def add_shapes(self, new_shapes: Union[Shape, List[Shape]]):
@@ -101,8 +103,8 @@ class AnnotationGroup(QGraphicsObject):
         [(self.annotations[x].disconnect(), self.annotations.pop(x)) for x in ids_to_remove]
 
         # re-order key-ids in the dictionary
-        ids_in_order = [i for i in range(len(self.annotations))]
-        self.annotations = dict(zip(ids_in_order, list(self.annotations.values())))
+        """ids_in_order = [i for i in range(len(self.annotations))]
+        self.annotations = dict(zip(ids_in_order, list(self.annotations.values())))"""
 
     def clear(self):
         """
@@ -110,13 +112,11 @@ class AnnotationGroup(QGraphicsObject):
         :return:
         """
         self.remove_shapes(list(self.annotations.values()))
-        self.temp_shape = None
 
     def delete_shape(self, shape: Shape):
         """in-between function to open a dialog and let user confirm to delete the shape"""
         dlg = DeleteShapeMessageBox(shape.label)
         if dlg.answer == 1:
-            # TODO: does not work right; shape is still visible in display; may crash the program
             self.remove_shapes(shape)
             self.updateShapes.emit(list(self.annotations.values()))
 
@@ -166,12 +166,18 @@ class AnnotationGroup(QGraphicsObject):
             self.remove_shapes(self.temp_shape)
             self.scene().removeItem(self.temp_shape)
 
+        # in any case, remove temp shape reference
+        self.temp_shape = None
+
     def set_mode(self, mode: Union[AnnotationMode, int]):
         self.mode = mode
 
     def update_annotations(self, current_labels: List[Shape]):
         self.clear()
-        self.add_shapes(current_labels)
+
+        # for some reason, bugs emerge when you pass the labels as a list
+        for lbl in current_labels:
+            self.add_shapes(lbl)
 
 
 if __name__ == '__main__':
