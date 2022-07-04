@@ -9,7 +9,6 @@ class ImageViewer(QGraphicsView):
     def __init__(self, *args):
         super(ImageViewer, self).__init__(*args)
         self.b_isEmpty = True
-
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)

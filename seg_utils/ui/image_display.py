@@ -30,7 +30,9 @@ class CenterDisplayWidget(QWidget):
         self.annotations = AnnotationGroup()
         self.scene.addItem(self.annotations)
 
-        self.image_size = QSize()
+        # QLabel displaying the patients id/name/alias
+        self.patient_label = QLabel()
+        self.patient_label.setContentsMargins(10, 0, 10, 0)
 
         self.hide_button = QPushButton(get_icon("next"), "", self)
         self.hide_button.setGeometry(0, 0, 40, 40)
@@ -39,6 +41,7 @@ class CenterDisplayWidget(QWidget):
         self.image_viewer.setFrameShape(QFrame.NoFrame)
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.image_viewer)
+        self.layout.addWidget(self.patient_label)
 
     def mousePressEvent(self, event: QMouseEvent):
         if self.annotations.mode == AnnotationGroup.AnnotationMode.DRAW:
@@ -75,9 +78,12 @@ class CenterDisplayWidget(QWidget):
     def get_pixmap_dimensions(self):
         return [self.pixmap.pixmap().width(), self.pixmap.pixmap().height()]
 
-    def init_image(self, filepath: str, labels: list, classes: list):
+    def init_image(self, filepath: str, patient: str, labels: list, classes: list):
         """initializes the pixmap to display the image in the center widget
         return the current labels as shape objects"""
+        self.set_initialized()
+        self.annotations.classes = classes
+
         pixmap = QPixmap(filepath)
         self.image_size = pixmap.size()
         self.pixmap.setPixmap(pixmap)
@@ -87,12 +93,12 @@ class CenterDisplayWidget(QWidget):
                         color=self.annotations.get_color_for_label(_label['label']))
                   for _label in labels]
 
-        self.annotations.classes = classes
         self.annotations.update_annotations(labels)
         self.hide_button.raise_()
         rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
         self.image_viewer.fitInView(rect)
 
+        self.patient_label.setText(patient)
         return labels
 
     def is_empty(self):

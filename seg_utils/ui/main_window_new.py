@@ -115,6 +115,7 @@ class LabelingMainWindow(QMainWindow):
         self.image_display.image_viewer.sNextFile.connect(self.next_image)
         self.image_display.annotations.updateShapes.connect(self.polygons.update_polygons)
         self.image_display.annotations.shapeSelected.connect(self.polygons.shape_selected)
+        self.labels_list.label_list.sDeleteClass.connect(self.image_display.annotations.delete_label_class)
         self.polygons.sItemClicked.connect(self.image_display.annotations.label_selected)
         self.polygons.sUpdateLabels.connect(self.image_display.annotations.update_annotations)
         self.menubar.sRequestSave.connect(self.save_to_database)
@@ -177,16 +178,14 @@ class LabelingMainWindow(QMainWindow):
         self.image_display.setHidden(is_empty)
         self.no_files.setHidden(not is_empty)
 
-    def update_window(self, files: list, classes: list, labels: list):
+    def update_window(self, files: list, patient: str, classes: list, labels: list):
         color_map, new_color = colormap_rgb(n=NUM_COLORS)
         self.labels_list.label_list.update_with_classes(classes, color_map)
         self.file_list.update_list(files, self.img_idx)
-        self.image_display.annotations.classes = classes
 
         if files:
-            self.image_display.set_initialized()
             self.set_default(False)
-            current_labels = self.image_display.init_image(files[self.img_idx], labels, classes)
+            current_labels = self.image_display.init_image(files[self.img_idx], patient, labels, classes)
             self.polygons.update_polygons(current_labels)
         else:
             self.set_default(True)

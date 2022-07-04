@@ -8,6 +8,7 @@ from typing import List
 
 
 class PolyFrame(QWidget):
+    # TODO: This class is only used in the old main_window version - delete soon
     """
     This class is used to build up the part in the right menu of the GUI
     where the currently created Polygons are displayed.

@@ -77,7 +77,7 @@ DELETE_FILE_ANNOTATIONS = "DELETE FROM annotations WHERE modality = ? AND file =
 
 class SQLiteDatabase(QObject):
     """class to control an SQL database. inherits a QObject to enable pyqt-signal transfer"""
-    sUpdate = pyqtSignal(list, list, list)
+    sUpdate = pyqtSignal(list, str, list, list)
     sImportFile = pyqtSignal(list)
     sCheckForChanges = pyqtSignal(list, int)
 
@@ -143,12 +143,12 @@ class SQLiteDatabase(QObject):
     def create_annotation_entry(self, label_dict: dict, img_idx: int, label_class: str):
         cur_image = self.get_images()[img_idx]
         mod, file = self.get_uids_from_filename(cur_image)
-        patient = self.get_patient_by_filename(cur_image)
+        patient_uid = self.get_patient_by_filename(cur_image)
         label_class = self.get_uid_from_label(label_class)
 
         annotation_entry = {'modality': mod,
                             'file': file,
-                            'patient': patient,
+                            'patient': patient_uid,
                             'shape': pickle.dumps(label_dict),
                             'label': label_class}
 
@@ -220,6 +220,11 @@ class SQLiteDatabase(QObject):
         with self.connection:
             self.cursor.execute("SELECT patient FROM images WHERE filename = ?", (filename,))
             return self.cursor.fetchone()[0]
+
+    def get_patient_by_uid(self, patient_uid: int):
+        """returns the id/patient info from the patients table by the corresponding uid"""
+        self.cursor.execute("SELECT some_id FROM patients WHERE uid = ?", (patient_uid,))
+        return self.cursor.fetchone()[0]
 
     def get_uid_from_filename(self, table_name: str, filename: str) -> int:
         """
@@ -326,8 +331,13 @@ class SQLiteDatabase(QObject):
         """gathers all information about the project and updates the database"""
         files = self.get_images()
         classes = self.get_label_classes()
-        labels = self.get_label_from_imagepath(files[img_idx]) if files else []
-        self.sUpdate.emit(files, classes, labels)
+        if files:
+            file = files[img_idx]
+            labels = self.get_label_from_imagepath(file)
+            patient = self.get_patient_by_uid(self.get_patient_by_filename(file))
+        else:
+            labels, patient = [], ""
+        self.sUpdate.emit(files, patient, classes, labels)
 
     def update_labels(self, classes: list):
         """

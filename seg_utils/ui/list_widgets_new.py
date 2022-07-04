@@ -7,13 +7,13 @@ from typing import List
 
 from seg_utils.ui.shape import Shape
 from seg_utils.utils.qt import createListWidgetItemWithSquareIcon, get_icon
-from seg_utils.utils.stylesheets import COMMENT_LIST, TAB_STYLESHEET
+from seg_utils.utils.stylesheets import TAB_STYLESHEET
 from seg_utils.utils.project_structure import Structure
 
 
 class LabelList(QListWidget):
     """ a list widget to store annotation labels"""
-    sRequestContextMenu = pyqtSignal(int, QPoint)
+    sDeleteClass = pyqtSignal(str)
 
     def __init__(self, *args):
         super(QListWidget, self).__init__(*args)
@@ -22,8 +22,17 @@ class LabelList(QListWidget):
 
     def contextMenuEvent(self, event) -> None:
         pos = event.pos()
-        idx = self.row(self.itemAt(pos))
-        self.sRequestContextMenu.emit(idx, self.mapToGlobal(pos))
+        item = self.itemAt(pos)
+        if item:
+            menu = QMenu()
+            action = QAction("Delete")
+            action.triggered.connect(lambda: self.sDeleteClass.emit(item.text()))
+            menu.addAction(action)
+            global_pos = event.globalPos()
+            menu.exec(global_pos)
+
+    def delete_label(self, item: QListWidgetItem):
+        pass
 
     def update_with_classes(self, classes: List[str], color_map: List[QColor]):
         """ fills the list widget with the given class names and their corresponding colors"""

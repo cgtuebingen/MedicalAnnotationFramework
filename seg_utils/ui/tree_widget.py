@@ -72,10 +72,12 @@ class TreeWidget(QTreeWidget):
 
     def shape_selected(self, idx: int):
         """selects the item with the corresponding index in the poly list"""
-        # TODO: Does not work yet, find out how items in qtreewidget can be indexed
-        model_idx = QModelIndex()
-        item = self.itemFromIndex(model_idx)
-        # item.setSelected(True)
+        for item in self.selectedItems():
+            item.setSelected(False)
+
+        root = self.invisibleRootItem()
+        select_item = root.child(idx)
+        select_item.setSelected(True)
 
     def update_polygons(self, current_labels: List[Shape]):
         """updates the treeWidget with the specified labels"""
