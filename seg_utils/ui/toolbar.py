@@ -108,19 +108,12 @@ class Toolbar(QToolBar):
                                        icon="square",
                                        tip="Draw Rectangle",
                                        checkable=True)
-        action_quit = Action(parent,
-                             "Quit\nProgram",
-                             self.parent().close,
-                             icon="quit",
-                             tip="Quit Program",
-                             checkable=True)
 
         actions = ((action_select,
                     action_draw_poly,
                     action_trace_outline,
                     action_draw_circle,
-                    action_draw_rectangle,
-                    action_quit))
+                    action_draw_rectangle))
 
         # Init Toolbar
         self.addActions(actions)

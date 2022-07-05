@@ -94,7 +94,7 @@ class LabelingMainWindow(QMainWindow):
         self.main_widget.layout().addWidget(self.right_menu_widget)
         self.setCentralWidget(self.main_widget)
 
-        self.menubar = MenuBar()
+        self.menubar = MenuBar(self)
         self.setMenuBar(self.menubar)
 
         self.statusbar = QStatusBar()
@@ -167,8 +167,8 @@ class LabelingMainWindow(QMainWindow):
         if patient:
             filepath, _ = QFileDialog.getOpenFileName(self,
                                                       caption="Select File",
-                                                      directory=str(Path.home()),
-                                                      options=QFileDialog.DontUseNativeDialog)
+                                                      directory=str(Path.home()),)
+            # options = QFileDialog.DontUseNativeDialog
             if filepath:
                 self.sAddFile.emit(filepath, patient)
                 self.sRequestUpdate.emit(self.img_idx)
