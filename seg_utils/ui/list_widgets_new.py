@@ -11,6 +11,27 @@ from seg_utils.utils.stylesheets import TAB_STYLESHEET
 from seg_utils.utils.project_structure import Structure
 
 
+class FileList(QListWidget):
+    """ a list widget subclass to make use of context menu"""
+    sDeleteFile = pyqtSignal(str)
+
+    def __init__(self):
+        super(FileList, self).__init__()
+        self.setIconSize(QSize(7, 7))
+        self.setContentsMargins(0, 0, 0, 0)
+        self.setFrameShape(QFrame.NoFrame)
+        self.setItemAlignment(Qt.AlignmentFlag.AlignLeft)
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        item = self.itemAt(event.pos())
+        if item:
+            menu = QMenu()
+            action = QAction("Delete")
+            action.triggered.connect(lambda: self.sDeleteFile.emit(item.text()))
+            menu.addAction(action)
+            menu.exec(event.globalPos())
+
+
 class LabelList(QListWidget):
     """ a list widget to store annotation labels"""
     sDeleteClass = pyqtSignal(str)
@@ -30,9 +51,6 @@ class LabelList(QListWidget):
             menu.addAction(action)
             global_pos = event.globalPos()
             menu.exec(global_pos)
-
-    def delete_label(self, item: QListWidgetItem):
-        pass
 
     def update_with_classes(self, classes: List[str], color_map: List[QColor]):
         """ fills the list widget with the given class names and their corresponding colors"""
@@ -72,6 +90,7 @@ class FileViewingWidget(QWidget):
     """ holds a QTabWidget to be able to display both images and whole slide images"""
     itemClicked = pyqtSignal(QListWidgetItem)
     sRequestFileChange = pyqtSignal(int)
+    sDeleteFile = pyqtSignal(str)
 
     def __init__(self):
         super(FileViewingWidget, self).__init__()
@@ -110,31 +129,29 @@ class FileViewingWidget(QWidget):
         self.search_field.setObjectName("fileSearch")
         self.layout().addWidget(self.search_field)
 
-        self.image_list = QListWidget()
-        self.image_list.setIconSize(QSize(7, 7))
-        self.image_list.setContentsMargins(0, 0, 0, 0)
-        self.image_list.setFrameShape(QFrame.NoFrame)
-        self.image_list.setItemAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.image_list.setObjectName("imageList")
-
-        self.wsi_list = QListWidget()
-        self.wsi_list.setIconSize(QSize(7, 7))
-        self.wsi_list.setContentsMargins(0, 0, 0, 0)
-        self.wsi_list.setFrameShape(QFrame.NoFrame)
-        self.wsi_list.setItemAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.wsi_list.setObjectName("wsiList")
+        self.image_list = FileList()
+        self.wsi_list = FileList()
 
         self.tab.addTab(self.image_list, 'Images')
         self.tab.addTab(self.wsi_list, 'WSI')
         self.layout().addWidget(self.tab)
 
         self.image_list.itemClicked.connect(self.file_selected)
+        self.image_list.sDeleteFile.connect(self.sDeleteFile.emit)
         self.search_field.textChanged.connect(self.search_text_changed)
 
     def file_selected(self):
         """gets the index of the selected file and emits a signal"""
         idx2 = self.image_list.currentRow()
         self.sRequestFileChange.emit(idx2)
+
+    def get_img_idx(self, filename: str) -> int:
+        """ searches through the ListWidget and returns the index of the item with the filename / -1 if not found"""
+        for i in range(self.image_list.count()):
+            item = self.image_list.item(i)
+            if item.text() == filename:
+                return i
+        return -1
 
     def update_list(self, filenames, img_idx: int, show_check_box: bool = False):
         """ clears the list widget and fills it again with the provided filenames"""

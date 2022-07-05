@@ -9,7 +9,7 @@ from seg_utils.ui.image_display import CenterDisplayWidget
 from seg_utils.ui.toolbar import Toolbar
 from seg_utils.ui.poly_frame import PolyFrame
 from seg_utils.ui.shape import Shape
-from seg_utils.ui.dialogs_new import SelectPatientDialog, NewLabelDialog, CloseMessageBox
+from seg_utils.ui.dialogs_new import SelectPatientDialog, NewLabelDialog, CloseMessageBox, DeleteFileMessageBox
 from seg_utils.ui.menu_bar import MenuBar
 from seg_utils.src.actions import Action
 from seg_utils.ui.list_widgets_new import FileViewingWidget, LabelsViewingWidget
@@ -27,7 +27,8 @@ class LabelingMainWindow(QMainWindow):
     sAddFile = pyqtSignal(str, str)
     sRequestUpdate = pyqtSignal(int)
     sRequestCheckForChanges = pyqtSignal(int, int)
-    sSaveToDatabase = pyqtSignal(list, int)
+    sSaveToDatabase = pyqtSignal(list, int)#
+    sDeleteFile = pyqtSignal(str, int)
 
     def __init__(self):
         super(LabelingMainWindow, self).__init__()
@@ -116,6 +117,7 @@ class LabelingMainWindow(QMainWindow):
         self.image_display.annotations.updateShapes.connect(self.polygons.update_polygons)
         self.image_display.annotations.shapeSelected.connect(self.polygons.shape_selected)
         self.labels_list.label_list.sDeleteClass.connect(self.image_display.annotations.delete_label_class)
+        self.file_list.sDeleteFile.connect(self.delete_file)
         self.polygons.sItemClicked.connect(self.image_display.annotations.label_selected)
         self.polygons.sUpdateLabels.connect(self.image_display.annotations.update_annotations)
         self.menubar.sRequestSave.connect(self.save_to_database)
@@ -139,6 +141,13 @@ class LabelingMainWindow(QMainWindow):
             event.accept()
         else:
             event.ignore()
+
+    def delete_file(self, filename):
+        dlg = DeleteFileMessageBox(filename)
+        dlg.exec()
+
+        if dlg.result() == QMessageBox.Ok:
+            self.sDeleteFile.emit(filename, self.img_idx)
 
     def hide_toolbar(self):
         """hides or shows the toolbar"""
@@ -178,7 +187,8 @@ class LabelingMainWindow(QMainWindow):
         self.image_display.setHidden(is_empty)
         self.no_files.setHidden(not is_empty)
 
-    def update_window(self, files: list, patient: str, classes: list, labels: list):
+    def update_window(self, files: list, img_idx, patient: str, classes: list, labels: list):
+        self.img_idx = img_idx
         color_map, new_color = colormap_rgb(n=NUM_COLORS)
         self.labels_list.label_list.update_with_classes(classes, color_map)
         self.file_list.update_list(files, self.img_idx)

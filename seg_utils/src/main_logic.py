@@ -46,6 +46,7 @@ class MainLogic:
         self.main_window.sAddPatient.connect(self.database.add_patient)
         self.main_window.sRequestUpdate.connect(self.database.update_gui)
         self.main_window.sRequestCheckForChanges.connect(self.database.send_changes_info)
+        self.main_window.sDeleteFile.connect(self.database.delete_file)
 
         self.database.sUpdate.connect(self.main_window.update_window)
         self.database.sImportFile.connect(self.main_window.import_file)

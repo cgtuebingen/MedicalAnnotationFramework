@@ -78,6 +78,17 @@ class DeleteClassMessageBox(QMessageBox):
             self.answer = 1
 
 
+class DeleteFileMessageBox(QMessageBox):
+    def __init__(self, filename):
+        super(DeleteFileMessageBox, self).__init__()
+        self.setWindowTitle("Delete File")
+        self.setText("You are about to delete the file \n {}".format(filename))
+        self.setInformativeText("All annotations in this image will be lost.\n"
+                                "This operation can not be undone. \n Continue?")
+        self.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        self.setIcon(QMessageBox.Warning)
+
+
 class DeleteShapeMessageBox(QMessageBox):
     def __init__(self, shape: str, *args):
         super(DeleteShapeMessageBox, self).__init__(*args)

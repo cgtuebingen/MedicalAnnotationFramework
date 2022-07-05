@@ -7,8 +7,7 @@ import os
 from typing import List, Union
 from seg_utils.utils.project_structure import modality, create_project_structure, Structure
 
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtCore import QObject
+from PyQt5.QtCore import pyqtSignal, QObject, QSettings
 
 # TODO: 'file' value references the uid in either 'videos', 'images', or 'whole slide images'
 #  (depends on 'modality' value),
@@ -77,7 +76,7 @@ DELETE_FILE_ANNOTATIONS = "DELETE FROM annotations WHERE modality = ? AND file =
 
 class SQLiteDatabase(QObject):
     """class to control an SQL database. inherits a QObject to enable pyqt-signal transfer"""
-    sUpdate = pyqtSignal(list, str, list, list)
+    sUpdate = pyqtSignal(list, int, str, list, list)
     sImportFile = pyqtSignal(list)
     sCheckForChanges = pyqtSignal(list, int)
 
@@ -88,6 +87,7 @@ class SQLiteDatabase(QObject):
         self.location = ""
         self.file_tables = FILE_TABLES
         self.is_initialized = False
+        self.settings = None  # type: QSettings
 
     def add_annotation(self, modality: int, file: int, patient: int, shape: bytes, label: int):
         """ adds an entry to the annotation table using the parameter values"""
@@ -110,16 +110,13 @@ class SQLiteDatabase(QObject):
             # copy to project location and add to database
             if mod == 0:
                 shutil.copy(filepath, self.location + Structure.VIDEOS_DIR)
-                filepath_new = self.location + Structure.VIDEOS_DIR + os.path.basename(filepath)
-                self.cursor.execute(ADD_VIDEO, (filepath_new, patient))
+                self.cursor.execute(ADD_VIDEO, (os.path.basename(filepath), patient))
             elif mod == 1:
                 shutil.copy(filepath, self.location + Structure.IMAGES_DIR)
-                filepath_new = self.location + Structure.IMAGES_DIR + os.path.basename(filepath)
-                self.cursor.execute(ADD_IMAGE, (filepath_new, patient))
+                self.cursor.execute(ADD_IMAGE, (os.path.basename(filepath), patient))
             elif mod == 2:
                 shutil.copy(filepath, self.location + Structure.WSI_DIR)
-                filepath_new = self.location + Structure.WSI_DIR + os.path.basename(filepath)
-                self.cursor.execute(ADD_WSI, (filepath_new, patient))
+                self.cursor.execute(ADD_WSI, (os.path.basename(filepath), patient))
 
     def add_label(self, label_class: str):
         """ add a new label class to database"""
@@ -140,14 +137,13 @@ class SQLiteDatabase(QObject):
             result = self.cursor.execute("SELECT uid FROM patients WHERE some_id = ?", (some_id,)).fetchone()
         return result[0]
 
-    def create_annotation_entry(self, label_dict: dict, img_idx: int, label_class: str):
-        cur_image = self.get_images()[img_idx]
-        mod, file = self.get_uids_from_filename(cur_image)
-        patient_uid = self.get_patient_by_filename(cur_image)
+    def create_annotation_entry(self, filename: str, label_dict: dict, label_class: str):
+        mod, file_uid = self.get_uids_from_filename(filename)
+        patient_uid = self.get_patient_by_filename(filename)
         label_class = self.get_uid_from_label(label_class)
 
         annotation_entry = {'modality': mod,
-                            'file': file,
+                            'file': file_uid,
                             'patient': patient_uid,
                             'shape': pickle.dumps(label_dict),
                             'label': label_class}
@@ -167,13 +163,27 @@ class SQLiteDatabase(QObject):
             self.cursor.execute(CREATE_LABELS_TABLE)
             self.cursor.execute(CREATE_ANNOTATIONS_TABLE)
 
-    def delete_file(self, filename: str):
-        """ this method deletes a file from the database and removes all corresponding annotations"""
+    def delete_file(self, filename: str, cur_img_idx: int):
+        """ this method deletes a file from the database and removes all corresponding annotations
+        updates the gui afterwards while regarding the possible image switching"""
+        deleted_idx = 0
+        images = self.get_images()
+        for i in range(len(images)):
+            if images[i] == filename:
+                deleted_idx = i
+        if cur_img_idx == 0:
+            new_img_idx = 0
+        elif deleted_idx <= cur_img_idx:
+            new_img_idx = cur_img_idx - 1
+        else:
+            new_img_idx = cur_img_idx
+
         modality, file = self.get_uids_from_filename(filename)
         table_name = self.file_tables[modality]
         with self.connection:
             self.cursor.execute(DELETE_FILE_ANNOTATIONS, (modality, file))
             self.cursor.execute("DELETE FROM {} WHERE filename = ?".format(table_name), (filename,))
+        self.update_gui(new_img_idx)
 
     def get_column_names(self, table_name: str) -> list:
         """
@@ -280,6 +290,12 @@ class SQLiteDatabase(QObject):
             self.create_initial_tables()
             for file, patient in files.items():
                 self.add_file(file, patient)
+            self.settings = QSettings(self.location + '/settings', QSettings.NativeFormat)
+            self.settings.setValue("ThisShouldBeTrue", True)
+        else:
+            self.settings = QSettings(self.location + '/settings', QSettings.NativeFormat)
+            b = self.settings.value("ThisShouldBeTrue")
+            print("Whatever")
 
         with self.connection:
             self.cursor.execute(f"PRAGMA foreign_keys = ON;")
@@ -288,12 +304,15 @@ class SQLiteDatabase(QObject):
         self.update_gui()
 
     def save(self, current_labels: list, img_idx: int):
-        entries = list()
-        for lbl in current_labels:
-            label_dict, label_class = lbl.to_dict()
-            self.add_label(label_class)
-            entries.append(self.create_annotation_entry(label_dict, img_idx, label_class))
-        self.update_image_annotations(image_name=self.get_images()[img_idx], entries=entries)
+        files = self.get_images()
+        if files:
+            file = files[img_idx]
+            entries = list()
+            for lbl in current_labels:
+                label_dict, label_class = lbl.to_dict()
+                self.add_label(label_class)
+                entries.append(self.create_annotation_entry(file, label_dict, label_class))
+            self.update_image_annotations(image_name=file, entries=entries)
 
     def send_import_info(self):
         existing_patients = self.get_patients()
@@ -330,14 +349,15 @@ class SQLiteDatabase(QObject):
     def update_gui(self, img_idx: int = 0):
         """gathers all information about the project and updates the database"""
         files = self.get_images()
-        classes = self.get_label_classes()
         if files:
             file = files[img_idx]
             labels = self.get_label_from_imagepath(file)
             patient = self.get_patient_by_uid(self.get_patient_by_filename(file))
         else:
             labels, patient = [], ""
-        self.sUpdate.emit(files, patient, classes, labels)
+        files = [self.location + Structure.IMAGES_DIR + file for file in files]
+        classes = self.get_label_classes()
+        self.sUpdate.emit(files, img_idx, patient, classes, labels)
 
     def update_labels(self, classes: list):
         """
