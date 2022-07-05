@@ -4,7 +4,7 @@ from PyQt5.QtCore import QRect, pyqtSignal
 from pathlib import Path
 
 from seg_utils.src.actions import Action
-from seg_utils.ui.dialogs_new import ProjectHandlerDialog
+from seg_utils.ui.dialogs import ProjectHandlerDialog
 from seg_utils.utils.project_structure import Structure, check_environment
 
 

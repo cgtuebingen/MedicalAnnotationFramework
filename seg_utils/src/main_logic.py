@@ -14,11 +14,11 @@ from seg_utils.utils.database import SQLiteDatabase
 from seg_utils.utils import qt
 from seg_utils.utils.project_structure import Structure, create_project_structure, check_environment, modality
 from seg_utils.src.actions import Action
-from seg_utils.ui.main_window_new import LabelingMainWindow
+from seg_utils.ui.main_window import LabelingMainWindow
 from seg_utils.ui.shape import Shape
-from seg_utils.ui.dialogs_new import (NewLabelDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox,
-                                      CloseMessageBox, SelectPatientDialog, ProjectHandlerDialog,
-                                      CommentDialog, DeleteClassMessageBox)
+from seg_utils.ui.dialogs import (NewLabelDialog, ForgotToSaveMessageBox, DeleteShapeMessageBox,
+                                  CloseMessageBox, SelectPatientDialog, ProjectHandlerDialog,
+                                  CommentDialog, DeleteClassMessageBox)
 from seg_utils.config import VERTEX_SIZE
 
 

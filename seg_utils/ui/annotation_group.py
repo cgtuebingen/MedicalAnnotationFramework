@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from seg_utils.utils.qt import colormap_rgb
 from seg_utils.ui.shape import Shape
-from seg_utils.ui.dialogs_new import NewLabelDialog, DeleteShapeMessageBox, DeleteClassMessageBox
+from seg_utils.ui.dialogs import NewLabelDialog, DeleteShapeMessageBox, DeleteClassMessageBox
 
 
 class AnnotationGroup(QGraphicsObject):
@@ -56,16 +56,6 @@ class AnnotationGroup(QGraphicsObject):
         label_index = self.classes.index(label_name)
         return self.color_map[label_index]
 
-    @pyqtSlot(int)
-    def on_hover_enter(self, shape_id: int):
-        # TODO: Do we need these?
-        self.item_highlighted.emit(self.annotations[shape_id])
-
-    @pyqtSlot(int)
-    def on_hover_leave(self, shape_id: int):
-        # TODO: Do we need these?
-        self.item_dehighlighted.emit(self.annotations[shape_id])
-
     def add_shapes(self, new_shapes: Union[Shape, List[Shape]]):
         """
         Add new shapes to the group
@@ -78,8 +68,6 @@ class AnnotationGroup(QGraphicsObject):
             shape.setParentItem(self)
             new_id = 0 if not self.annotations else max(self.annotations.keys()) + 1
             self.annotations[new_id] = shape
-            shape.hover_enter.connect(lambda: self.on_hover_enter(new_id))
-            shape.hover_exit.connect(lambda: self.on_hover_leave(new_id))
             shape.selected.connect(self.shape_selected)
             shape.deleted.connect(lambda: self.delete_shape(shape))
             shape.mode_changed.connect(self.shape_mode_changed)

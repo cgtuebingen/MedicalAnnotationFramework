@@ -2,9 +2,9 @@
 in order to test them in isolation"""
 import sys
 
-from seg_utils.ui.main_window_new import LabelingMainWindow
-from seg_utils.ui.dialogs_new import *
-from seg_utils.ui.list_widgets_new import *
+from seg_utils.ui.main_window import LabelingMainWindow
+from seg_utils.ui.dialogs import *
+from seg_utils.ui.list_widgets import *
 from seg_utils.ui.image_display import CenterDisplayWidget
 from seg_utils.ui.tree_widget import TreeWidget
 from seg_utils.ui.shape import Shape

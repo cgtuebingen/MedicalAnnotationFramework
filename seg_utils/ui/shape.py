@@ -7,7 +7,6 @@ from copy import deepcopy
 from typing import *
 import numpy as np
 from seg_utils.config import VERTEX_SIZE, SCALING_INITIAL
-from datetime import datetime
 
 from seg_utils.utils.qt import closest_euclidean_distance
 

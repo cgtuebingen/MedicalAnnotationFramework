@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 
-from seg_utils.ui.dialogs_new import CommentDialog, DeleteShapeMessageBox
+from seg_utils.ui.dialogs import CommentDialog, DeleteShapeMessageBox
 from seg_utils.ui.shape import Shape
 
 from typing import List

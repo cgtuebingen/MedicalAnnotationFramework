@@ -1,108 +1,75 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
+
+import os
 from typing import List
 
 from seg_utils.ui.shape import Shape
-from seg_utils.utils.qt import createListWidgetItemWithSquareIcon
-from seg_utils.ui.misc_dialogs import CommentDialog
+from seg_utils.utils.qt import createListWidgetItemWithSquareIcon, get_icon
+from seg_utils.utils.stylesheets import TAB_STYLESHEET
 
 
-STYLESHEET = """QListWidget {
-                color: rgb(0, 102, 204);
-                selection-color: blue;
-                selection-background-color: white;
-                }
-                QListWidget::item:hover {
-                color: blue;
-                }"""
+class FileList(QListWidget):
+    """ a list widget subclass to make use of context menu"""
+    sDeleteFile = pyqtSignal(str)
+
+    def __init__(self):
+        super(FileList, self).__init__()
+        self.setIconSize(QSize(7, 7))
+        self.setContentsMargins(0, 0, 0, 0)
+        self.setFrameShape(QFrame.NoFrame)
+        self.setItemAlignment(Qt.AlignmentFlag.AlignLeft)
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        item = self.itemAt(event.pos())
+        if item:
+            menu = QMenu()
+            action = QAction("Delete")
+            action.triggered.connect(lambda: self.sDeleteFile.emit(item.text()))
+            menu.addAction(action)
+            menu.exec(event.globalPos())
 
 
-class ListWidget(QListWidget):
-    # TODO: change this to a QTreeWidget with 2 columns
+class LabelList(QListWidget):
+    """ a list widget to store annotation labels"""
+    sDeleteClass = pyqtSignal(str)
 
-    def __init__(self, *args, is_comment_list=False):
-        super(ListWidget, self).__init__(*args)
+    def __init__(self, *args):
+        super(QListWidget, self).__init__(*args)
         self._icon_size = 10
-        self.is_comment_list = is_comment_list
-        if self.is_comment_list:
-            self.setStyleSheet(STYLESHEET)
-            self.itemClicked.connect(self.handle_click)
-        self.itemClicked.connect(self.item_selected)
-
-    @pyqtSlot(QListWidgetItem)
-    def item_selected(self, item: QListWidgetItem):
-        shape = item.data(Qt.UserRole)
-        # TODO: This check needs to be deleted once this widget isn't used for a lot of different things
-        if shape is None:
-            return
-        for i in range(self.count()):
-            item = self.item(i)
-            if item.data(Qt.UserRole) == shape:
-                item.data(Qt.UserRole).setSelected(True)
-            else:
-                item.data(Qt.UserRole).setSelected(False)
-
-    @pyqtSlot()
-    def on_shape_selected(self):
-        shape = self.sender()
-        for i in range(self.count()):
-            item = self.item(i)
-            if item.data(Qt.UserRole) == shape:
-                item.setSelected(True)
-                break
-
-    @pyqtSlot()
-    def on_shape_deselected(self):
-        shape = self.sender()
-        for i in range(self.count()):
-            item = self.item(i)
-            if item.data(Qt.UserRole) == shape:
-                item.setSelected(False)
-                break
+        self.setFrameShape(QFrame.NoFrame)
 
     def contextMenuEvent(self, event) -> None:
         pos = event.pos()
-        idx = self.row(self.itemAt(pos))
+        item = self.itemAt(pos)
+        if item:
+            menu = QMenu()
+            action = QAction("Delete")
+            action.triggered.connect(lambda: self.sDeleteClass.emit(item.text()))
+            menu.addAction(action)
+            global_pos = event.globalPos()
+            menu.exec(global_pos)
 
-    def update_list(self, current_label: List[Shape]):
+    def update_with_classes(self, classes: List[str], color_map: List[QColor]):
+        """ fills the list widget with the given class names and their corresponding colors"""
         self.clear()
-        if self.is_comment_list:
-            for lbl in current_label:
-                text = "Details" if lbl.comment else "Add comment"
-                item = QListWidgetItem()
-                item.setData(Qt.UserRole, lbl)  # store reference to shape so it can be used later
-                item.setText(text)
-                self.addItem(item)
-        else:
-            for lbl in current_label:
-                txt = lbl.label
-                col = lbl.line_color
-                item = createListWidgetItemWithSquareIcon(txt, col, self._icon_size)
-                item.setData(Qt.UserRole, lbl)    # store reference to shape so it can be used later
-                self.addItem(item)
+        for idx, _class in enumerate(classes):
+            item = createListWidgetItemWithSquareIcon(_class, color_map[idx], self._icon_size)
+            self.addItem(item)
 
-        for lbl in current_label:
-            lbl.selected.connect(self.on_shape_selected)
-            lbl.deselected.connect(self.on_shape_deselected)
-
-    def handle_click(self, item: QListWidgetItem):
-        """Either shows a blank comment window or the previously written comment for this label"""
-        comment = ""
-        data = item.data(Qt.UserRole)
-        if data is not None:
-            if item.text() != "Add comment" and item.data(Qt.UserRole).comment is not None:
-                comment = item.data(Qt.UserRole).comment
-
-        dlg = CommentDialog(comment)
-        dlg.exec()
-
-        text = "Details" if dlg.comment else "Add comment"
-        item.setText(text)
-        item.data(Qt.UserRole).comment = dlg.comment
+    def update_with_labels(self, labels: List[Shape]):
+        """ fills the list widget with the given shape objects """
+        self.clear()
+        for lbl in labels:
+            txt = lbl.label
+            col = lbl.line_color
+            item = createListWidgetItemWithSquareIcon(txt, col, self._icon_size)
+            self.addItem(item)
 
 
 class LabelsViewingWidget(QWidget):
+    """ a widget to hold a LabelList displaying the (unique) label class names"""
     def __init__(self):
         super(LabelsViewingWidget, self).__init__()
         self.setLayout(QVBoxLayout())
@@ -113,14 +80,16 @@ class LabelsViewingWidget(QWidget):
         self.file_label.setText("Labels")
         self.file_label.setAlignment(Qt.AlignCenter)
         self.layout().addWidget(self.file_label)
-        self.label_list = ListWidget()
+        self.label_list = LabelList()
         self.label_list.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self.layout().addWidget(self.label_list)
 
 
 class FileViewingWidget(QWidget):
+    """ holds a QTabWidget to be able to display both images and whole slide images"""
     itemClicked = pyqtSignal(QListWidgetItem)
-    search_text_changed = pyqtSignal()
+    sRequestFileChange = pyqtSignal(int)
+    sDeleteFile = pyqtSignal(str)
 
     def __init__(self):
         super(FileViewingWidget, self).__init__()
@@ -132,6 +101,10 @@ class FileViewingWidget(QWidget):
         self.file_label.setText("File List")
         self.file_label.setAlignment(Qt.AlignCenter)
         self.layout().addWidget(self.file_label)
+
+        self.tab = QTabWidget()
+        self.tab.setContentsMargins(0, 0, 0, 0)
+        self.tab.setStyleSheet(TAB_STYLESHEET)
         self.search_field = QTextEdit()
 
         # Size Policy
@@ -155,12 +128,52 @@ class FileViewingWidget(QWidget):
         self.search_field.setObjectName("fileSearch")
         self.layout().addWidget(self.search_field)
 
-        self.file_list = ListWidget()
-        self.file_list.setIconSize(QSize(7, 7))
-        self.file_list.setItemAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.file_list.setObjectName("fileList")
-        self.layout().addWidget(self.file_list)
+        self.image_list = FileList()
+        self.wsi_list = FileList()
 
-        # TODO: This should all be done within this widget. There should be little need for outside connections
-        self.file_list.itemClicked.connect(self.itemClicked.emit)
-        self.search_field.textChanged.connect(self.search_text_changed.emit)
+        self.tab.addTab(self.image_list, 'Images')
+        self.tab.addTab(self.wsi_list, 'WSI')
+        self.layout().addWidget(self.tab)
+
+        self.image_list.itemClicked.connect(self.file_selected)
+        self.image_list.sDeleteFile.connect(self.sDeleteFile.emit)
+        self.search_field.textChanged.connect(self.search_text_changed)
+
+    def file_selected(self):
+        """gets the index of the selected file and emits a signal"""
+        idx2 = self.image_list.currentRow()
+        self.sRequestFileChange.emit(idx2)
+
+    def get_img_idx(self, filename: str) -> int:
+        """ searches through the ListWidget and returns the index of the item with the filename / -1 if not found"""
+        for i in range(self.image_list.count()):
+            item = self.image_list.item(i)
+            if item.text() == filename:
+                return i
+        return -1
+
+    def update_list(self, filenames, img_idx: int, show_check_box: bool = False):
+        """ clears the list widget and fills it again with the provided filenames"""
+        self.image_list.clear()
+        for fn in filenames:
+            fn = os.path.basename(fn)
+            if show_check_box:
+                icon = get_icon("checked")
+                item = QListWidgetItem(icon, fn)
+            else:
+                item = QListWidgetItem(fn)
+            self.image_list.addItem(item)
+        if self.image_list.count() > 0:
+            self.image_list.setCurrentRow(img_idx)
+
+    def search_text_changed(self):
+        """ filters the list regarding the user input in the search field"""
+        cur_text = self.search_field.toPlainText()
+        cur_list = self.tab.currentWidget()
+
+        for idx in range(cur_list.count()):
+            item = cur_list.item(idx)
+            if cur_text not in item.text():
+                item.setHidden(True)
+            else:
+                item.setHidden(False)

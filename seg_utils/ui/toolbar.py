@@ -3,11 +3,8 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 from typing import *
-from pathlib import Path
 
 from seg_utils.src.actions import Action
-from seg_utils.ui.dialogs_new import ProjectHandlerDialog, SelectPatientDialog
-from seg_utils.utils.project_structure import Structure, check_environment
 
 
 class Toolbar(QToolBar):
