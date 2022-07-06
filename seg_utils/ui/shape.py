@@ -20,6 +20,7 @@ class Shape(QGraphicsObject):
     deselected = pyqtSignal()
     mode_changed = pyqtSignal(int)
     deleted = pyqtSignal()
+    drawingDone = pyqtSignal()
 
     @dataclass
     class ShapeMode:
@@ -126,6 +127,17 @@ class Shape(QGraphicsObject):
                             (self.image_size.width(), self.image_size.height()))
         return QPointF(scene_pos[0], scene_pos[1])
 
+    def contextMenuEvent(self, event: QGraphicsSceneContextMenuEvent) -> None:
+        pos = event.screenPos()
+        menu = QMenu()
+
+        action = QAction("Delete")
+        action.triggered.connect(self.deleted.emit)
+        menu.addAction(action)
+
+        self.setSelected(True)
+        menu.exec(pos)
+
     @pyqtSlot(QGraphicsSceneMouseEvent)
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
         if self.contains(event.pos()):
@@ -150,12 +162,13 @@ class Shape(QGraphicsObject):
             self.setPos(0, 0)  # reset the anchor to line up with the original origin
             self.set_mode(Shape.ShapeMode.FIXED)
         elif self.mode == Shape.ShapeMode.CREATE:
-            self.set_mode(Shape.ShapeMode.FIXED)
             self.ungrabMouse()
             self.is_closed_path = True
+
             # TODO: base these off the actual values
             self.shape_type = 'polygon'
-            self.group_id = 1
+
+            self.drawingDone.emit()
 
     @pyqtSlot(QGraphicsSceneHoverEvent)
     def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent):
@@ -348,6 +361,21 @@ class Shape(QGraphicsObject):
             self.line_color, self.brush_color = color, deepcopy(color)
             self.brush_color.setAlphaF(0.5)
             self.vertices.update_color(self.line_color, self.brush_color)
+
+    def __eq__(self, other):
+        """overridden equality comparison since Shapes are now QGraphicsObjects
+        which will always return False when compared using equality operator"""
+        if isinstance(self, other.__class__):
+            return (self.image_size == other.image_size and
+                    self.image_rect == other.image_rect and
+                    self.vertex_size == other.vertex_size and
+                    self.label == other.label and
+                    self.shape_type == other.shape_type and
+                    self.group_id == other.group_id and
+                    self.comment == other.comment and
+                    self.line_color == other.line_color and
+                    self.vertices.vertices == other.vertices.vertices)
+        return False
 
 
 class VertexCollection(object):

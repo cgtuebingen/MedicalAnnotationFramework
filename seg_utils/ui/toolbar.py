@@ -1,12 +1,19 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
+
 from typing import *
 
 from seg_utils.src.actions import Action
 
 
 class Toolbar(QToolBar):
+
+    sCreateNewProject = pyqtSignal(str, dict)
+    sOpenProject = pyqtSignal(str)
+    sRequestPatients = pyqtSignal()
+    sSetDrawingMode = pyqtSignal(int)
+
     def __init__(self, parent):
         super(Toolbar, self).__init__(parent)
         self.actionsDict = {}  # This is a lookup table to match the buttons to the numbers they got added
@@ -23,7 +30,7 @@ class Toolbar(QToolBar):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
         self.setObjectName("toolBar")
         self.button_group = QButtonGroup()
-        self.button_group.setExclusive(False)
+        self.button_group.setExclusive(True)
         self.button_group.buttonToggled.connect(self.exclusive_optional)
 
     def disable_drawing(self, disable: bool):
@@ -62,6 +69,51 @@ class Toolbar(QToolBar):
             if self.actionGeometry(self.actions()[self.actionsDict["DrawPolygon"]]).contains(event.pos()):
                 # TODO: raise own context menu with options for drawing a circle or a rectangle
                 pass
+
+    def init_actions(self, parent):
+        """Initialise all actions present which can be connected to buttons or menu items"""
+        # TODO: some shortcuts don't work
+        # TODO: Figure out a more modular way to set up these actions
+        action_select = Action(parent,
+                               "Select",
+                               lambda: self.sSetDrawingMode.emit(0),
+                               icon="mouse",
+                               tip="Select items in the image",
+                               checkable=True,
+                               checked=True)
+        action_draw_poly = Action(parent,
+                                  "Draw\nPolygon",
+                                  lambda: self.sSetDrawingMode.emit(1),
+                                  icon="polygon",
+                                  tip="Draw Polygon (right click to show options)",
+                                  checkable=True)
+        action_trace_outline = Action(parent,
+                                      "Draw\nTrace",
+                                      lambda: self.sSetDrawingMode.emit(1),
+                                      icon="outline",
+                                      tip="Trace Outline",
+                                      checkable=True)
+        action_draw_circle = Action(parent,
+                                    "Draw\nCircle",
+                                    lambda: self.sSetDrawingMode.emit(1),
+                                    icon="circle",
+                                    tip="Draw Circle",
+                                    checkable=True)
+        action_draw_rectangle = Action(parent,
+                                       "Draw\nRectangle",
+                                       lambda: self.sSetDrawingMode.emit(1),
+                                       icon="square",
+                                       tip="Draw Rectangle",
+                                       checkable=True)
+
+        actions = ((action_select,
+                    action_draw_poly,
+                    action_trace_outline,
+                    action_draw_circle,
+                    action_draw_rectangle))
+
+        # Init Toolbar
+        self.addActions(actions)
 
     def get_action(self, action_str: str) -> Action:
         if action_str not in self.actionsDict:

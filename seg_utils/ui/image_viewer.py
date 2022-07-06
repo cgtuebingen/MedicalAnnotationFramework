@@ -2,14 +2,13 @@ from PyQt5.QtWidgets import QGraphicsView
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 
-PLACEHOLDER_TEXT = "No files to display"
-
 
 class ImageViewer(QGraphicsView):
+    sNextFile = pyqtSignal(int)
+
     def __init__(self, *args):
         super(ImageViewer, self).__init__(*args)
         self.b_isEmpty = True
-
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -49,23 +48,13 @@ class ImageViewer(QGraphicsView):
             if event.key() == Qt.Key.Key_Control:
                 self._enableZoomPan = True
                 self.setDragMode(QGraphicsView.ScrollHandDrag)
+            elif event.key() == Qt.Key_Left:
+                self.sNextFile.emit(-1)
+            elif event.key() == Qt.Key_Right:
+                self.sNextFile.emit(1)
 
     def keyReleaseEvent(self, event) -> None:
         if not self.b_isEmpty:
             if event.key() == Qt.Key.Key_Control:
                 self._enableZoomPan = False
                 self.setDragMode(QGraphicsView.NoDrag)
-
-    def paintEvent(self, event):
-        super().paintEvent(event)
-        if self.b_isEmpty:
-            painter = QPainter(self.viewport())
-            painter.save()
-            col = self.palette().placeholderText().color()
-            painter.setPen(col)
-            fm = self.fontMetrics()
-            elided_text = fm.elidedText(
-                PLACEHOLDER_TEXT, Qt.ElideRight, self.viewport().width()
-            )
-            painter.drawText(self.viewport().rect(), Qt.AlignCenter, elided_text)
-            painter.restore()

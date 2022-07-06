@@ -1,7 +1,13 @@
 import sqlite3
 import pickle
+import pathlib
+import shutil
+import os
 
 from typing import List, Union
+from seg_utils.utils.project_structure import modality, create_project_structure, Structure
+
+from PyQt5.QtCore import pyqtSignal, QObject, QSettings
 
 # TODO: 'file' value references the uid in either 'videos', 'images', or 'whole slide images'
 #  (depends on 'modality' value),
@@ -45,6 +51,8 @@ CREATE_WSI_TABLE = """
     institution TEXT,
     FOREIGN KEY (patient) REFERENCES patients(uid));"""
 
+FILE_TABLES = ['videos', 'images', "'whole slide images'"]
+
 CREATE_PATIENTS_TABLE = """
     CREATE TABLE IF NOT EXISTS patients (
     uid INTEGER PRIMARY KEY,
@@ -66,34 +74,30 @@ ADD_LABEL = "INSERT INTO labels (label_class) VALUES (?);"
 DELETE_FILE_ANNOTATIONS = "DELETE FROM annotations WHERE modality = ? AND file = ?"
 
 
-class SQLiteDatabase:
-    """class to control an SQL database"""
-    def __init__(self, database_path: str, new_db: bool = False):
-        """
-        Connect to database as initialization
-        :param database_path: path to the database
-        :param new_db: indicates whether the database already exists or not
-        """
-        self.connection = sqlite3.connect(database_path)
-        self.cursor = self.connection.cursor()
-        self.file_tables = ['videos', 'images', "'whole slide images'"]
+class SQLiteDatabase(QObject):
+    """class to control an SQL database. inherits a QObject to enable pyqt-signal transfer"""
+    sUpdate = pyqtSignal(list, int, str, list, list)
+    sImportFile = pyqtSignal(list)
+    sCheckForChanges = pyqtSignal(list, int)
 
-        if new_db:
-            self.create_initial_tables()
-
-        with self.connection:
-            self.cursor.execute(f"PRAGMA foreign_keys = ON;")
+    def __init__(self):
+        super(SQLiteDatabase, self).__init__()
+        self.connection = None
+        self.cursor = None
+        self.location = ""
+        self.file_tables = FILE_TABLES
+        self.is_initialized = False
+        self.settings = None  # type: QSettings
 
     def add_annotation(self, modality: int, file: int, patient: int, shape: bytes, label: int):
         """ adds an entry to the annotation table using the parameter values"""
         with self.connection:
             self.cursor.execute(ADD_ANNOTATION, (modality, file, patient, shape, label))
 
-    def add_file(self, filename: str, modality: int, patient: str):
+    def add_file(self, filepath: str, patient: str):
         """
         adds a file to the database
-        :param filename: the name of the file to be added
-        :param modality: indicates whether it is a video (0), image (1) or whole slide image (2)
+        :param filepath: the name of the file to be added
         :param patient: a patient id which may be added to the database
         """
         with self.connection:
@@ -101,17 +105,25 @@ class SQLiteDatabase:
             # check if patient already exists, add if necessary
             p = self.cursor.execute("""SELECT uid FROM patients WHERE some_id = ?""", (patient,)).fetchone()
             patient = p[0] if p else self.add_patient(patient)
+            mod = modality(filepath)
 
-            if modality == 0:
-                self.cursor.execute(ADD_VIDEO, (filename, patient))
-            elif modality == 1:
-                self.cursor.execute(ADD_IMAGE, (filename, patient))
-            elif modality == 2:
-                self.cursor.execute(ADD_WSI, (filename, patient))
+            # copy to project location and add to database
+            if mod == 0:
+                shutil.copy(filepath, self.location + Structure.VIDEOS_DIR)
+                self.cursor.execute(ADD_VIDEO, (os.path.basename(filepath), patient))
+            elif mod == 1:
+                shutil.copy(filepath, self.location + Structure.IMAGES_DIR)
+                self.cursor.execute(ADD_IMAGE, (os.path.basename(filepath), patient))
+            elif mod == 2:
+                shutil.copy(filepath, self.location + Structure.WSI_DIR)
+                self.cursor.execute(ADD_WSI, (os.path.basename(filepath), patient))
 
     def add_label(self, label_class: str):
         """ add a new label class to database"""
         with self.connection:
+            # make sure label does not already exist
+            if self.cursor.execute("SELECT uid FROM labels WHERE label_class = ?", (label_class,)).fetchone():
+                return
             self.cursor.execute(ADD_LABEL, (label_class,))
 
     def add_patient(self, some_id: str, another_id: str = "2"):
@@ -124,6 +136,19 @@ class SQLiteDatabase:
             self.cursor.execute(ADD_PATIENT, (some_id, another_id))
             result = self.cursor.execute("SELECT uid FROM patients WHERE some_id = ?", (some_id,)).fetchone()
         return result[0]
+
+    def create_annotation_entry(self, filename: str, label_dict: dict, label_class: str):
+        mod, file_uid = self.get_uids_from_filename(filename)
+        patient_uid = self.get_patient_by_filename(filename)
+        label_class = self.get_uid_from_label(label_class)
+
+        annotation_entry = {'modality': mod,
+                            'file': file_uid,
+                            'patient': patient_uid,
+                            'shape': pickle.dumps(label_dict),
+                            'label': label_class}
+
+        return annotation_entry
 
     def create_initial_tables(self):
         """
@@ -138,13 +163,27 @@ class SQLiteDatabase:
             self.cursor.execute(CREATE_LABELS_TABLE)
             self.cursor.execute(CREATE_ANNOTATIONS_TABLE)
 
-    def delete_file(self, filename: str):
-        """ this method deletes a file from the database and removes all corresponding annotations"""
+    def delete_file(self, filename: str, cur_img_idx: int):
+        """ this method deletes a file from the database and removes all corresponding annotations
+        updates the gui afterwards while regarding the possible image switching"""
+        deleted_idx = 0
+        images = self.get_images()
+        for i in range(len(images)):
+            if images[i] == filename:
+                deleted_idx = i
+        if cur_img_idx == 0:
+            new_img_idx = 0
+        elif deleted_idx <= cur_img_idx:
+            new_img_idx = cur_img_idx - 1
+        else:
+            new_img_idx = cur_img_idx
+
         modality, file = self.get_uids_from_filename(filename)
         table_name = self.file_tables[modality]
         with self.connection:
             self.cursor.execute(DELETE_FILE_ANNOTATIONS, (modality, file))
             self.cursor.execute("DELETE FROM {} WHERE filename = ?".format(table_name), (filename,))
+        self.update_gui(new_img_idx)
 
     def get_column_names(self, table_name: str) -> list:
         """
@@ -192,6 +231,11 @@ class SQLiteDatabase:
             self.cursor.execute("SELECT patient FROM images WHERE filename = ?", (filename,))
             return self.cursor.fetchone()[0]
 
+    def get_patient_by_uid(self, patient_uid: int):
+        """returns the id/patient info from the patients table by the corresponding uid"""
+        self.cursor.execute("SELECT some_id FROM patients WHERE uid = ?", (patient_uid,))
+        return self.cursor.fetchone()[0]
+
     def get_uid_from_filename(self, table_name: str, filename: str) -> int:
         """
         :param table_name: videos, images, or whole slide images
@@ -227,6 +271,63 @@ class SQLiteDatabase:
             result = self.cursor.fetchone()
         return result[0] if result is not None else None
 
+    def initialize(self, database_path: str, files: dict = None):
+        """
+        Connect to database as initialization
+        :param database_path: path to the database
+        :param files: initially added files in case of newly created project
+        """
+        self.location = str(pathlib.Path(database_path).parents[0])
+        # indicates a new project - set up project environment
+        if files is not None:
+            create_project_structure(self.location)
+
+        self.connection = sqlite3.connect(database_path)
+        self.cursor = self.connection.cursor()
+
+        # indicates a new project - add initial files
+        if files is not None:
+            self.create_initial_tables()
+            for file, patient in files.items():
+                self.add_file(file, patient)
+            self.settings = QSettings(self.location + '/settings', QSettings.NativeFormat)
+            self.settings.setValue("ThisShouldBeTrue", True)
+        else:
+            self.settings = QSettings(self.location + '/settings', QSettings.NativeFormat)
+            b = self.settings.value("ThisShouldBeTrue")
+            print("Whatever")
+
+        with self.connection:
+            self.cursor.execute(f"PRAGMA foreign_keys = ON;")
+
+        self.is_initialized = True
+        self.update_gui()
+
+    def save(self, current_labels: list, img_idx: int):
+        files = self.get_images()
+        if files:
+            file = files[img_idx]
+            entries = list()
+            for lbl in current_labels:
+                label_dict, label_class = lbl.to_dict()
+                self.add_label(label_class)
+                entries.append(self.create_annotation_entry(file, label_dict, label_class))
+            self.update_image_annotations(image_name=file, entries=entries)
+
+    def send_import_info(self):
+        existing_patients = self.get_patients()
+        self.sImportFile.emit(existing_patients)
+
+    def send_changes_info(self, img_idx: int, new_img_idx: int):
+        """collects the information about the annotations in the image with the given index and emits a signal"""
+        images = self.get_images() if self.is_initialized else None
+        if images:
+            cur_image = images[img_idx]
+            current_labels = self.get_label_from_imagepath(cur_image)
+        else:
+            current_labels = []
+        self.sCheckForChanges.emit(current_labels, new_img_idx)
+
     def update_image_annotations(self, image_name: str, entries: list):
         """
         updates the annotations associated with a given image
@@ -244,6 +345,19 @@ class SQLiteDatabase:
             for entry in entries:
                 self.cursor.execute("""INSERT INTO annotations (modality, file, patient, shape, label) 
                     VALUES (:modality, :file, :patient, :shape, :label)""", entry)
+
+    def update_gui(self, img_idx: int = 0):
+        """gathers all information about the project and updates the database"""
+        files = self.get_images()
+        if files:
+            file = files[img_idx]
+            labels = self.get_label_from_imagepath(file)
+            patient = self.get_patient_by_uid(self.get_patient_by_filename(file))
+        else:
+            labels, patient = [], ""
+        files = [self.location + Structure.IMAGES_DIR + file for file in files]
+        classes = self.get_label_classes()
+        self.sUpdate.emit(files, img_idx, patient, classes, labels)
 
     def update_labels(self, classes: list):
         """
