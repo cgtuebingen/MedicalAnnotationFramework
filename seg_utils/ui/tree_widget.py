@@ -8,11 +8,20 @@ from seg_utils.ui.shape import Shape
 from typing import List
 
 
+class TreeWidgetItem(QTreeWidgetItem):
+    def __init__(self, *args, shape: Shape):
+        super(TreeWidgetItem, self).__init__(*args)
+        self.pointer = shape
+
+    def shape(self) -> Shape:
+        return self.pointer
+
+
 class TreeWidget(QTreeWidget):
     """tree widget to display annotations in a list (all at top level)
     second column is used to let user enter or view comments"""
     sItemClicked = pyqtSignal(int)
-    sUpdateLabels = pyqtSignal(list)
+    sItemDeleted = pyqtSignal(Shape)
 
     def __init__(self):
         super(TreeWidget, self).__init__()
@@ -20,37 +29,31 @@ class TreeWidget(QTreeWidget):
         self.setColumnCount(2)
         self.setFrameShape(QFrame.NoFrame)
         self.setHeaderLabels(["Annotation", "Your notes"])
-        self.current_labels = list()
         self.clicked.connect(self.handle_click)
 
-    def delete_item(self, item: QTreeWidgetItem):
+    def delete_item(self, item: TreeWidgetItem):
         """deletes a given item from the tree and updates the label shapes"""
         dlg = DeleteShapeMessageBox(item.text(0))
         if dlg.answer == 1:
             root = self.invisibleRootItem()
-            idx = root.indexOfChild(item)
             root.removeChild(item)
-            self.current_labels.pop(idx)
-            self.sUpdateLabels.emit(self.current_labels)
+            self.sItemDeleted.emit(item.shape())
 
     def handle_click(self, idx: QModelIndex):
         """handles an item click in the QTreeWidget, if user clicked at the right part, open up a comment dialog"""
-        row, column = idx.row(), idx.column()
+        item = self.itemFromIndex(idx)
+        shape = item.shape()
+        shape.setSelected(True)
 
-        if column == 0:
-            self.sItemClicked.emit(row)
-        elif column == 1:
-            lbl = self.current_labels[row]
-            comment = lbl.comment if lbl.comment else ""
+        if idx.column() == 1:
+            comment = shape.comment if shape.comment else ""
             dlg = CommentDialog(comment)
             dlg.exec()
 
             # store the dialog result
             text = "Details" if dlg.comment else "Add comment"
-            item = self.itemFromIndex(idx)
-            item.setText(column, text)
-            self.current_labels[row].comment = dlg.comment
-            self.sUpdateLabels.emit(self.current_labels)
+            item.setText(1, text)
+            shape.comment = dlg.comment
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         super(TreeWidget, self).mousePressEvent(event)
@@ -58,9 +61,8 @@ class TreeWidget(QTreeWidget):
             item = self.itemAt(event.pos())
             if item:
                 # set corresponding item in display selected
-                root = self.invisibleRootItem()
-                idx = root.indexOfChild(item)
-                self.sItemClicked.emit(idx)
+                shape = item.shape()
+                shape.setSelected(True)
 
                 # open context menu
                 pos = event.globalPos()
@@ -81,8 +83,6 @@ class TreeWidget(QTreeWidget):
 
     def update_polygons(self, current_labels: List[Shape]):
         """updates the treeWidget with the specified labels"""
-        self.current_labels = current_labels
-
         self.clear()
         for lbl in current_labels:
             txt = lbl.label
@@ -90,7 +90,7 @@ class TreeWidget(QTreeWidget):
             col = lbl.line_color
             icon = create_square_icon(col)
 
-            item = QTreeWidgetItem([txt, txt2])
+            item = TreeWidgetItem([txt, txt2], shape=lbl)
             item.setIcon(0, icon)
             self.addTopLevelItem(item)
 
