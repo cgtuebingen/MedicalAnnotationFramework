@@ -33,8 +33,6 @@ class FileList(QListWidget):
 
 class LabelList(QListWidget):
     """ a list widget to store annotation labels"""
-    sDeleteClass = pyqtSignal(str)
-
     def __init__(self, *args):
         super(QListWidget, self).__init__(*args)
         self._icon_size = 10
@@ -46,7 +44,6 @@ class LabelList(QListWidget):
         if item:
             menu = QMenu()
             action = QAction("Delete")
-            action.triggered.connect(lambda: self.sDeleteClass.emit(item.text()))
             menu.addAction(action)
             global_pos = event.globalPos()
             menu.exec(global_pos)

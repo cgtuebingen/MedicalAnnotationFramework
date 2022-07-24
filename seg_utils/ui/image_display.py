@@ -5,7 +5,7 @@ from PyQt5.QtGui import *
 from seg_utils.ui.image_viewer import ImageViewer
 from seg_utils.ui.annotation_group import AnnotationGroup
 from seg_utils.ui.shape import Shape
-from seg_utils.ui.dialogs import ForgotToSaveMessageBox
+from seg_utils.ui.dialogs import ForgotToSaveMessageBox, CommentDialog
 from seg_utils.utils.qt import get_icon
 
 

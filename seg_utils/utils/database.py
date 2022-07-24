@@ -293,9 +293,9 @@ class SQLiteDatabase(QObject):
             self.settings = QSettings(self.location + '/settings', QSettings.NativeFormat)
             self.settings.setValue("ThisShouldBeTrue", True)
         else:
+            # TODO: Work on settings
             self.settings = QSettings(self.location + '/settings', QSettings.NativeFormat)
             b = self.settings.value("ThisShouldBeTrue")
-            print("Whatever")
 
         with self.connection:
             self.cursor.execute(f"PRAGMA foreign_keys = ON;")

@@ -54,28 +54,24 @@ class CommentDialog(QDialog):
         self.close()
 
 
+class DeleteAllMessageBox(QMessageBox):
+    def __init__(self, *args):
+        super(DeleteAllMessageBox, self).__init__(*args)
+
+        self.setText("You are about to delete all annotations.\nContinue?")
+        self.setInformativeText("This will clear the image.\n\n")
+        self.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        self.setIcon(QMessageBox.Question)
+
+
 class DeleteClassMessageBox(QMessageBox):
-    """ the answer variable can be interpreted as follows:
-        0 cancel
-        1 delete only the annotations of that class
-        2 delete the whole label class"""
     def __init__(self, class_name: str, *args):
         super(DeleteClassMessageBox, self).__init__(*args)
 
         self.setText("You are about to delete the '{}'-class.\nContinue?".format(class_name))
         self.setInformativeText("This will remove all occurrences of '{}' from the image.\n\n".format(class_name))
-        self.setCheckBox(QCheckBox("Delete the label class from my list", self))
         self.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-
-        self.answer = 0
-        self.accepted.connect(self.set_answer)
-
-    def set_answer(self):
-        """ sets the answer-variable """
-        if self.checkBox().isChecked():
-            self.answer = 2
-        else:
-            self.answer = 1
+        self.setIcon(QMessageBox.Question)
 
 
 class DeleteFileMessageBox(QMessageBox):
@@ -90,16 +86,12 @@ class DeleteFileMessageBox(QMessageBox):
 
 
 class DeleteShapeMessageBox(QMessageBox):
-    def __init__(self, shape: str, *args):
+    def __init__(self, label: str, *args):
         super(DeleteShapeMessageBox, self).__init__(*args)
-        if self.parentWidget():
-            move_to_center(self, self.parentWidget().pos(), self.parentWidget().size())
-        reply = self.question(self, "Deleting Shape", f"You are about to delete {shape}.\nContinue?",
-                              QMessageBox.Yes | QMessageBox.No)
-        if reply == QMessageBox.Yes:
-            self.answer = 1
-        else:
-            self.answer = 0
+        self.setWindowTitle("Delete Annotation")
+        self.setIcon(QMessageBox.Question)
+        self.setText("You are about to delete {}.\nContinue?".format(label))
+        self.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
 
 
 class ForgotToSaveMessageBox(QMessageBox):

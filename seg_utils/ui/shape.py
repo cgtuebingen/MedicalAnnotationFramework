@@ -136,12 +136,14 @@ class Shape(QGraphicsObject):
         menu.addAction(action)
 
         self.setSelected(True)
+        self.selected.emit()
         menu.exec(pos)
 
     @pyqtSlot(QGraphicsSceneMouseEvent)
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
         if self.contains(event.pos()):
             self.setSelected(True)
+            self.selected.emit()
             self.clicked.emit(event)
         else:
             event.ignore()
@@ -223,10 +225,10 @@ class Shape(QGraphicsObject):
 
     def setSelected(self, selected: bool):
         QGraphicsItem.setSelected(self, selected)
-        if self.isSelected():
+        """if self.isSelected():
             self.selected.emit()
         else:
-            self.deselected.emit()
+            self.deselected.emit()"""
 
     def check_displacement(self, displacement: QPointF) -> QPointF:
         """This function checks whether the bounding rect of the current shape exceeds the image if the

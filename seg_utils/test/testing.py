@@ -15,7 +15,7 @@ from seg_utils.utils.stylesheets import TAB_STYLESHEET
 
 
 COLORS, _ = colormap_rgb(25)
-CLASSES = ["Tumour", "Blood", "Vein", "Healthy Tissue"]
+CLASSES = ["Tumour", "Blood", "Blood", "Vein", "Healthy Tissue", "Tumour", "Blood"]
 SHAPES = [Shape(QSize(10, 10), _class, color=_color, shape_type='polygon')
           for _class, _color in zip(CLASSES, COLORS)]
 PATIENTS = ["Alex", "Mark", "Clara"]

@@ -111,10 +111,9 @@ class LabelingMainWindow(QMainWindow):
         self.image_display.image_viewer.sNextFile.connect(self.next_image)
         self.image_display.annotations.updateShapes.connect(self.polygons.update_polygons)
         self.image_display.annotations.shapeSelected.connect(self.polygons.shape_selected)
-        self.labels_list.label_list.sDeleteClass.connect(self.image_display.annotations.delete_label_class)
         self.file_list.sDeleteFile.connect(self.delete_file)
-        self.polygons.sItemClicked.connect(self.image_display.annotations.label_selected)
-        self.polygons.sItemDeleted.connect(self.image_display.annotations.delete_shape)
+        self.polygons.sItemsDeleted.connect(self.image_display.annotations.remove_shapes)
+        self.polygons.sDeselectAll.connect(self.image_display.annotations.deselect_all)
         self.menubar.sRequestSave.connect(self.save_to_database)
         self.toolBar.sSetDrawingMode.connect(self.image_display.annotations.set_mode)
 
