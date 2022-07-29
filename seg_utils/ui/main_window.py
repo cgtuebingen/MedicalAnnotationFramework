@@ -112,6 +112,7 @@ class LabelingMainWindow(QMainWindow):
         self.image_display.annotations.updateShapes.connect(self.polygons.update_polygons)
         self.image_display.annotations.shapeSelected.connect(self.polygons.shape_selected)
         self.file_list.sDeleteFile.connect(self.delete_file)
+        self.file_list.sRequestFileChange.connect(self.file_list_item_clicked)
         self.polygons.sItemsDeleted.connect(self.image_display.annotations.remove_shapes)
         self.polygons.sDeselectAll.connect(self.image_display.annotations.deselect_all)
         self.menubar.sRequestSave.connect(self.save_to_database)
@@ -142,6 +143,9 @@ class LabelingMainWindow(QMainWindow):
 
         if dlg.result() == QMessageBox.Ok:
             self.sDeleteFile.emit(filename, self.img_idx)
+
+    def file_list_item_clicked(self, new_img_idx: int):
+        self.sRequestCheckForChanges.emit(self.img_idx, new_img_idx)
 
     def hide_toolbar(self):
         """hides or shows the toolbar"""

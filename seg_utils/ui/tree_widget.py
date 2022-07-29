@@ -12,6 +12,8 @@ class TreeWidgetItem(QTreeWidgetItem):
     def __init__(self, *args, shape: Shape = None):
         super(TreeWidgetItem, self).__init__(*args)
         self.pointer = shape
+        self.setFlags(self.flags() | Qt.ItemIsTristate)
+        self.setCheckState(0, Qt.Checked)
 
     def shape(self) -> Shape:
         return self.pointer
@@ -29,18 +31,15 @@ class TreeWidget(QTreeWidget):
         self.setColumnCount(2)
         self.setFrameShape(QFrame.NoFrame)
         self.setHeaderLabels(["Annotation", "Your notes"])
+
         self.top = TreeWidgetItem(["Annotations", ""])
         self.addTopLevelItem(self.top)
         self.clicked.connect(self.handle_click)
+        self.itemChanged.connect(self.handle_item_changed)
+        self.ignore_selection = False
 
     def delete_item(self, item: QTreeWidgetItem):
         """deletes the given item and all items below its place in the hierarchy"""
-        def gather_shapes(cur_item: QTreeWidgetItem) -> List[Shape]:
-            """helper method to iterate the tree"""
-            shapes_to_remove = [cur_item.shape()] if cur_item.shape() else list()
-            for i in range(cur_item.childCount()):
-                shapes_to_remove += gather_shapes(cur_item.child(i))
-            return shapes_to_remove
 
         # select the correct MessageBox
         level = self.level_of(item)
@@ -54,10 +53,17 @@ class TreeWidget(QTreeWidget):
             return
         dlg.exec()
 
-        # emit signal to remove shapes
+        # emit deletion signal
         if dlg.result() == QMessageBox.Ok:
-            shapes = gather_shapes(item)
+            shapes = self.gather_shapes(item)
             self.sItemsDeleted.emit(shapes)
+
+    def gather_shapes(self, cur_item: QTreeWidgetItem) -> List[Shape]:
+        """helper method to collect all shapes belonging to the item"""
+        shapes = [cur_item.shape()] if cur_item.shape() else list()
+        for i in range(cur_item.childCount()):
+            shapes += self.gather_shapes(cur_item.child(i))
+        return shapes
 
     def get_item_by_shape(self, shape: Shape) -> QTreeWidgetItem:
         """returns the item in the tree with the corresponding shape reference"""
@@ -77,6 +83,9 @@ class TreeWidget(QTreeWidget):
 
     def handle_click(self, idx: QModelIndex):
         """handles an item click in the QTreeWidget, if user clicked at the right part, open up a comment dialog"""
+        if self.ignore_selection:
+            self.ignore_selection = False
+            return
         item = self.itemFromIndex(idx)
         self.sDeselectAll.emit()
         self.set_shapes_selected(item)
@@ -92,6 +101,18 @@ class TreeWidget(QTreeWidget):
             text = "Details" if dlg.comment else "Add comment"
             item.setText(1, text)
             shape.comment = dlg.comment
+
+    def handle_item_changed(self, item: QTreeWidgetItem, column: int):
+        state = item.checkState(column)
+        if state == Qt.Checked:
+            visible = True
+        elif state == Qt.Unchecked:
+            visible = False
+        else:  # intermediate State - not done by user
+            return
+        for shape in self.gather_shapes(item):
+            shape.setVisible(visible)
+        self.ignore_selection = True
 
     def level_of(self, item: QTreeWidgetItem) -> int:
         """returns the level of the given item in the tree"""
@@ -113,6 +134,7 @@ class TreeWidget(QTreeWidget):
         if event.button() == Qt.RightButton:
             item = self.itemAt(event.pos())
             if item:
+                self.sDeselectAll.emit()
                 self.set_shapes_selected(item)
 
                 # open context menu
@@ -141,16 +163,30 @@ class TreeWidget(QTreeWidget):
 
     def update_polygons(self, current_labels: List[Shape]):
         """updates the treeWidget with the specified labels"""
+
+        # memorize which items were expanded before updating
+        expanded_items = list()
+        if self.top.isExpanded():
+            for i in range(self.top.childCount()):
+                child = self.top.child(i)
+                if child.isExpanded():
+                    expanded_items.append(child.text(0))
+
         for i in reversed(range(self.top.childCount())):
             self.top.removeChild(self.top.child(i))
 
+        # add the label classes as intermediate level
         label_classes = list()
         for lbl in current_labels:
             txt = lbl.label
             if txt not in label_classes:
                 label_classes.append(txt)
-                self.top.addChild(TreeWidgetItem([txt, ""]))
+                item = TreeWidgetItem([txt, ""])
+                self.top.addChild(item)
+                if txt in expanded_items:
+                    item.setExpanded(True)
 
+        # add the annotations to their label classes
         for lbl in current_labels:
             txt = lbl.label
             txt2 = "Details" if lbl.comment else "Add comment"
@@ -162,6 +198,8 @@ class TreeWidget(QTreeWidget):
             for i in range(self.top.childCount()):
                 child = self.top.child(i)
                 if child.text(0) == txt:
+                    if not lbl.isVisible():
+                        item.setCheckState(0, Qt.Unchecked)
                     child.addChild(item)
 
 
