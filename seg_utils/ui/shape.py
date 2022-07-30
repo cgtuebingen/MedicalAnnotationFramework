@@ -164,7 +164,7 @@ class Shape(QGraphicsObject):
             self.vertices.translate(self.pos())  # shift actual points to new location
             self.setPos(0, 0)  # reset the anchor to line up with the original origin
             self.set_mode(Shape.ShapeMode.FIXED)
-            self.sChange.emit(4)
+            self.sChange.emit(2)
         elif self.mode == Shape.ShapeMode.CREATE:
             self.ungrabMouse()
             self.is_closed_path = True

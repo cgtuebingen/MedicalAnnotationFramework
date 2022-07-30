@@ -93,7 +93,7 @@ class AnnotationGroup(QGraphicsObject):
             if dlg.result() != QMessageBox.Ok:
                 return
             shapes = [shapes]
-            self.sChange.emit(3)
+            self.sChange.emit(1)
         ids_to_remove = []
         for shape_id in self.annotations:
             if self.annotations[shape_id] in shapes:
@@ -140,7 +140,7 @@ class AnnotationGroup(QGraphicsObject):
             self.temp_shape.label = label
             self.temp_shape.set_mode(Shape.ShapeMode.FIXED)
             self.updateShapes.emit(list(self.annotations.values()))
-            self.sChange.emit(2)
+            self.sChange.emit(0)
 
         # if user entered no label, remove shape
         else:

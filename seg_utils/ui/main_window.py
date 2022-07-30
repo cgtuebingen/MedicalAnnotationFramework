@@ -28,12 +28,10 @@ class LabelingMainWindow(QMainWindow):
 
     @dataclass
     class Changes:
-        FILE_ADDED: int = 0
-        FILE_DELETED: int = 1
-        ANNOTATION_ADDED: int = 2
-        ANNOTATION_DELETED: int = 3
-        ANNOTATION_SHIFTED: int = 4
-        COMMENT: int = 5
+        ANNOTATION_ADDED: int = 0
+        ANNOTATION_DELETED: int = 1
+        ANNOTATION_SHIFTED: int = 2
+        COMMENT: int = 3
 
     def __init__(self):
         super(LabelingMainWindow, self).__init__()
@@ -138,7 +136,7 @@ class LabelingMainWindow(QMainWindow):
     def check_for_changes(self) -> bool:
         """ asks whether user wants to save; returns False on cancellation"""
         if self.changes:
-            dlg = ForgotToSaveMessageBox(self)
+            dlg = ForgotToSaveMessageBox()
             dlg.exec()
             if dlg.result() == QMessageBox.AcceptRole or dlg.result() == QMessageBox.DestructiveRole:
                 if dlg.result() == QMessageBox.AcceptRole:
@@ -164,7 +162,6 @@ class LabelingMainWindow(QMainWindow):
 
         if dlg.result() == QMessageBox.Ok:
             self.sDeleteFile.emit(filename, self.img_idx)
-            self.change_detected(1)
 
     def file_list_item_clicked(self, new_img_idx: int):
         if self.check_for_changes():
@@ -194,7 +191,6 @@ class LabelingMainWindow(QMainWindow):
             if filepath:
                 self.sAddFile.emit(filepath, patient)
                 self.sRequestUpdate.emit(self.img_idx)
-                self.change_detected(0)
 
     def next_image(self, direction: int):
         """proceeds to the next/previous image"""

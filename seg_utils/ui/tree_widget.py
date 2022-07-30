@@ -56,7 +56,7 @@ class TreeWidget(QTreeWidget):
 
         # emit deletion signal
         if dlg.result() == QMessageBox.Ok:
-            self.sChange.emit(3)
+            self.sChange.emit(1)
             shapes = self.gather_shapes(item)
             self.sItemsDeleted.emit(shapes)
 
@@ -101,7 +101,7 @@ class TreeWidget(QTreeWidget):
 
             # detect possible change
             if shape.comment != dlg.comment:
-                self.sChange.emit(5)
+                self.sChange.emit(3)
             # store the dialog result
             text = "Details" if dlg.comment else "Add comment"
             item.setText(1, text)
