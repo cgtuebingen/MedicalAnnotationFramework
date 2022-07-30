@@ -78,7 +78,6 @@ class SQLiteDatabase(QObject):
     """class to control an SQL database. inherits a QObject to enable pyqt-signal transfer"""
     sUpdate = pyqtSignal(list, int, str, list, list)
     sImportFile = pyqtSignal(list)
-    sCheckForChanges = pyqtSignal(list, int)
 
     def __init__(self):
         super(SQLiteDatabase, self).__init__()
@@ -317,16 +316,6 @@ class SQLiteDatabase(QObject):
     def send_import_info(self):
         existing_patients = self.get_patients()
         self.sImportFile.emit(existing_patients)
-
-    def send_changes_info(self, img_idx: int, new_img_idx: int):
-        """collects the information about the annotations in the image with the given index and emits a signal"""
-        images = self.get_images() if self.is_initialized else None
-        if images:
-            cur_image = images[img_idx]
-            current_labels = self.get_label_from_imagepath(cur_image)
-        else:
-            current_labels = []
-        self.sCheckForChanges.emit(current_labels, new_img_idx)
 
     def update_image_annotations(self, image_name: str, entries: list):
         """

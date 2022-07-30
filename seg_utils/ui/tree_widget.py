@@ -24,6 +24,7 @@ class TreeWidget(QTreeWidget):
     second column is used to let user enter or view comments"""
     sItemsDeleted = pyqtSignal(list)
     sDeselectAll = pyqtSignal()
+    sChange = pyqtSignal(int)
 
     def __init__(self):
         super(TreeWidget, self).__init__()
@@ -55,6 +56,7 @@ class TreeWidget(QTreeWidget):
 
         # emit deletion signal
         if dlg.result() == QMessageBox.Ok:
+            self.sChange.emit(3)
             shapes = self.gather_shapes(item)
             self.sItemsDeleted.emit(shapes)
 
@@ -97,6 +99,9 @@ class TreeWidget(QTreeWidget):
             dlg = CommentDialog(comment)
             dlg.exec()
 
+            # detect possible change
+            if shape.comment != dlg.comment:
+                self.sChange.emit(5)
             # store the dialog result
             text = "Details" if dlg.comment else "Add comment"
             item.setText(1, text)

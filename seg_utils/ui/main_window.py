@@ -3,10 +3,11 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 from pathlib import Path
+from dataclasses import dataclass
 
 from seg_utils.ui.image_display import CenterDisplayWidget
 from seg_utils.ui.toolbar import Toolbar
-from seg_utils.ui.dialogs import SelectPatientDialog, CloseMessageBox, DeleteFileMessageBox
+from seg_utils.ui.dialogs import SelectPatientDialog, CloseMessageBox, DeleteFileMessageBox, ForgotToSaveMessageBox
 from seg_utils.ui.menu_bar import MenuBar
 from seg_utils.ui.list_widgets import FileViewingWidget, LabelsViewingWidget
 from seg_utils.ui.tree_widget import TreeWidget
@@ -22,8 +23,17 @@ class LabelingMainWindow(QMainWindow):
     sAddFile = pyqtSignal(str, str)
     sRequestUpdate = pyqtSignal(int)
     sRequestCheckForChanges = pyqtSignal(int, int)
-    sSaveToDatabase = pyqtSignal(list, int)#
+    sSaveToDatabase = pyqtSignal(list, int)
     sDeleteFile = pyqtSignal(str, int)
+
+    @dataclass
+    class Changes:
+        FILE_ADDED: int = 0
+        FILE_DELETED: int = 1
+        ANNOTATION_ADDED: int = 2
+        ANNOTATION_DELETED: int = 3
+        ANNOTATION_SHIFTED: int = 4
+        COMMENT: int = 5
 
     def __init__(self):
         super(LabelingMainWindow, self).__init__()
@@ -104,38 +114,49 @@ class LabelingMainWindow(QMainWindow):
         # TODO: if possible, get rid of such variables
         self.img_idx = 0
         self.closeMe = False
+        self.changes = list()
 
         # connect signals
         self.image_display.sRequestSave.connect(self.save_to_database)
-        self.image_display.sChangeFile.connect(self.change_file)
         self.image_display.image_viewer.sNextFile.connect(self.next_image)
         self.image_display.annotations.updateShapes.connect(self.polygons.update_polygons)
         self.image_display.annotations.shapeSelected.connect(self.polygons.shape_selected)
+        self.image_display.annotations.sChange.connect(self.change_detected)
         self.file_list.sDeleteFile.connect(self.delete_file)
         self.file_list.sRequestFileChange.connect(self.file_list_item_clicked)
         self.polygons.sItemsDeleted.connect(self.image_display.annotations.remove_shapes)
         self.polygons.sDeselectAll.connect(self.image_display.annotations.deselect_all)
+        self.polygons.sChange.connect(self.change_detected)
         self.menubar.sRequestSave.connect(self.save_to_database)
         self.toolBar.sSetDrawingMode.connect(self.image_display.annotations.set_mode)
 
-    def change_file(self, img_idx: int):
-        """changes the displayed file to the file with the specified index
-        a img_idx of -1 indicates a closing request"""
-        if img_idx == -1:
+    def change_detected(self, change: int):
+        """appends the detected change to the changes list"""
+        if change not in self.changes:
+            self.changes.append(change)
+
+    def check_for_changes(self) -> bool:
+        """ asks whether user wants to save; returns False on cancellation"""
+        if self.changes:
+            dlg = ForgotToSaveMessageBox(self)
+            dlg.exec()
+            if dlg.result() == QMessageBox.AcceptRole or dlg.result() == QMessageBox.DestructiveRole:
+                if dlg.result() == QMessageBox.AcceptRole:
+                    self.save_to_database()
+                return True
+            else:
+                return False
+        else:
+            return True
+
+    def closeEvent(self, event):
+        if self.check_for_changes():
             dlg = CloseMessageBox()
             dlg.exec()
             if dlg.result() == QMessageBox.AcceptRole:
-                self.closeMe = True
-        else:
-            self.img_idx = img_idx
-            self.sRequestUpdate.emit(img_idx)
-
-    def closeEvent(self, event, final_close: bool = False):
-        self.sRequestCheckForChanges.emit(self.img_idx, -1)
-        if self.closeMe:
-            event.accept()
-        else:
-            event.ignore()
+                event.accept()
+            else:
+                event.ignore()
 
     def delete_file(self, filename):
         dlg = DeleteFileMessageBox(filename)
@@ -143,9 +164,12 @@ class LabelingMainWindow(QMainWindow):
 
         if dlg.result() == QMessageBox.Ok:
             self.sDeleteFile.emit(filename, self.img_idx)
+            self.change_detected(1)
 
     def file_list_item_clicked(self, new_img_idx: int):
-        self.sRequestCheckForChanges.emit(self.img_idx, new_img_idx)
+        if self.check_for_changes():
+            self.img_idx = new_img_idx
+            self.sRequestUpdate.emit(new_img_idx)
 
     def hide_toolbar(self):
         """hides or shows the toolbar"""
@@ -170,14 +194,19 @@ class LabelingMainWindow(QMainWindow):
             if filepath:
                 self.sAddFile.emit(filepath, patient)
                 self.sRequestUpdate.emit(self.img_idx)
+                self.change_detected(0)
 
     def next_image(self, direction: int):
+        """proceeds to the next/previous image"""
         if not self.image_display.is_empty():
             new_img_idx = (self.img_idx + direction) % self.file_list.image_list.count()
-            self.sRequestCheckForChanges.emit(self.img_idx, new_img_idx)
+            if self.check_for_changes():
+                self.img_idx = new_img_idx
+                self.sRequestUpdate.emit(new_img_idx)
 
     def save_to_database(self):
         annotations = list(self.image_display.annotations.annotations.values())
+        self.changes.clear()
         self.sSaveToDatabase.emit(annotations, self.img_idx)
 
     def set_default(self, is_empty: bool):

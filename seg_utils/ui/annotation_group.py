@@ -15,6 +15,7 @@ class AnnotationGroup(QGraphicsObject):
     updateShapes = pyqtSignal(list)
     shapeSelected = pyqtSignal(Shape)
     sLabelClassDeleted = pyqtSignal(str)
+    sChange = pyqtSignal(int)
 
     @dataclass
     class AnnotationMode:
@@ -45,7 +46,6 @@ class AnnotationGroup(QGraphicsObject):
                                 shape_type='tempTrace',
                                 mode=Shape.ShapeMode.CREATE,
                                 color=self.draw_new_color)
-        self.add_shapes(self.temp_shape)
         self.temp_shape.grabMouse()
 
     def get_color_for_label(self, label_name: str):
@@ -71,6 +71,7 @@ class AnnotationGroup(QGraphicsObject):
             shape.deleted.connect(lambda: self.remove_shapes(shape))
             shape.mode_changed.connect(self.shape_mode_changed)
             shape.drawingDone.connect(self.set_label)
+            shape.sChange.connect(self.sChange.emit)
             self.update()
 
     def deselect_all(self):
@@ -92,11 +93,11 @@ class AnnotationGroup(QGraphicsObject):
             if dlg.result() != QMessageBox.Ok:
                 return
             shapes = [shapes]
+            self.sChange.emit(3)
         ids_to_remove = []
         for shape_id in self.annotations:
             if self.annotations[shape_id] in shapes:
                 ids_to_remove.append(shape_id)
-                # self.annotations[shape_id].setParentItem(None)
                 self.annotations[shape_id].deleteLater()
         [(self.annotations[x].disconnect(), self.annotations.pop(x)) for x in ids_to_remove]
         self.updateShapes.emit(list(self.annotations.values()))
@@ -139,6 +140,7 @@ class AnnotationGroup(QGraphicsObject):
             self.temp_shape.label = label
             self.temp_shape.set_mode(Shape.ShapeMode.FIXED)
             self.updateShapes.emit(list(self.annotations.values()))
+            self.sChange.emit(2)
 
         # if user entered no label, remove shape
         else:

@@ -49,24 +49,6 @@ class CenterDisplayWidget(QWidget):
                 self.annotations.create_shape()
         event.accept()
 
-    def check_for_changes(self, sql_labels: list, new_img_idx: int):
-        """compares the annotations in the current image with the stored annotations in the database"""
-        database_labels = [Shape(image_size=self.image_size,
-                                 label_dict=_label,
-                                 color=self.annotations.get_color_for_label(_label['label']))
-                           for _label in sql_labels]
-        current_labels = list(self.annotations.annotations.values())
-
-        if database_labels == current_labels:
-            self.sChangeFile.emit(new_img_idx)
-        else:
-            d = ForgotToSaveMessageBox(self)
-            d.exec()
-            if d.result() == QMessageBox.AcceptRole or d.result() == QMessageBox.DestructiveRole:
-                if d.result() == QMessageBox.AcceptRole:
-                    self.sRequestSave.emit()
-                self.sChangeFile.emit(new_img_idx)
-
     def clear(self):
         """This function deletes all currently stored labels
         and triggers the image_viewer to display a default image"""
