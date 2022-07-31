@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMenuBar, QFileDialog, QMessageBox, QMainWindow, QMenu
+from PyQt5.QtWidgets import QMenuBar, QMessageBox, QMainWindow, QMenu
 from PyQt5.QtCore import QRect, pyqtSignal
 
 from pathlib import Path
@@ -14,12 +14,13 @@ class MenuBar(QMenuBar):
     sOpenProject = pyqtSignal(str)
     sRequestImport = pyqtSignal()
     sRequestSave = pyqtSignal()
+    sRequestSettings = pyqtSignal()
 
     def __init__(self, parent: QMainWindow):
         super(MenuBar, self).__init__()
         self.setGeometry(QRect(0, 0, 1276, 22))
 
-        self.labelingTool = QMenu("Edit")
+        self.maf = QMenu("The All-Purpose Labeling Tool")
         self.file = QMenu("File")
 
         action_new_project = Action(self,
@@ -53,19 +54,21 @@ class MenuBar(QMenuBar):
                              tip="Quit Program")
         action_settings = Action(self,
                                  "Preferences",
+                                 self.sRequestSettings.emit,
                                  icon="settings",
                                  tip="Set your preferences for the program",)
 
         action_save.setEnabled(False)
         action_import.setEnabled(False)
 
-        self.labelingTool.addActions((action_settings,
-                                      action_quit))
         self.file.addActions((action_new_project,
                               action_open_project,
                               action_save,
                               action_import))
-        # self.addMenu(self.labelingTool)
+        self.maf.addActions((action_settings,
+                             action_quit))
+
+        self.addMenu(self.maf)
         self.addMenu(self.file)
 
     def enable_project_tools(self):

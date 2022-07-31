@@ -7,7 +7,8 @@ from dataclasses import dataclass
 
 from seg_utils.ui.image_display import CenterDisplayWidget
 from seg_utils.ui.toolbar import Toolbar
-from seg_utils.ui.dialogs import SelectPatientDialog, CloseMessageBox, DeleteFileMessageBox, ForgotToSaveMessageBox
+from seg_utils.ui.dialogs import (SelectPatientDialog, CloseMessageBox, DeleteFileMessageBox,
+                                  ForgotToSaveMessageBox, SettingDialog)
 from seg_utils.ui.menu_bar import MenuBar
 from seg_utils.ui.list_widgets import FileViewingWidget, LabelsViewingWidget
 from seg_utils.ui.tree_widget import TreeWidget
@@ -25,6 +26,7 @@ class LabelingMainWindow(QMainWindow):
     sRequestCheckForChanges = pyqtSignal(int, int)
     sSaveToDatabase = pyqtSignal(list, int)
     sDeleteFile = pyqtSignal(str, int)
+    sUpdateSettings = pyqtSignal(list)
 
     @dataclass
     class Changes:
@@ -128,6 +130,12 @@ class LabelingMainWindow(QMainWindow):
         self.menubar.sRequestSave.connect(self.save_to_database)
         self.toolBar.sSetDrawingMode.connect(self.image_display.annotations.set_mode)
 
+    def apply_settings(self, settings: list):
+        """applies the settings"""
+        # TODO: actually apply the settings
+        self.sUpdateSettings.emit(settings)
+        print("settings saved")
+
     def change_detected(self, change: int):
         """appends the detected change to the changes list"""
         if change not in self.changes:
@@ -191,6 +199,14 @@ class LabelingMainWindow(QMainWindow):
             if filepath:
                 self.sAddFile.emit(filepath, patient)
                 self.sRequestUpdate.emit(self.img_idx)
+
+    def open_settings(self, settings: list):
+        """opens up the settings dialog, sends signal to save them"""
+        dlg = SettingDialog(settings)
+        dlg.exec()
+        s = dlg.settings
+        if dlg.settings:
+            self.apply_settings(dlg.settings)
 
     def next_image(self, direction: int):
         """proceeds to the next/previous image"""

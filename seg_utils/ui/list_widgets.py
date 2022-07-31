@@ -7,7 +7,7 @@ from typing import List
 
 from seg_utils.ui.shape import Shape
 from seg_utils.utils.qt import createListWidgetItemWithSquareIcon, get_icon
-from seg_utils.utils.stylesheets import TAB_STYLESHEET
+from seg_utils.utils.stylesheets import TAB_STYLESHEET, SETTING_STYLESHEET
 
 
 class FileList(QListWidget):
@@ -174,3 +174,16 @@ class FileViewingWidget(QWidget):
                 item.setHidden(True)
             else:
                 item.setHidden(False)
+
+
+class SettingList(QListWidget):
+    def __init__(self, settings):
+        super(SettingList, self).__init__()
+        self.setSpacing(5)
+        self.setStyleSheet(SETTING_STYLESHEET)
+        for setting in settings:
+            item = QListWidgetItem(setting[0])
+            checked = Qt.Checked if setting[1] else Qt.Unchecked
+            item.setCheckState(checked)
+            item.setToolTip(setting[2])
+            self.addItem(item)

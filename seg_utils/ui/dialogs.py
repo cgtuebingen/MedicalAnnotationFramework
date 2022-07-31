@@ -6,7 +6,7 @@ from typing import List
 from pathlib import Path
 import os
 
-from seg_utils.ui.list_widgets import LabelList
+from seg_utils.ui.list_widgets import LabelList, SettingList
 from seg_utils.utils.qt import get_icon
 from seg_utils.utils.stylesheets import BUTTON_STYLESHEET
 
@@ -402,6 +402,36 @@ class ProjectHandlerDialog(QDialog):
         if dialog.exec_():
             filename = dialog.selectedFiles()[0]
             self.enter_path.setText(filename)
+
+
+class SettingDialog(QDialog):
+    def __init__(self, settings: list):
+        super(SettingDialog, self).__init__()
+        self.setFixedSize(300, 500)
+        self.setLayout(QVBoxLayout())
+        self.setWindowTitle("Settings")
+
+        self.header = QLabel("Enter your preferences")
+        self.header.setStyleSheet("font: bold 12px")
+        self.preferences = SettingList(settings)
+        self.settings = list()
+
+        # Accept & cancel buttons
+        self.confirmation = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        self.confirmation.accepted.connect(self.save_settings)
+        self.confirmation.rejected.connect(self.close)
+
+        self.layout().addWidget(self.header)
+        self.layout().addWidget(self.preferences)
+        self.layout().addWidget(self.confirmation)
+
+    def save_settings(self):
+        for idx in range(self.preferences.count()):
+            item = self.preferences.item(idx)
+            key = item.text()
+            value = True if item.checkState() == Qt.Checked else False
+            self.settings.append((key, value))
+        self.close()
 
 
 def move_to_center(widget, parent_pos: QPoint, parent_size: QSize):

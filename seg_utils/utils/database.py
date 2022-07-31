@@ -6,6 +6,7 @@ import os
 
 from typing import List, Union
 from seg_utils.utils.project_structure import modality, create_project_structure, Structure
+from seg_utils.utils.settings import SETTINGS, get_tooltip
 
 from PyQt5.QtCore import pyqtSignal, QObject, QSettings
 
@@ -78,6 +79,8 @@ class SQLiteDatabase(QObject):
     """class to control an SQL database. inherits a QObject to enable pyqt-signal transfer"""
     sUpdate = pyqtSignal(list, int, str, list, list)
     sImportFile = pyqtSignal(list)
+    sOpenSettings = pyqtSignal(list)
+    sApplySettings = pyqtSignal(list)
 
     def __init__(self):
         super(SQLiteDatabase, self).__init__()
@@ -235,6 +238,15 @@ class SQLiteDatabase(QObject):
         self.cursor.execute("SELECT some_id FROM patients WHERE uid = ?", (patient_uid,))
         return self.cursor.fetchone()[0]
 
+    def get_settings(self):
+        """retrieves the values stored in the settings file"""
+        settings = list()
+        for key in self.settings.allKeys():
+            value = self.settings.value(key)
+            tooltip = get_tooltip(key)
+            settings.append((key, value, tooltip))
+        return settings
+
     def get_uid_from_filename(self, table_name: str, filename: str) -> int:
         """
         :param table_name: videos, images, or whole slide images
@@ -290,17 +302,22 @@ class SQLiteDatabase(QObject):
             for file, patient in files.items():
                 self.add_file(file, patient)
             self.settings = QSettings(self.location + '/settings', QSettings.NativeFormat)
-            self.settings.setValue("ThisShouldBeTrue", True)
+            self.update_settings(SETTINGS)
         else:
-            # TODO: Work on settings
             self.settings = QSettings(self.location + '/settings', QSettings.NativeFormat)
-            b = self.settings.value("ThisShouldBeTrue")
 
         with self.connection:
             self.cursor.execute(f"PRAGMA foreign_keys = ON;")
 
         self.is_initialized = True
         self.update_gui()
+        settings = self.get_settings()
+        self.sApplySettings.emit(settings)
+
+    def open_settings(self):
+        """emits a signal to open the settings dialog"""
+        settings = self.get_settings()
+        self.sOpenSettings.emit(settings)
 
     def save(self, current_labels: list, img_idx: int):
         files = self.get_images()
@@ -358,6 +375,11 @@ class SQLiteDatabase(QObject):
                 self.cursor.execute("""SELECT * FROM labels WHERE label_class = ?""", (label_class,))
                 if not self.cursor.fetchone():
                     self.cursor.execute("""INSERT INTO labels (label_class) VALUES (?)""", (label_class,))
+
+    def update_settings(self, settings: list):
+        """saves the specified settings in the QSettings file"""
+        for setting in settings:
+            self.settings.setValue(setting[0], setting[1])
 
 
 def check_for_bytes(lst: List[tuple]) -> Union[List[list], list]:
