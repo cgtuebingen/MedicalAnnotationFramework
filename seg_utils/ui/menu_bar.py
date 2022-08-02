@@ -4,7 +4,7 @@ from PyQt5.QtCore import QRect, pyqtSignal
 from pathlib import Path
 
 from seg_utils.src.actions import Action
-from seg_utils.ui.dialogs import ProjectHandlerDialog
+from seg_utils.ui.dialogs import ProjectHandlerDialog, QFileDialog
 from seg_utils.utils.project_structure import Structure, check_environment
 
 
@@ -89,12 +89,12 @@ class MenuBar(QMenuBar):
 
     def open_project(self):
         """executes a dialog prompting the user to select a database"""
-        """database, _ = QFileDialog.getOpenFileName(self,
+        database, _ = QFileDialog.getOpenFileName(self,
                                                   caption="Select Database",
                                                   directory=str(Path.home()),
                                                   filter="Database (*.db)",
-                                                  options=QFileDialog.DontUseNativeDialog)"""
-        database = '/Users/jakob/AnnotationProjects/project14/database.db'
+                                                  options=QFileDialog.DontUseNativeDialog)
+        # database = '/Users/jakob/AnnotationProjects/project14/database.db'
         if database:
 
             # make sure the database is inside a project environment

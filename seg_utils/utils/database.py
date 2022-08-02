@@ -210,13 +210,13 @@ class SQLiteDatabase(QObject):
             label_classes = self.cursor.execute("SELECT label_class FROM labels").fetchall()
         return [label_class[0] for label_class in label_classes]
 
-    def get_label_from_imagepath(self, imagepath: str):
+    def get_label_from_image(self, image: str):
         """
-        :param imagepath: the image name to be searched in
+        :param image: the image name to be searched in
         :return: a list of all label shapes related to the specified image
         """
         with self.connection:
-            image_id = self.get_uid_from_filename("images", imagepath)
+            image_id = self.get_uid_from_filename("images", image)
             labels = self.cursor.execute("""SELECT shape FROM annotations
                                             WHERE modality = 1 AND file = ?""", (image_id,)).fetchall()
         return check_for_bytes(labels)
@@ -319,6 +319,17 @@ class SQLiteDatabase(QObject):
         settings = self.get_settings()
         self.sOpenSettings.emit(settings)
 
+    def prepare_files(self, files: list) -> list:
+        """goes through all filenames and returns them as full paths,
+        in a tuple together with a boolean indicating whether there is at least 1 annotation in the image"""
+        result = list()
+        for file in files:
+            labels = self.get_label_from_image(file)
+            populated = True if labels else False
+            file = self.location + Structure.IMAGES_DIR + file
+            result.append((file, populated))
+        return result
+
     def save(self, current_labels: list, img_idx: int):
         files = self.get_images()
         if files:
@@ -357,11 +368,11 @@ class SQLiteDatabase(QObject):
         files = self.get_images()
         if files:
             file = files[img_idx]
-            labels = self.get_label_from_imagepath(file)
+            labels = self.get_label_from_image(file)
             patient = self.get_patient_by_uid(self.get_patient_by_filename(file))
         else:
             labels, patient = [], ""
-        files = [self.location + Structure.IMAGES_DIR + file for file in files]
+        files = self.prepare_files(files)
         classes = self.get_label_classes()
         self.sUpdate.emit(files, img_idx, patient, classes, labels)
 

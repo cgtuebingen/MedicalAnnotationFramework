@@ -127,6 +127,7 @@ class FileViewingWidget(QWidget):
 
         self.image_list = FileList()
         self.wsi_list = FileList()
+        self.show_check_box = False
 
         self.tab.addTab(self.image_list, 'Images')
         self.tab.addTab(self.wsi_list, 'WSI')
@@ -149,16 +150,18 @@ class FileViewingWidget(QWidget):
                 return i
         return -1
 
-    def update_list(self, filenames, img_idx: int, show_check_box: bool = False):
+    def update_list(self, files: list, img_idx: int):
         """ clears the list widget and fills it again with the provided filenames"""
         self.image_list.clear()
-        for fn in filenames:
-            fn = os.path.basename(fn)
-            if show_check_box:
+        for file in files:
+            filename = os.path.basename(file[0])
+
+            # display check box if image is populated with at least 1 annotation
+            if self.show_check_box and file[1]:
                 icon = get_icon("checked")
-                item = QListWidgetItem(icon, fn)
+                item = QListWidgetItem(icon, filename)
             else:
-                item = QListWidgetItem(fn)
+                item = QListWidgetItem(filename)
             self.image_list.addItem(item)
         if self.image_list.count() > 0:
             self.image_list.setCurrentRow(img_idx)

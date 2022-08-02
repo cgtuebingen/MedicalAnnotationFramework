@@ -115,6 +115,7 @@ class LabelingMainWindow(QMainWindow):
         self.img_idx = 0
         self.closeMe = False
         self.changes = list()
+        self.autoSave = False
 
         # connect signals
         self.image_display.sRequestSave.connect(self.save_to_database)
@@ -132,9 +133,15 @@ class LabelingMainWindow(QMainWindow):
 
     def apply_settings(self, settings: list):
         """applies the settings"""
-        # TODO: actually apply the settings
+        for setting in settings:
+            if setting[0] == "Autosave on file change":
+                self.autoSave = setting[1]
+            elif setting[0] == "Mark annotated files":
+                self.file_list.show_check_box = True
+                self.sRequestUpdate.emit(self.img_idx)
+            elif setting[0] == "Display patient name":
+                self.image_display.patient_label.setVisible(setting[1])
         self.sUpdateSettings.emit(settings)
-        print("settings saved")
 
     def change_detected(self, change: int):
         """appends the detected change to the changes list"""
@@ -165,6 +172,7 @@ class LabelingMainWindow(QMainWindow):
                 event.ignore()
 
     def delete_file(self, filename):
+        """asks for user consent, emits a signal to permanently delete a project file"""
         dlg = DeleteFileMessageBox(filename)
         dlg.exec()
 
@@ -172,7 +180,12 @@ class LabelingMainWindow(QMainWindow):
             self.sDeleteFile.emit(filename, self.img_idx)
 
     def file_list_item_clicked(self, new_img_idx: int):
-        if self.check_for_changes():
+        """switches to the image clicked by the user"""
+        if self.autoSave:
+            self.save_to_database()
+            self.img_idx = new_img_idx
+            self.sRequestUpdate.emit(new_img_idx)
+        elif self.check_for_changes():
             self.img_idx = new_img_idx
             self.sRequestUpdate.emit(new_img_idx)
 
@@ -212,7 +225,11 @@ class LabelingMainWindow(QMainWindow):
         """proceeds to the next/previous image"""
         if not self.image_display.is_empty():
             new_img_idx = (self.img_idx + direction) % self.file_list.image_list.count()
-            if self.check_for_changes():
+            if self.autoSave:
+                self.save_to_database()
+                self.img_idx = new_img_idx
+                self.sRequestUpdate.emit(new_img_idx)
+            elif self.check_for_changes():
                 self.img_idx = new_img_idx
                 self.sRequestUpdate.emit(new_img_idx)
 
@@ -234,7 +251,7 @@ class LabelingMainWindow(QMainWindow):
 
         if files:
             self.set_default(False)
-            current_labels = self.image_display.init_image(files[self.img_idx], patient, labels, classes)
+            current_labels = self.image_display.init_image(files[self.img_idx][0], patient, labels, classes)
             self.polygons.update_polygons(current_labels)
         else:
             self.set_default(True)
