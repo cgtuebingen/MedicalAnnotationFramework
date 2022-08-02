@@ -89,12 +89,12 @@ class MenuBar(QMenuBar):
 
     def open_project(self):
         """executes a dialog prompting the user to select a database"""
-        database, _ = QFileDialog.getOpenFileName(self,
+        """database, _ = QFileDialog.getOpenFileName(self,
                                                   caption="Select Database",
                                                   directory=str(Path.home()),
                                                   filter="Database (*.db)",
-                                                  options=QFileDialog.DontUseNativeDialog)
-        # database = '/Users/jakob/AnnotationProjects/project14/database.db'
+                                                  options=QFileDialog.DontUseNativeDialog)"""
+        database = '/Users/jakob/AnnotationProjects/project14/database.db'
         if database:
 
             # make sure the database is inside a project environment

@@ -16,7 +16,7 @@ class FileList(QListWidget):
 
     def __init__(self):
         super(FileList, self).__init__()
-        self.setIconSize(QSize(7, 7))
+        self.setIconSize(QSize(11, 11))
         self.setContentsMargins(0, 0, 0, 0)
         self.setFrameShape(QFrame.NoFrame)
         self.setItemAlignment(Qt.AlignmentFlag.AlignLeft)

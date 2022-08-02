@@ -137,7 +137,7 @@ class LabelingMainWindow(QMainWindow):
             if setting[0] == "Autosave on file change":
                 self.autoSave = setting[1]
             elif setting[0] == "Mark annotated files":
-                self.file_list.show_check_box = True
+                self.file_list.show_check_box = setting[1]
                 self.sRequestUpdate.emit(self.img_idx)
             elif setting[0] == "Display patient name":
                 self.image_display.patient_label.setVisible(setting[1])
@@ -210,8 +210,9 @@ class LabelingMainWindow(QMainWindow):
                                                       directory=str(Path.home()),)
             # options = QFileDialog.DontUseNativeDialog
             if filepath:
-                self.sAddFile.emit(filepath, patient)
-                self.sRequestUpdate.emit(self.img_idx)
+                if self.check_for_changes():
+                    self.sAddFile.emit(filepath, patient)
+                    self.sRequestUpdate.emit(self.img_idx)
 
     def open_settings(self, settings: list):
         """opens up the settings dialog, sends signal to save them"""

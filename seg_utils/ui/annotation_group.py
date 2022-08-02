@@ -46,7 +46,7 @@ class AnnotationGroup(QGraphicsObject):
                                 shape_type='tempTrace',
                                 mode=Shape.ShapeMode.CREATE,
                                 color=self.draw_new_color)
-        s2 = self.temp_shape.scene()
+        self.add_shapes(self.temp_shape)
         self.temp_shape.grabMouse()
 
     def get_color_for_label(self, label_name: str):
