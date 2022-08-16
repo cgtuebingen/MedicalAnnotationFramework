@@ -85,6 +85,8 @@ class TreeWidget(QTreeWidget):
 
     def handle_click(self, idx: QModelIndex):
         """handles an item click in the QTreeWidget, if user clicked at the right part, open up a comment dialog"""
+
+        # if this function was triggered by a check box, skip
         if self.ignore_selection:
             self.ignore_selection = False
             return
@@ -108,6 +110,11 @@ class TreeWidget(QTreeWidget):
             shape.comment = dlg.comment
 
     def handle_item_changed(self, item: QTreeWidgetItem, column: int):
+        """this function gets triggered when user clicks the checkbox; set corresponding shapes visible/hidden"""
+        # ignore changes on the comment section
+        if column == 1:
+            return
+
         state = item.checkState(column)
         if state == Qt.Checked:
             visible = True

@@ -1,17 +1,15 @@
-from PyQt5.QtWidgets import QMenuBar, QMessageBox, QMainWindow, QMenu
+from PyQt5.QtWidgets import QMenuBar, QMainWindow, QMenu
 from PyQt5.QtCore import QRect, pyqtSignal
 
-from pathlib import Path
+from typing import List
 
 from seg_utils.src.actions import Action
-from seg_utils.ui.dialogs import ProjectHandlerDialog, QFileDialog
-from seg_utils.utils.project_structure import Structure, check_environment
 
 
 class MenuBar(QMenuBar):
-
-    sCreateNewProject = pyqtSignal(str, dict)
-    sOpenProject = pyqtSignal(str)
+    sNewProject = pyqtSignal()
+    sOpenProject = pyqtSignal()
+    sCloseProject = pyqtSignal()
     sRequestImport = pyqtSignal()
     sRequestSave = pyqtSignal()
     sRequestSettings = pyqtSignal()
@@ -25,16 +23,22 @@ class MenuBar(QMenuBar):
 
         action_new_project = Action(self,
                                     "New Project",
-                                    self.new_project,
+                                    self.sNewProject.emit,
                                     'Ctrl+N',
                                     "new",
                                     "New project")
         action_open_project = Action(self,
                                      "Open Project",
-                                     self.open_project,
+                                     self.sOpenProject.emit,
                                      'Ctrl+O',
                                      "open",
                                      "Open project")
+        action_close_project = Action(self,
+                                      "Close Project",
+                                      self.sCloseProject.emit,
+                                      'Ctrl+C',
+                                      "close",
+                                      "Close Project")
         action_save = Action(self,
                              "Save",
                              self.sRequestSave.emit,
@@ -58,11 +62,9 @@ class MenuBar(QMenuBar):
                                  icon="settings",
                                  tip="Set your preferences for the program",)
 
-        action_save.setEnabled(False)
-        action_import.setEnabled(False)
-
         self.file.addActions((action_new_project,
                               action_open_project,
+                              action_close_project,
                               action_save,
                               action_import))
         self.maf.addActions((action_settings,
@@ -71,39 +73,23 @@ class MenuBar(QMenuBar):
         self.addMenu(self.maf)
         self.addMenu(self.file)
 
-    def enable_project_tools(self):
-        for action in self.file.actions():
-            if action.text() == "Save" or action.text() == "Import File":
+        self.enable_tools(["New Project", "Open Project"])
+
+    def enable_tools(self, tools: List[str] = None):
+        """enables the tools specified in the list; if no parameter is passed, enable all"""
+        if tools:
+            for action in self.file.actions():
+                if action.text() in tools:
+                    action.setEnabled(True)
+                else:
+                    action.setEnabled(False)
+            for action in self.maf.actions():
+                if action.text() in tools:
+                    action.setEnabled(True)
+                else:
+                    action.setEnabled(False)
+        else:
+            for action in self.file.actions():
                 action.setEnabled(True)
-            else:
-                action.setEnabled(False)
-
-    def new_project(self):
-        """executes a dialog prompting the user to enter information about the new project"""
-        dlg = ProjectHandlerDialog()
-        dlg.exec()
-        if dlg.project_path:
-            database_path = dlg.project_path + Structure.DATABASE_DEFAULT_NAME
-            self.sCreateNewProject.emit(database_path, dlg.files)
-            self.enable_project_tools()
-
-    def open_project(self):
-        """executes a dialog prompting the user to select a database"""
-        """database, _ = QFileDialog.getOpenFileName(self,
-                                                  caption="Select Database",
-                                                  directory=str(Path.home()),
-                                                  filter="Database (*.db)",
-                                                  options=QFileDialog.DontUseNativeDialog)"""
-        database = '/Users/jakob/AnnotationProjects/project14/database.db'
-        if database:
-
-            # make sure the database is inside a project environment
-            if check_environment(str(Path(database).parents[0])):
-                self.sOpenProject.emit(database)
-                self.enable_project_tools()
-            else:
-                msg = QMessageBox()
-                msg.setIcon(QMessageBox.Information)
-                msg.setText("Invalid Project Location")
-                msg.setStandardButtons(QMessageBox.Ok)
-                msg.exec()
+            for action in self.maf.actions():
+                action.setEnabled(True)
