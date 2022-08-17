@@ -15,6 +15,7 @@ from seg_utils.ui.tree_widget import TreeWidget
 from seg_utils.ui.welcome_screen import WelcomeScreen
 from seg_utils.utils.qt import colormap_rgb, get_icon
 from seg_utils.utils.project_structure import check_environment, Structure
+from seg_utils.macros.macros import Macros
 
 NUM_COLORS = 25
 
@@ -108,6 +109,7 @@ class LabelingMainWindow(QMainWindow):
 
         self.menubar = MenuBar(self)
         self.setMenuBar(self.menubar)
+        self.menubar.setVisible(True)
 
         self.statusbar = QStatusBar()
         self.setStatusBar(self.statusbar)
@@ -122,6 +124,7 @@ class LabelingMainWindow(QMainWindow):
         self.changes = list()
         self.autoSave = False
 
+        self.macros = Macros()
         self.set_welcome_screen(True)
 
         # connect signals
@@ -135,11 +138,14 @@ class LabelingMainWindow(QMainWindow):
         self.polygons.sItemsDeleted.connect(self.image_display.annotations.remove_shapes)
         self.polygons.sDeselectAll.connect(self.image_display.annotations.deselect_all)
         self.polygons.sChange.connect(self.change_detected)
+        self.toolBar.sSetDrawingMode.connect(self.image_display.annotations.set_mode)
+        self.macros.sEnableTools.connect(self.menubar.enable_tools)
+
         self.menubar.sRequestSave.connect(self.save_to_database)
         self.menubar.sNewProject.connect(self.new_project)
         self.menubar.sOpenProject.connect(self.open_project)
         self.menubar.sCloseProject.connect(self.close_project)
-        self.toolBar.sSetDrawingMode.connect(self.image_display.annotations.set_mode)
+        self.menubar.sExampleProject.connect(self.macros.example_project)
 
     def apply_settings(self, settings: list):
         """applies the settings"""
@@ -187,7 +193,7 @@ class LabelingMainWindow(QMainWindow):
         """this function closes the project, but not the program itself - return to the welcome screen"""
         if self.check_for_changes():
             self.set_welcome_screen(True)
-            self.menubar.enable_tools(["New Project", "Open Project"])
+            self.menubar.enable_tools(["New Project", "Open Project", "Quit Program", "Example Project"])
             self.sDisconnect.emit()
 
     def delete_file(self, filename):
@@ -246,12 +252,11 @@ class LabelingMainWindow(QMainWindow):
     def open_project(self):
         """executes a dialog prompting the user to select a database"""
         if self.check_for_changes():
-            """database, _ = QFileDialog.getOpenFileName(self,
+            database, _ = QFileDialog.getOpenFileName(self,
                                                       caption="Select Database",
                                                       directory=str(Path.home()),
                                                       filter="Database (*.db)",
-                                                      options=QFileDialog.DontUseNativeDialog)"""
-            database = '/Users/jakob/AnnotationProjects/project14/database.db'
+                                                      options=QFileDialog.DontUseNativeDialog)
             if database:
 
                 # make sure the database is inside a project environment

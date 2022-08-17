@@ -107,7 +107,7 @@ def test_file_viewing_widget():
 
 def test_image_display():
     window = CenterDisplayWidget()
-    pm = QPixmap("../examples/images/video0001_0001.png")
+    pm = QPixmap("../examples/images/elephant.png")
     window.init_image(pm, None)
     window.show()
     app.exec()

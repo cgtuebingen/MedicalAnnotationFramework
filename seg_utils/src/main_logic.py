@@ -30,6 +30,9 @@ class MainLogic:
         self.main_window.menubar.sRequestImport.connect(self.database.send_import_info)
         self.main_window.menubar.sRequestSettings.connect(self.database.open_settings)
 
+        # macros -> database
+        self.main_window.macros.sNewProject.connect(self.database.initialize)
+
         # database -> main window
         self.database.sUpdate.connect(self.main_window.update_window)
         self.database.sImportFile.connect(self.main_window.import_file)
