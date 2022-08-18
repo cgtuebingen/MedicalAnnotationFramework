@@ -1,39 +1,48 @@
-from PyQt5.QtWidgets import QMenuBar, QFileDialog, QMessageBox, QMainWindow, QMenu
+from PyQt5.QtWidgets import QMenuBar, QMainWindow, QMenu
 from PyQt5.QtCore import QRect, pyqtSignal
 
-from pathlib import Path
+from typing import List
 
 from seg_utils.src.actions import Action
-from seg_utils.ui.dialogs import ProjectHandlerDialog
-from seg_utils.utils.project_structure import Structure, check_environment
 
 
 class MenuBar(QMenuBar):
-
-    sCreateNewProject = pyqtSignal(str, dict)
-    sOpenProject = pyqtSignal(str)
+    sNewProject = pyqtSignal()
+    sOpenProject = pyqtSignal()
+    sCloseProject = pyqtSignal()
     sRequestImport = pyqtSignal()
     sRequestSave = pyqtSignal()
+    sRequestSettings = pyqtSignal()
+    sExampleProject = pyqtSignal()
 
     def __init__(self, parent: QMainWindow):
         super(MenuBar, self).__init__()
         self.setGeometry(QRect(0, 0, 1276, 22))
+        self.setNativeMenuBar(False)
 
-        self.labelingTool = QMenu("Edit")
-        self.file = QMenu("File")
+        self.maf = QMenu("TAPLT")
+        self.project = QMenu("Project")
+        self.edit = QMenu("Edit")
+        self.macros = QMenu("Macros")
 
         action_new_project = Action(self,
                                     "New Project",
-                                    self.new_project,
+                                    self.sNewProject.emit,
                                     'Ctrl+N',
                                     "new",
                                     "New project")
         action_open_project = Action(self,
                                      "Open Project",
-                                     self.open_project,
+                                     self.sOpenProject.emit,
                                      'Ctrl+O',
                                      "open",
                                      "Open project")
+        action_close_project = Action(self,
+                                      "Close Project",
+                                      self.sCloseProject.emit,
+                                      'Ctrl+C',
+                                      "close",
+                                      "Close Project")
         action_save = Action(self,
                              "Save",
                              self.sRequestSave.emit,
@@ -47,59 +56,55 @@ class MenuBar(QMenuBar):
                                "import",
                                "Import a new file to database")
         action_quit = Action(self,
-                             "Quit\nProgram",
+                             "Quit Program",
                              parent.close,
                              icon="quit",
                              tip="Quit Program")
         action_settings = Action(self,
                                  "Preferences",
+                                 self.sRequestSettings.emit,
                                  icon="settings",
                                  tip="Set your preferences for the program",)
 
-        action_save.setEnabled(False)
-        action_import.setEnabled(False)
+        macros_example_project = Action(self,
+                                        "Example Project",
+                                        self.sExampleProject.emit)
 
-        self.labelingTool.addActions((action_settings,
-                                      action_quit))
-        self.file.addActions((action_new_project,
-                              action_open_project,
-                              action_save,
+        self.actions = [action_new_project,
+                        action_open_project,
+                        action_close_project,
+                        action_save,
+                        action_import,
+                        action_quit,
+                        action_settings,
+                        macros_example_project]
+
+        self.maf.addActions((action_settings,
+                             action_quit))
+
+        self.project.addActions((action_new_project,
+                                 action_open_project,
+                                 action_close_project))
+
+        self.edit.addActions((action_save,
                               action_import))
-        # self.addMenu(self.labelingTool)
-        self.addMenu(self.file)
+        self.macros.addAction(macros_example_project)
 
-    def enable_project_tools(self):
-        for action in self.file.actions():
-            if action.text() == "Save" or action.text() == "Import File":
+        self.addMenu(self.maf)
+        self.addMenu(self.project)
+        self.addMenu(self.edit)
+        self.addMenu(self.macros)
+
+        self.enable_tools(["New Project", "Open Project", "Quit Program", "Example Project"])
+
+    def enable_tools(self, tools: List[str] = None):
+        """enables the tools specified in the list; if no parameter is passed, enable all"""
+        if tools:
+            for action in self.actions:
+                if action.text() in tools:
+                    action.setEnabled(True)
+                else:
+                    action.setEnabled(False)
+        else:
+            for action in self.actions:
                 action.setEnabled(True)
-            else:
-                action.setEnabled(False)
-
-    def new_project(self):
-        """executes a dialog prompting the user to enter information about the new project"""
-        dlg = ProjectHandlerDialog()
-        dlg.exec()
-        if dlg.project_path:
-            database_path = dlg.project_path + Structure.DATABASE_DEFAULT_NAME
-            self.sCreateNewProject.emit(database_path, dlg.files)
-            self.enable_project_tools()
-
-    def open_project(self):
-        """executes a dialog prompting the user to select a database"""
-        database, _ = QFileDialog.getOpenFileName(self,
-                                                  caption="Select Database",
-                                                  directory=str(Path.home()),
-                                                  filter="Database (*.db)",
-                                                  options=QFileDialog.DontUseNativeDialog)
-        if database:
-
-            # make sure the database is inside a project environment
-            if check_environment(str(Path(database).parents[0])):
-                self.sOpenProject.emit(database)
-                self.enable_project_tools()
-            else:
-                msg = QMessageBox()
-                msg.setIcon(QMessageBox.Information)
-                msg.setText("Invalid Project Location")
-                msg.setStandardButtons(QMessageBox.Ok)
-                msg.exec()

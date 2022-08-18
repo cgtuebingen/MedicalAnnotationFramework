@@ -6,6 +6,7 @@ import os
 
 from typing import List, Union
 from seg_utils.utils.project_structure import modality, create_project_structure, Structure
+from seg_utils.utils.settings import SETTINGS, get_tooltip
 
 from PyQt5.QtCore import pyqtSignal, QObject, QSettings
 
@@ -78,7 +79,8 @@ class SQLiteDatabase(QObject):
     """class to control an SQL database. inherits a QObject to enable pyqt-signal transfer"""
     sUpdate = pyqtSignal(list, int, str, list, list)
     sImportFile = pyqtSignal(list)
-    sCheckForChanges = pyqtSignal(list, int)
+    sOpenSettings = pyqtSignal(list)
+    sApplySettings = pyqtSignal(list)
 
     def __init__(self):
         super(SQLiteDatabase, self).__init__()
@@ -208,13 +210,13 @@ class SQLiteDatabase(QObject):
             label_classes = self.cursor.execute("SELECT label_class FROM labels").fetchall()
         return [label_class[0] for label_class in label_classes]
 
-    def get_label_from_imagepath(self, imagepath: str):
+    def get_label_from_image(self, image: str):
         """
-        :param imagepath: the image name to be searched in
+        :param image: the image name to be searched in
         :return: a list of all label shapes related to the specified image
         """
         with self.connection:
-            image_id = self.get_uid_from_filename("images", imagepath)
+            image_id = self.get_uid_from_filename("images", image)
             labels = self.cursor.execute("""SELECT shape FROM annotations
                                             WHERE modality = 1 AND file = ?""", (image_id,)).fetchall()
         return check_for_bytes(labels)
@@ -235,6 +237,15 @@ class SQLiteDatabase(QObject):
         """returns the id/patient info from the patients table by the corresponding uid"""
         self.cursor.execute("SELECT some_id FROM patients WHERE uid = ?", (patient_uid,))
         return self.cursor.fetchone()[0]
+
+    def get_settings(self):
+        """retrieves the values stored in the settings file"""
+        settings = list()
+        for key in self.settings.allKeys():
+            value = self.settings.value(key)
+            tooltip = get_tooltip(key)
+            settings.append((key, value, tooltip))
+        return settings
 
     def get_uid_from_filename(self, table_name: str, filename: str) -> int:
         """
@@ -291,17 +302,33 @@ class SQLiteDatabase(QObject):
             for file, patient in files.items():
                 self.add_file(file, patient)
             self.settings = QSettings(self.location + '/settings', QSettings.NativeFormat)
-            self.settings.setValue("ThisShouldBeTrue", True)
+            self.update_settings(SETTINGS)
         else:
             self.settings = QSettings(self.location + '/settings', QSettings.NativeFormat)
-            b = self.settings.value("ThisShouldBeTrue")
-            print("Whatever")
 
         with self.connection:
             self.cursor.execute(f"PRAGMA foreign_keys = ON;")
 
         self.is_initialized = True
         self.update_gui()
+        settings = self.get_settings()
+        self.sApplySettings.emit(settings)
+
+    def open_settings(self):
+        """emits a signal to open the settings dialog"""
+        settings = self.get_settings()
+        self.sOpenSettings.emit(settings)
+
+    def prepare_files(self, files: list) -> list:
+        """goes through all filenames and returns them as full paths,
+        in a tuple together with a boolean indicating whether there is at least 1 annotation in the image"""
+        result = list()
+        for file in files:
+            labels = self.get_label_from_image(file)
+            populated = True if labels else False
+            file = self.location + Structure.IMAGES_DIR + file
+            result.append((file, populated))
+        return result
 
     def save(self, current_labels: list, img_idx: int):
         files = self.get_images()
@@ -317,16 +344,6 @@ class SQLiteDatabase(QObject):
     def send_import_info(self):
         existing_patients = self.get_patients()
         self.sImportFile.emit(existing_patients)
-
-    def send_changes_info(self, img_idx: int, new_img_idx: int):
-        """collects the information about the annotations in the image with the given index and emits a signal"""
-        images = self.get_images() if self.is_initialized else None
-        if images:
-            cur_image = images[img_idx]
-            current_labels = self.get_label_from_imagepath(cur_image)
-        else:
-            current_labels = []
-        self.sCheckForChanges.emit(current_labels, new_img_idx)
 
     def update_image_annotations(self, image_name: str, entries: list):
         """
@@ -351,11 +368,11 @@ class SQLiteDatabase(QObject):
         files = self.get_images()
         if files:
             file = files[img_idx]
-            labels = self.get_label_from_imagepath(file)
+            labels = self.get_label_from_image(file)
             patient = self.get_patient_by_uid(self.get_patient_by_filename(file))
         else:
             labels, patient = [], ""
-        files = [self.location + Structure.IMAGES_DIR + file for file in files]
+        files = self.prepare_files(files)
         classes = self.get_label_classes()
         self.sUpdate.emit(files, img_idx, patient, classes, labels)
 
@@ -369,6 +386,11 @@ class SQLiteDatabase(QObject):
                 self.cursor.execute("""SELECT * FROM labels WHERE label_class = ?""", (label_class,))
                 if not self.cursor.fetchone():
                     self.cursor.execute("""INSERT INTO labels (label_class) VALUES (?)""", (label_class,))
+
+    def update_settings(self, settings: list):
+        """saves the specified settings in the QSettings file"""
+        for setting in settings:
+            self.settings.setValue(setting[0], setting[1])
 
 
 def check_for_bytes(lst: List[tuple]) -> Union[List[list], list]:

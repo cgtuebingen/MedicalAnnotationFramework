@@ -15,7 +15,7 @@ from seg_utils.utils.stylesheets import TAB_STYLESHEET
 
 
 COLORS, _ = colormap_rgb(25)
-CLASSES = ["Tumour", "Blood", "Vein", "Healthy Tissue"]
+CLASSES = ["Tumour", "Blood", "Blood", "Vein", "Healthy Tissue", "Tumour", "Blood"]
 SHAPES = [Shape(QSize(10, 10), _class, color=_color, shape_type='polygon')
           for _class, _color in zip(CLASSES, COLORS)]
 PATIENTS = ["Alex", "Mark", "Clara"]
@@ -107,7 +107,7 @@ def test_file_viewing_widget():
 
 def test_image_display():
     window = CenterDisplayWidget()
-    pm = QPixmap("../examples/images/video0001_0001.png")
+    pm = QPixmap("../examples/images/elephant.png")
     window.init_image(pm, None)
     window.show()
     app.exec()

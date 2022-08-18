@@ -7,7 +7,7 @@ from typing import List
 
 from seg_utils.ui.shape import Shape
 from seg_utils.utils.qt import createListWidgetItemWithSquareIcon, get_icon
-from seg_utils.utils.stylesheets import TAB_STYLESHEET
+from seg_utils.utils.stylesheets import TAB_STYLESHEET, SETTING_STYLESHEET
 
 
 class FileList(QListWidget):
@@ -16,7 +16,7 @@ class FileList(QListWidget):
 
     def __init__(self):
         super(FileList, self).__init__()
-        self.setIconSize(QSize(7, 7))
+        self.setIconSize(QSize(11, 11))
         self.setContentsMargins(0, 0, 0, 0)
         self.setFrameShape(QFrame.NoFrame)
         self.setItemAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -33,8 +33,6 @@ class FileList(QListWidget):
 
 class LabelList(QListWidget):
     """ a list widget to store annotation labels"""
-    sDeleteClass = pyqtSignal(str)
-
     def __init__(self, *args):
         super(QListWidget, self).__init__(*args)
         self._icon_size = 10
@@ -46,7 +44,6 @@ class LabelList(QListWidget):
         if item:
             menu = QMenu()
             action = QAction("Delete")
-            action.triggered.connect(lambda: self.sDeleteClass.emit(item.text()))
             menu.addAction(action)
             global_pos = event.globalPos()
             menu.exec(global_pos)
@@ -130,6 +127,7 @@ class FileViewingWidget(QWidget):
 
         self.image_list = FileList()
         self.wsi_list = FileList()
+        self.show_check_box = False
 
         self.tab.addTab(self.image_list, 'Images')
         self.tab.addTab(self.wsi_list, 'WSI')
@@ -152,16 +150,18 @@ class FileViewingWidget(QWidget):
                 return i
         return -1
 
-    def update_list(self, filenames, img_idx: int, show_check_box: bool = False):
+    def update_list(self, files: list, img_idx: int):
         """ clears the list widget and fills it again with the provided filenames"""
         self.image_list.clear()
-        for fn in filenames:
-            fn = os.path.basename(fn)
-            if show_check_box:
+        for file in files:
+            filename = os.path.basename(file[0])
+
+            # display check box if image is populated with at least 1 annotation
+            if self.show_check_box and file[1]:
                 icon = get_icon("checked")
-                item = QListWidgetItem(icon, fn)
+                item = QListWidgetItem(icon, filename)
             else:
-                item = QListWidgetItem(fn)
+                item = QListWidgetItem(filename)
             self.image_list.addItem(item)
         if self.image_list.count() > 0:
             self.image_list.setCurrentRow(img_idx)
@@ -177,3 +177,16 @@ class FileViewingWidget(QWidget):
                 item.setHidden(True)
             else:
                 item.setHidden(False)
+
+
+class SettingList(QListWidget):
+    def __init__(self, settings):
+        super(SettingList, self).__init__()
+        self.setSpacing(5)
+        self.setStyleSheet(SETTING_STYLESHEET)
+        for setting in settings:
+            item = QListWidgetItem(setting[0])
+            checked = Qt.Checked if setting[1] else Qt.Unchecked
+            item.setCheckState(checked)
+            item.setToolTip(setting[2])
+            self.addItem(item)

@@ -46,3 +46,9 @@ TAB_STYLESHEET = """ QTabWidget::pane {
                      font: bold;
                      }
                      """
+
+SETTING_STYLESHEET = """ QListWidget::item {
+                         color: black;
+                         background-color:transparent;
+                         }
+                         """

@@ -21,6 +21,7 @@ class Shape(QGraphicsObject):
     mode_changed = pyqtSignal(int)
     deleted = pyqtSignal()
     drawingDone = pyqtSignal()
+    sChange = pyqtSignal(int)
 
     @dataclass
     class ShapeMode:
@@ -136,12 +137,14 @@ class Shape(QGraphicsObject):
         menu.addAction(action)
 
         self.setSelected(True)
+        self.selected.emit()
         menu.exec(pos)
 
     @pyqtSlot(QGraphicsSceneMouseEvent)
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
         if self.contains(event.pos()):
             self.setSelected(True)
+            self.selected.emit()
             self.clicked.emit(event)
         else:
             event.ignore()
@@ -161,6 +164,7 @@ class Shape(QGraphicsObject):
             self.vertices.translate(self.pos())  # shift actual points to new location
             self.setPos(0, 0)  # reset the anchor to line up with the original origin
             self.set_mode(Shape.ShapeMode.FIXED)
+            self.sChange.emit(2)
         elif self.mode == Shape.ShapeMode.CREATE:
             self.ungrabMouse()
             self.is_closed_path = True
@@ -223,10 +227,10 @@ class Shape(QGraphicsObject):
 
     def setSelected(self, selected: bool):
         QGraphicsItem.setSelected(self, selected)
-        if self.isSelected():
+        """if self.isSelected():
             self.selected.emit()
         else:
-            self.deselected.emit()
+            self.deselected.emit()"""
 
     def check_displacement(self, displacement: QPointF) -> QPointF:
         """This function checks whether the bounding rect of the current shape exceeds the image if the

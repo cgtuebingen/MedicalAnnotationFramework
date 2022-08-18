@@ -5,17 +5,17 @@ from dataclasses import dataclass
 
 from seg_utils.utils.qt import colormap_rgb
 from seg_utils.ui.shape import Shape
-from seg_utils.ui.dialogs import NewLabelDialog, DeleteShapeMessageBox, DeleteClassMessageBox
+from seg_utils.ui.dialogs import NewLabelDialog, DeleteShapeMessageBox
 
 
 class AnnotationGroup(QGraphicsObject):
     """ A group for managing annotation objects and their signals with a scene """
     item_highlighted = pyqtSignal(Shape)
     item_dehighlighted = pyqtSignal(Shape)
-    # item_clicked = pyqtSignal(Shape, QGraphicsSceneMouseEvent)
     updateShapes = pyqtSignal(list)
-    shapeSelected = pyqtSignal(int)
+    shapeSelected = pyqtSignal(Shape)
     sLabelClassDeleted = pyqtSignal(str)
+    sChange = pyqtSignal(int)
 
     @dataclass
     class AnnotationMode:
@@ -69,10 +69,16 @@ class AnnotationGroup(QGraphicsObject):
             new_id = 0 if not self.annotations else max(self.annotations.keys()) + 1
             self.annotations[new_id] = shape
             shape.selected.connect(self.shape_selected)
-            shape.deleted.connect(lambda: self.delete_shape(shape))
+            shape.deleted.connect(lambda: self.remove_shapes(shape))
             shape.mode_changed.connect(self.shape_mode_changed)
             shape.drawingDone.connect(self.set_label)
+            shape.sChange.connect(self.sChange.emit)
             self.update()
+
+    def deselect_all(self):
+        """deselects all shapes"""
+        for shape in self.annotations.values():
+            shape.setSelected(False)
 
     def remove_shapes(self, shapes: Union[Shape, List[Shape]]):
         """
@@ -83,13 +89,19 @@ class AnnotationGroup(QGraphicsObject):
         if shapes is None:
             return
         if isinstance(shapes, Shape):
+            dlg = DeleteShapeMessageBox(shapes.label)
+            dlg.exec()
+            if dlg.result() != QMessageBox.Ok:
+                return
             shapes = [shapes]
+            self.sChange.emit(1)
         ids_to_remove = []
         for shape_id in self.annotations:
             if self.annotations[shape_id] in shapes:
                 ids_to_remove.append(shape_id)
-                self.annotations[shape_id].setParentItem(None)
+                self.annotations[shape_id].deleteLater()
         [(self.annotations[x].disconnect(), self.annotations.pop(x)) for x in ids_to_remove]
+        self.updateShapes.emit(list(self.annotations.values()))
 
     def clear(self):
         """
@@ -98,43 +110,13 @@ class AnnotationGroup(QGraphicsObject):
         """
         self.remove_shapes(list(self.annotations.values()))
 
-    def delete_label_class(self, label_class: str):
-        """searches for all labels with the given label_class and removes them (after user consent)"""
-        dlg = DeleteClassMessageBox(label_class)
-        dlg.exec()
-        if dlg.answer != 0:
-            labels_to_remove = list()
-            for lbl in self.annotations.values():
-                if lbl.label == label_class:
-                    labels_to_remove.append(lbl)
-            self.remove_shapes(labels_to_remove)
-            self.update_annotations(list(self.annotations.values()))
-            if dlg.answer == 2:
-                self.sLabelClassDeleted.emit(label_class)
-
-    def delete_shape(self, shape: Shape):
-        """in-between function to open a dialog and let user confirm to delete the shape"""
-        dlg = DeleteShapeMessageBox(shape.label)
-        if dlg.answer == 1:
-            self.remove_shapes(shape)
-            self.update_annotations(list(self.annotations.values()))
-
     def shape_selected(self):
         """gets the index of the selected shape and emits it"""
         shape = self.sender()
-        result = -1
         for ann_id, ann in self.annotations.items():
-            if ann == shape:
-                result = ann_id
-            else:
+            if ann != shape:
                 ann.setSelected(False)
-        self.shapeSelected.emit(result)
-
-    def label_selected(self, idx: int):
-        """sets the annotation with the corresponding index selected"""
-        for annotation in self.annotations.values():
-            annotation.setSelected(False)
-        self.annotations[idx].setSelected(True)
+        self.shapeSelected.emit(shape)
 
     @pyqtSlot(int)
     def shape_mode_changed(self, mode: Union[int, Shape.ShapeMode]):
@@ -159,14 +141,15 @@ class AnnotationGroup(QGraphicsObject):
             self.temp_shape.label = label
             self.temp_shape.set_mode(Shape.ShapeMode.FIXED)
             self.updateShapes.emit(list(self.annotations.values()))
+            self.sChange.emit(0)
 
         # if user entered no label, remove shape
         else:
-            self.remove_shapes(self.temp_shape)
-            self.scene().removeItem(self.temp_shape)
+            self.remove_shapes([self.temp_shape])
+            # self.scene().removeItem(self.temp_shape)
 
         # in any case, remove temp shape reference
-        self.temp_shape = None
+        # self.temp_shape = None
 
     def set_mode(self, mode: Union[AnnotationMode, int]):
         self.mode = mode

@@ -3,14 +3,19 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 from pathlib import Path
+from dataclasses import dataclass
 
 from seg_utils.ui.image_display import CenterDisplayWidget
 from seg_utils.ui.toolbar import Toolbar
-from seg_utils.ui.dialogs import SelectPatientDialog, CloseMessageBox, DeleteFileMessageBox
+from seg_utils.ui.dialogs import (SelectPatientDialog, CloseMessageBox, DeleteFileMessageBox,
+                                  ForgotToSaveMessageBox, SettingDialog, ProjectHandlerDialog)
 from seg_utils.ui.menu_bar import MenuBar
 from seg_utils.ui.list_widgets import FileViewingWidget, LabelsViewingWidget
 from seg_utils.ui.tree_widget import TreeWidget
+from seg_utils.ui.welcome_screen import WelcomeScreen
 from seg_utils.utils.qt import colormap_rgb, get_icon
+from seg_utils.utils.project_structure import check_environment, Structure
+from seg_utils.macros.macros import Macros
 
 NUM_COLORS = 25
 
@@ -18,12 +23,23 @@ NUM_COLORS = 25
 class LabelingMainWindow(QMainWindow):
     """The main window for the application"""
 
+    sCreateNewProject = pyqtSignal(str, dict)
+    sOpenProject = pyqtSignal(str)
     sAddPatient = pyqtSignal(str)
     sAddFile = pyqtSignal(str, str)
     sRequestUpdate = pyqtSignal(int)
     sRequestCheckForChanges = pyqtSignal(int, int)
-    sSaveToDatabase = pyqtSignal(list, int)#
+    sSaveToDatabase = pyqtSignal(list, int)
     sDeleteFile = pyqtSignal(str, int)
+    sUpdateSettings = pyqtSignal(list)
+    sDisconnect = pyqtSignal()
+
+    @dataclass
+    class Changes:
+        ANNOTATION_ADDED: int = 0
+        ANNOTATION_DELETED: int = 1
+        ANNOTATION_SHIFTED: int = 2
+        COMMENT: int = 3
 
     def __init__(self):
         super(LabelingMainWindow, self).__init__()
@@ -46,15 +62,17 @@ class LabelingMainWindow(QMainWindow):
         self.center_frame.layout().setContentsMargins(0, 0, 0, 0)
         self.center_frame.layout().setSpacing(0)
 
-        # default widget while no project has been loaded
+        self.welcome_screen = WelcomeScreen()
+        self.image_display = CenterDisplayWidget()
+
+        # default widget when no images exist in the project
         self.no_files = QLabel()
         self.no_files.setText("No files to display")
         self.no_files.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.image_display = CenterDisplayWidget()
-        self.image_display.setHidden(True)
 
         self.center_frame.layout().addWidget(self.image_display)
         self.center_frame.layout().addWidget(self.no_files)
+        self.center_frame.layout().addWidget(self.welcome_screen)
 
         # Right Menu
         self.right_menu_widget = QWidget()
@@ -91,6 +109,7 @@ class LabelingMainWindow(QMainWindow):
 
         self.menubar = MenuBar(self)
         self.setMenuBar(self.menubar)
+        self.menubar.setVisible(True)
 
         self.statusbar = QStatusBar()
         self.setStatusBar(self.statusbar)
@@ -99,50 +118,101 @@ class LabelingMainWindow(QMainWindow):
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.toolBar)
         self.toolBar.init_margins()
         self.toolBar.init_actions(self)
-        self.toolBar.setHidden(True)
 
         # TODO: if possible, get rid of such variables
         self.img_idx = 0
-        self.closeMe = False
+        self.changes = list()
+        self.autoSave = False
+
+        self.macros = Macros()
+        self.set_welcome_screen(True)
 
         # connect signals
         self.image_display.sRequestSave.connect(self.save_to_database)
-        self.image_display.sChangeFile.connect(self.change_file)
         self.image_display.image_viewer.sNextFile.connect(self.next_image)
         self.image_display.annotations.updateShapes.connect(self.polygons.update_polygons)
         self.image_display.annotations.shapeSelected.connect(self.polygons.shape_selected)
-        self.labels_list.label_list.sDeleteClass.connect(self.image_display.annotations.delete_label_class)
+        self.image_display.annotations.sChange.connect(self.change_detected)
         self.file_list.sDeleteFile.connect(self.delete_file)
-        self.polygons.sItemClicked.connect(self.image_display.annotations.label_selected)
-        self.polygons.sUpdateLabels.connect(self.image_display.annotations.update_annotations)
-        self.menubar.sRequestSave.connect(self.save_to_database)
+        self.file_list.sRequestFileChange.connect(self.file_list_item_clicked)
+        self.polygons.sItemsDeleted.connect(self.image_display.annotations.remove_shapes)
+        self.polygons.sDeselectAll.connect(self.image_display.annotations.deselect_all)
+        self.polygons.sChange.connect(self.change_detected)
         self.toolBar.sSetDrawingMode.connect(self.image_display.annotations.set_mode)
+        self.macros.sEnableTools.connect(self.menubar.enable_tools)
 
-    def change_file(self, img_idx: int):
-        """changes the displayed file to the file with the specified index
-        a img_idx of -1 indicates a closing request"""
-        if img_idx == -1:
+        self.menubar.sRequestSave.connect(self.save_to_database)
+        self.menubar.sNewProject.connect(self.new_project)
+        self.menubar.sOpenProject.connect(self.open_project)
+        self.menubar.sCloseProject.connect(self.close_project)
+        self.menubar.sExampleProject.connect(self.macros.example_project)
+
+    def apply_settings(self, settings: list):
+        """applies the settings"""
+        for setting in settings:
+            if setting[0] == "Autosave on file change":
+                self.autoSave = setting[1]
+            elif setting[0] == "Mark annotated files":
+                self.file_list.show_check_box = setting[1]
+                self.sRequestUpdate.emit(self.img_idx)
+            elif setting[0] == "Display patient name":
+                self.image_display.patient_label.setVisible(setting[1])
+        self.sUpdateSettings.emit(settings)
+
+    def change_detected(self, change: int):
+        """appends the detected change to the changes list"""
+        if change not in self.changes:
+            self.changes.append(change)
+
+    def check_for_changes(self) -> bool:
+        """ asks whether user wants to save; returns False on cancellation"""
+        if self.changes:
+            dlg = ForgotToSaveMessageBox()
+            dlg.exec()
+            if dlg.result() == QMessageBox.AcceptRole or dlg.result() == QMessageBox.DestructiveRole:
+                if dlg.result() == QMessageBox.AcceptRole:
+                    self.save_to_database()
+                else:
+                    self.changes.clear()
+                return True
+            else:
+                return False
+        else:
+            return True
+
+    def closeEvent(self, event):
+        if self.check_for_changes():
             dlg = CloseMessageBox()
             dlg.exec()
             if dlg.result() == QMessageBox.AcceptRole:
-                self.closeMe = True
-        else:
-            self.img_idx = img_idx
-            self.sRequestUpdate.emit(img_idx)
+                event.accept()
+            else:
+                event.ignore()
 
-    def closeEvent(self, event, final_close: bool = False):
-        self.sRequestCheckForChanges.emit(self.img_idx, -1)
-        if self.closeMe:
-            event.accept()
-        else:
-            event.ignore()
+    def close_project(self):
+        """this function closes the project, but not the program itself - return to the welcome screen"""
+        if self.check_for_changes():
+            self.set_welcome_screen(True)
+            self.menubar.enable_tools(["New Project", "Open Project", "Quit Program", "Example Project"])
+            self.sDisconnect.emit()
 
     def delete_file(self, filename):
+        """asks for user consent, emits a signal to permanently delete a project file"""
         dlg = DeleteFileMessageBox(filename)
         dlg.exec()
 
         if dlg.result() == QMessageBox.Ok:
             self.sDeleteFile.emit(filename, self.img_idx)
+
+    def file_list_item_clicked(self, new_img_idx: int):
+        """switches to the image clicked by the user"""
+        if self.autoSave:
+            self.save_to_database()
+            self.img_idx = new_img_idx
+            self.sRequestUpdate.emit(new_img_idx)
+        elif self.check_for_changes():
+            self.img_idx = new_img_idx
+            self.sRequestUpdate.emit(new_img_idx)
 
     def hide_toolbar(self):
         """hides or shows the toolbar"""
@@ -165,32 +235,90 @@ class LabelingMainWindow(QMainWindow):
                                                       directory=str(Path.home()),)
             # options = QFileDialog.DontUseNativeDialog
             if filepath:
-                self.sAddFile.emit(filepath, patient)
-                self.sRequestUpdate.emit(self.img_idx)
+                if self.check_for_changes():
+                    self.sAddFile.emit(filepath, patient)
+                    self.sRequestUpdate.emit(self.img_idx)
+
+    def new_project(self):
+        """executes a dialog prompting the user to enter information about the new project"""
+        if self.check_for_changes():
+            dlg = ProjectHandlerDialog()
+            dlg.exec()
+            if dlg.project_path:
+                database_path = dlg.project_path + Structure.DATABASE_DEFAULT_NAME
+                self.sCreateNewProject.emit(database_path, dlg.files)
+                self.menubar.enable_tools()
+
+    def open_project(self):
+        """executes a dialog prompting the user to select a database"""
+        if self.check_for_changes():
+            database, _ = QFileDialog.getOpenFileName(self,
+                                                      caption="Select Database",
+                                                      directory=str(Path.home()),
+                                                      filter="Database (*.db)",
+                                                      options=QFileDialog.DontUseNativeDialog)
+            if database:
+
+                # make sure the database is inside a project environment
+                if check_environment(str(Path(database).parents[0])):
+                    self.sOpenProject.emit(database)
+                    self.menubar.enable_tools()
+                else:
+                    msg = QMessageBox()
+                    msg.setIcon(QMessageBox.Information)
+                    msg.setText("Invalid Project Location")
+                    msg.setStandardButtons(QMessageBox.Ok)
+                    msg.exec()
+
+    def open_settings(self, settings: list):
+        """opens up the settings dialog, sends signal to save them"""
+        dlg = SettingDialog(settings)
+        dlg.exec()
+        s = dlg.settings
+        if dlg.settings:
+            self.apply_settings(dlg.settings)
 
     def next_image(self, direction: int):
+        """proceeds to the next/previous image"""
         if not self.image_display.is_empty():
             new_img_idx = (self.img_idx + direction) % self.file_list.image_list.count()
-            self.sRequestCheckForChanges.emit(self.img_idx, new_img_idx)
+            if self.autoSave:
+                self.save_to_database()
+                self.img_idx = new_img_idx
+                self.sRequestUpdate.emit(new_img_idx)
+            elif self.check_for_changes():
+                self.img_idx = new_img_idx
+                self.sRequestUpdate.emit(new_img_idx)
 
     def save_to_database(self):
+        """stores the current state of the image to the database"""
         annotations = list(self.image_display.annotations.annotations.values())
+        self.changes.clear()
         self.sSaveToDatabase.emit(annotations, self.img_idx)
 
-    def set_default(self, is_empty: bool):
+    def set_no_files_screen(self, b: bool):
         """ either hides the default label or the image display"""
-        self.image_display.setHidden(is_empty)
-        self.no_files.setHidden(not is_empty)
+        self.image_display.setHidden(b)
+        self.no_files.setHidden(not b)
+
+    def set_welcome_screen(self, b: bool):
+        """sets or removes the welcome screen displayed when no project is opened"""
+        self.image_display.setHidden(b)
+        self.no_files.setHidden(b)
+        self.toolBar.setHidden(b)
+        self.right_menu_widget.setHidden(b)
+        self.welcome_screen.setHidden(not b)
 
     def update_window(self, files: list, img_idx, patient: str, classes: list, labels: list):
+        """main updating function: all necessary information is passed to the main window"""
         self.img_idx = img_idx
         color_map, new_color = colormap_rgb(n=NUM_COLORS)
         self.labels_list.label_list.update_with_classes(classes, color_map)
         self.file_list.update_list(files, self.img_idx)
-
+        self.set_welcome_screen(False)
         if files:
-            self.set_default(False)
-            current_labels = self.image_display.init_image(files[self.img_idx], patient, labels, classes)
+            self.set_no_files_screen(False)
+            current_labels = self.image_display.init_image(files[self.img_idx][0], patient, labels, classes)
             self.polygons.update_polygons(current_labels)
         else:
-            self.set_default(True)
+            self.set_no_files_screen(True)
