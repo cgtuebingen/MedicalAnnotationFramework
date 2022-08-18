@@ -16,6 +16,7 @@ from seg_utils.ui.welcome_screen import WelcomeScreen
 from seg_utils.utils.qt import colormap_rgb, get_icon
 from seg_utils.utils.project_structure import check_environment, Structure
 from seg_utils.macros.macros import Macros
+from seg_utils.macros.macros_dialogs import PreviewDatabaseDialog
 
 NUM_COLORS = 25
 
@@ -289,6 +290,11 @@ class LabelingMainWindow(QMainWindow):
             elif self.check_for_changes():
                 self.img_idx = new_img_idx
                 self.sRequestUpdate.emit(new_img_idx)
+
+    def preview_database(self, headers: list, content: list):
+        """displays the database content of the specified table in a dialog"""
+        dlg = PreviewDatabaseDialog(headers, content)
+        dlg.exec()
 
     def save_to_database(self):
         """stores the current state of the image to the database"""

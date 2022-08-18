@@ -31,7 +31,10 @@ class Macros(QObject):
 
             # create a project with limited functions
             self.sNewProject.emit(database_path, files_dict)
-            self.sEnableTools.emit(["Quit Program", "Preferences", "Close Project", "Save"])
+            self.sEnableTools.emit(["Quit Program", "Preferences",
+                                    "Close Project", "Save",
+                                    "Annotations", "Images",
+                                    "Patients", "Labels"])
 
             project_path = str(Path(database_path).parents[0])
             msg = ExampleProjectMessageBox(project_path)

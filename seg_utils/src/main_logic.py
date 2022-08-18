@@ -29,6 +29,7 @@ class MainLogic:
         # main window's menubar -> database
         self.main_window.menubar.sRequestImport.connect(self.database.send_import_info)
         self.main_window.menubar.sRequestSettings.connect(self.database.open_settings)
+        self.main_window.menubar.sPreviewDatabase.connect(self.database.preview_database)
 
         # macros -> database
         self.main_window.macros.sNewProject.connect(self.database.initialize)
@@ -38,6 +39,7 @@ class MainLogic:
         self.database.sImportFile.connect(self.main_window.import_file)
         self.database.sOpenSettings.connect(self.main_window.open_settings)
         self.database.sApplySettings.connect(self.main_window.apply_settings)
+        self.database.sPreviewDatabase.connect(self.main_window.preview_database)
 
     def disconnect(self):
         """disconnects the main window from the database when user closes a project

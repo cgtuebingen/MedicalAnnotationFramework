@@ -14,6 +14,7 @@ class MenuBar(QMenuBar):
     sRequestSave = pyqtSignal()
     sRequestSettings = pyqtSignal()
     sExampleProject = pyqtSignal()
+    sPreviewDatabase = pyqtSignal(str)
 
     def __init__(self, parent: QMainWindow):
         super(MenuBar, self).__init__()
@@ -24,6 +25,7 @@ class MenuBar(QMenuBar):
         self.project = QMenu("Project")
         self.edit = QMenu("Edit")
         self.macros = QMenu("Macros")
+        self.preview = QMenu("Preview Database")
 
         action_new_project = Action(self,
                                     "New Project",
@@ -69,6 +71,18 @@ class MenuBar(QMenuBar):
         macros_example_project = Action(self,
                                         "Example Project",
                                         self.sExampleProject.emit)
+        macros_preview_annotations = Action(self,
+                                            "Annotations",
+                                            lambda: self.sPreviewDatabase.emit("Annotations"))
+        macros_preview_images = Action(self,
+                                       "Images",
+                                       lambda: self.sPreviewDatabase.emit("Images"))
+        macros_preview_patients = Action(self,
+                                         "Patients",
+                                         lambda: self.sPreviewDatabase.emit("Patients"))
+        macros_preview_classes = Action(self,
+                                        "Labels",
+                                        lambda: self.sPreviewDatabase.emit("Labels"))
 
         self.actions = [action_new_project,
                         action_open_project,
@@ -77,7 +91,11 @@ class MenuBar(QMenuBar):
                         action_import,
                         action_quit,
                         action_settings,
-                        macros_example_project]
+                        macros_example_project,
+                        macros_preview_annotations,
+                        macros_preview_images,
+                        macros_preview_patients,
+                        macros_preview_classes]
 
         self.maf.addActions((action_settings,
                              action_quit))
@@ -89,6 +107,11 @@ class MenuBar(QMenuBar):
         self.edit.addActions((action_save,
                               action_import))
         self.macros.addAction(macros_example_project)
+        self.preview.addActions((macros_preview_annotations,
+                                 macros_preview_images,
+                                 macros_preview_patients,
+                                 macros_preview_classes))
+        self.macros.addMenu(self.preview)
 
         self.addMenu(self.maf)
         self.addMenu(self.project)

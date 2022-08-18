@@ -81,6 +81,7 @@ class SQLiteDatabase(QObject):
     sImportFile = pyqtSignal(list)
     sOpenSettings = pyqtSignal(list)
     sApplySettings = pyqtSignal(list)
+    sPreviewDatabase = pyqtSignal(list, list)
 
     def __init__(self):
         super(SQLiteDatabase, self).__init__()
@@ -329,6 +330,14 @@ class SQLiteDatabase(QObject):
             file = self.location + Structure.IMAGES_DIR + file
             result.append((file, populated))
         return result
+
+    def preview_database(self, table_name: str):
+        """collects all information from the specified table and emits a signal"""
+        with self.connection:
+            headers = self.cursor.execute("PRAGMA table_info({})".format(table_name)).fetchall()
+            headers = [header[1] for header in headers]
+            content = self.cursor.execute("SELECT * FROM {}".format(table_name)).fetchall()
+        self.sPreviewDatabase.emit(headers, content)
 
     def save(self, current_labels: list, img_idx: int):
         files = self.get_images()
