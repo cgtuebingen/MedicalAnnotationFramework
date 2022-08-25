@@ -11,7 +11,10 @@ and allows for creating annotation projects where you can:
 2. assign patient names or IDs
 3. mark areas in the image and assign labels to them
 
-<img src="seg_utils/examples/images/Demo2.png" style=" width:60px ; height:60px "   alt="whatever">
+![Demo 2](seg_utils/examples/images/Demo2.png "Demo 2")
+![Demo 3](seg_utils/examples/images/Demo3.png "Demo 3")
+![Demo 4](seg_utils/examples/images/Demo4.png "Demo 4")
+
 
 
 Over time, it is therefore possible to create extensive databases of annotated medical images, 
