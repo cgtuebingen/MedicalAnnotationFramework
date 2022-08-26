@@ -11,9 +11,9 @@ and allows for creating annotation projects where you can:
 2. assign patient names or IDs
 3. mark areas in the image and assign labels to them
 
-<img alt="Demo 2" src="seg_utils/examples/images/Demo2.png" title="Demo 2" width="150"/>
-<img alt="Demo 3" src="seg_utils/examples/images/Demo3.png" title="Demo 3"/>
-<img alt="Demo 4" src="seg_utils/examples/images/Demo4.png" title="Demo 4"/>
+<img alt="Demo 2" src="seg_utils/examples/images/Demo2.png" title="Demo 2" width="850"/>
+<img alt="Demo 3" src="seg_utils/examples/images/Demo3.png" title="Demo 3" width="850"/>
+<img alt="Demo 4" src="seg_utils/examples/images/Demo4.png" title="Demo 4" width="850"/>
 
 
 
