@@ -27,6 +27,26 @@ is refined as well as the saving.
 
 The underlying database is realized by [SQL](https://www.sqlite.org/index.html) which provides simple yet effective storing of the annotations.
 
+## Usage
+### First Project
+After starting the software, it is possible to create an example project to get you started. 
+Select "Macros -> Example" Project in the Menubar to do so.
+
+### Creating Projects
+Select "New Project" in the Menubar to open up the project manager. 
+There, you can select a project directory and add your first images.
+To open this project in your next session, click "Open Project" and navigate to your project directory. 
+After selecting the database file, the project will open up again.
+
+### Annotations
+1. Open up the Toolbar on the left side
+2. Select the desired drawing tool
+3. Draw an area inside the image
+4. Assign a label
+
+### Database
+Every time you save your changes, the annotations will be stored in the database. 
+Click "Macros -> Preview Database" to preview the current version of the database and see how it fills up with every new annotation.
 
 ## Functionality
 ### Implemented Features
