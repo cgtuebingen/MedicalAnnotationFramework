@@ -32,7 +32,7 @@ class MainLogic:
         self.main_window.menubar.sPreviewDatabase.connect(self.database.preview_database)
 
         # macros -> database
-        self.main_window.macros.sNewProject.connect(self.database.initialize)
+        # self.main_window.macros.sNewProject.connect(self.database.initialize)
 
         # database -> main window
         self.database.sUpdate.connect(self.main_window.update_window)

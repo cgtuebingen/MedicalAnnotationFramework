@@ -141,6 +141,8 @@ class LabelingMainWindow(QMainWindow):
         self.polygons.sChange.connect(self.change_detected)
         self.toolBar.sSetDrawingMode.connect(self.image_display.annotations.set_mode)
         self.macros.sEnableTools.connect(self.menubar.enable_tools)
+        self.macros.sNewProject.connect(self.sCreateNewProject.emit)
+        self.macros.sSetWelcomeScreen.connect(self.set_welcome_screen)
 
         self.menubar.sRequestSave.connect(self.save_to_database)
         self.menubar.sNewProject.connect(self.new_project)
@@ -248,6 +250,7 @@ class LabelingMainWindow(QMainWindow):
             if dlg.project_path:
                 database_path = dlg.project_path + Structure.DATABASE_DEFAULT_NAME
                 self.sCreateNewProject.emit(database_path, dlg.files)
+                self.set_welcome_screen(False)
                 self.menubar.enable_tools()
 
     def open_project(self):
@@ -263,6 +266,7 @@ class LabelingMainWindow(QMainWindow):
                 # make sure the database is inside a project environment
                 if check_environment(str(Path(database).parents[0])):
                     self.sOpenProject.emit(database)
+                    self.set_welcome_screen(False)
                     self.menubar.enable_tools()
                 else:
                     msg = QMessageBox()
@@ -321,7 +325,6 @@ class LabelingMainWindow(QMainWindow):
         color_map, new_color = colormap_rgb(n=NUM_COLORS)
         self.labels_list.label_list.update_with_classes(classes, color_map)
         self.file_list.update_list(files, self.img_idx)
-        self.set_welcome_screen(False)
         if files:
             self.set_no_files_screen(False)
             current_labels = self.image_display.init_image(files[self.img_idx][0], patient, labels, classes)

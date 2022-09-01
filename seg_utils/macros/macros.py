@@ -9,6 +9,7 @@ import os
 class Macros(QObject):
     sNewProject = pyqtSignal(str, dict)
     sEnableTools = pyqtSignal(list)
+    sSetWelcomeScreen = pyqtSignal(bool)
 
     def __init__(self):
         super(Macros, self).__init__()
@@ -30,6 +31,7 @@ class Macros(QObject):
                 files_dict[files[i]] = patient
 
             # create a project with limited functions
+            self.sSetWelcomeScreen.emit(False)
             self.sNewProject.emit(database_path, files_dict)
             self.sEnableTools.emit(["Quit Program", "Preferences",
                                     "Close Project", "Save",
