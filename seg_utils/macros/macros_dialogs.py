@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QMessageBox
-from PyQt5.QtCore import QSize
+from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QMessageBox, QTableWidget, QTableWidgetItem
+from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QFont
 
 from pathlib import Path
@@ -15,11 +15,10 @@ class ExampleProjectDialog(QDialog):
 
         self.info = QLabel()
         self.info.setWordWrap(True)
-        self.info.setText("Welcome to your first project. \n "
-                          "Click the button below to open up an example project")
+        self.info.setText("Click the button below to create a new project with some example images \n")
         self.info.setFont(QFont("Helvetica", 15, QFont.Bold))
 
-        self.button = QPushButton("SHow me an example project")
+        self.button = QPushButton("Show me an example project")
         self.button.setStyleSheet(BUTTON_STYLESHEET)
         self.button.clicked.connect(self.finish)
 
@@ -45,3 +44,39 @@ class ExampleProjectMessageBox(QMessageBox):
                                 "Feel free to click around and see what can be done.")
         self.setIcon(QMessageBox.Information)
 
+
+class PreviewDatabaseDialog(QDialog):
+    """displays the content of the specified database table"""
+
+    def __init__(self, headers: list, content: list):
+        super(PreviewDatabaseDialog, self).__init__()
+        self.setLayout(QVBoxLayout())
+
+        num_rows = len(content)
+        num_cols = len(headers)
+
+        self.table = QTableWidget()
+        self.table.setRowCount(num_rows)
+        self.table.setColumnCount(num_cols)
+        self.table.setHorizontalHeaderLabels(headers)
+
+        for i in range(num_rows):
+            row = content[i]
+            for j in range(num_cols):
+                cell = row[j]
+                if isinstance(cell, bytes):
+                    cell = "BLOB"
+                else:
+                    cell = str(cell)
+                item = QTableWidgetItem(cell)
+                self.table.setItem(i, j, item)
+
+        self.button = QPushButton("Close")
+        self.button.setStyleSheet(BUTTON_STYLESHEET)
+        self.button.setFixedSize(80, 60)
+        self.button.pressed.connect(self.close)
+
+        self.layout().addWidget(self.table)
+        self.layout().addWidget(self.button)
+        self.layout().setAlignment(self.button, Qt.AlignmentFlag.AlignCenter)
+        self.setMinimumSize(self.table.size())
