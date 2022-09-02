@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QAction
-from seg_utils.utils.qt import get_icon
+from PyQt6.QtGui import *
+from taplt.utils.qt import get_icon
 
 
 class Action(QAction):

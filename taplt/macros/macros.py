@@ -1,6 +1,6 @@
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import *
 
-from seg_utils.macros.macros_dialogs import ExampleProjectDialog, ExampleProjectMessageBox
+from taplt.macros.macros_dialogs import ExampleProjectDialog, ExampleProjectMessageBox
 
 from pathlib import Path
 import os
@@ -22,7 +22,7 @@ class Macros(QObject):
             database_path = str(Path.home()) + "/ExampleProject/database.db"
 
             # collect all example files and assign a patient name
-            examples_path = str(Path.cwd()) + "/examples/images/"
+            examples_path = os.path.dirname(__file__) + "/examples/images/"
             files = os.listdir(examples_path)
             files = [examples_path + file for file in files if not file.startswith(".")]
             files_dict = dict()

@@ -4,16 +4,16 @@ The underlying code is designed in a way that it can be integrated into a machin
 Therefore, the framework offers many possibilities regarding not only medicine but also research and AI modelling.
 
 The application is based on
-[PyQT 5.15](https://doc.qt.io/qtforpython/ "PyQT documentation") 
+[PyQT6](https://doc.qt.io/qtforpython/ "PyQT documentation") 
 and allows for creating annotation projects where you can:
 
 1. import your own images
 2. assign patient names or IDs
 3. mark areas in the image and assign labels to them
 
-<img alt="Demo 2" src="seg_utils/examples/demo/Demo2.png" title="Demo 2" width="650"/>
-<img alt="Demo 3" src="seg_utils/examples/demo/Demo3.png" title="Demo 3" width="650"/>
-<img alt="Demo 4" src="seg_utils/examples/demo/Demo4.png" title="Demo 4" width="650"/>
+<img alt="Demo 2" src="taplt/macros/examples/demo/Demo2.png" title="Demo 2" width="650"/>
+<img alt="Demo 3" src="taplt/macros/examples/demo/Demo3.png" title="Demo 3" width="650"/>
+<img alt="Demo 4" src="taplt/macros/examples/demo/Demo4.png" title="Demo 4" width="650"/>
 
 
 
@@ -48,24 +48,22 @@ After selecting the database file, the project will open up again.
 Every time you save your changes, the annotations will be stored in the database. 
 Click "Macros -> Preview Database" to preview the current version of the database and see how it fills up with every new annotation.
 
-## Functionality
-### Implemented Features
-- tight SQL integration
-- efficient labeling
-- context menu
-
-### To-Do and requested features
-- export options for COCO/VOC Segmentation 
-- undo/redo buttons to revert to previous states
-
 ## Requirements
 - Ubuntu / macOS / Windows
-- Python3
-- [PyQt5](https://doc.qt.io/qtforpython/)
+- Python 3
 
 ## Installation
 
-something with setup.py ? I don't really know
+```bash
+clone https://github.com/cgtuebingen/MedicalAnnotationFramework.git
+cd MedicalAnnotationFramework
+pip install .
+```
+
+Launch the app with:
+```bash
+python -m taplt
+```
 
 ## Acknowledgement
 This project was ported from its original creation by Nico Lösch at [segmentation_utils](https://github.com/nicoloesch/segmentation_utils), which was inspired by [labelme](https://github.com/wkentaro/labelme "Labelme Github").

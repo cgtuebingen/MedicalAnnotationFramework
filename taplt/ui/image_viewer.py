@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QGraphicsView
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtGui import *
+from PyQt6.QtCore import *
 
 
 class ImageViewer(QGraphicsView):
@@ -9,11 +9,11 @@ class ImageViewer(QGraphicsView):
     def __init__(self, *args):
         super(ImageViewer, self).__init__(*args)
         self.b_isEmpty = True
-        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
-        self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+        self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
         self.setMouseTracking(True)
 
         # Protected Item
@@ -47,14 +47,14 @@ class ImageViewer(QGraphicsView):
         if not self.b_isEmpty:
             if event.key() == Qt.Key.Key_Control:
                 self._enableZoomPan = True
-                self.setDragMode(QGraphicsView.ScrollHandDrag)
-            elif event.key() == Qt.Key_Left:
+                self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+            elif event.key() == Qt.Key.Key_Left:
                 self.sNextFile.emit(-1)
-            elif event.key() == Qt.Key_Right:
+            elif event.key() == Qt.Key.Key_Right:
                 self.sNextFile.emit(1)
 
     def keyReleaseEvent(self, event) -> None:
         if not self.b_isEmpty:
             if event.key() == Qt.Key.Key_Control:
                 self._enableZoomPan = False
-                self.setDragMode(QGraphicsView.NoDrag)
+                self.setDragMode(QGraphicsView.DragMode.NoDrag)

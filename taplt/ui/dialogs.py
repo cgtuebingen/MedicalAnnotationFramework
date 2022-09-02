@@ -1,14 +1,14 @@
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import QSize, QPoint, Qt
-from PyQt5.QtGui import QColor
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
 
 from typing import List
 from pathlib import Path
 import os
 
-from seg_utils.ui.list_widgets import LabelList, SettingList
-from seg_utils.utils.qt import get_icon
-from seg_utils.utils.stylesheets import BUTTON_STYLESHEET
+from taplt.ui.list_widgets import LabelList, SettingList
+from taplt.utils.qt import get_icon
+from taplt.utils.stylesheets import BUTTON_STYLESHEET
 
 
 class CloseMessageBox(QMessageBox):
@@ -16,9 +16,9 @@ class CloseMessageBox(QMessageBox):
         super(CloseMessageBox, self).__init__(*args)
 
         quit_button = QPushButton(get_icon('quit'), "Quit Program")
-        cancel_button = QPushButton(self.style().standardIcon(QStyle.SP_DialogCancelButton), "Cancel")
-        self.addButton(quit_button, QMessageBox.AcceptRole)
-        self.addButton(cancel_button, QMessageBox.RejectRole)
+        cancel_button = QPushButton(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton), "Cancel")
+        self.addButton(quit_button, QMessageBox.ButtonRole.AcceptRole)
+        self.addButton(cancel_button, QMessageBox.ButtonRole.RejectRole)
 
         self.setWindowTitle("Quit Program")
         self.setText("Are you sure you want to quit?")
@@ -40,7 +40,7 @@ class CommentDialog(QDialog):
         self.enter_comment.setText(self.comment)
 
         # Accept & cancel buttons
-        self.confirmation = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.confirmation = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         self.confirmation.accepted.connect(self.create_comment)
         self.confirmation.rejected.connect(self.close)
 
@@ -60,8 +60,8 @@ class DeleteAllMessageBox(QMessageBox):
 
         self.setText("You are about to delete all annotations.\nContinue?")
         self.setInformativeText("This will clear the image.\n\n")
-        self.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-        self.setIcon(QMessageBox.Question)
+        self.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+        self.setIcon(QMessageBox.Icon.Question)
 
 
 class DeleteClassMessageBox(QMessageBox):
@@ -70,8 +70,8 @@ class DeleteClassMessageBox(QMessageBox):
 
         self.setText("You are about to delete the '{}'-class.\nContinue?".format(class_name))
         self.setInformativeText("This will remove all occurrences of '{}' from the image.\n\n".format(class_name))
-        self.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-        self.setIcon(QMessageBox.Question)
+        self.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+        self.setIcon(QMessageBox.Icon.Question)
 
 
 class DeleteFileMessageBox(QMessageBox):
@@ -81,17 +81,17 @@ class DeleteFileMessageBox(QMessageBox):
         self.setText("You are about to delete the file \n {}".format(filename))
         self.setInformativeText("All annotations in this image will be lost.\n"
                                 "This operation can not be undone. \n Continue?")
-        self.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-        self.setIcon(QMessageBox.Warning)
+        self.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+        self.setIcon(QMessageBox.Icon.Warning)
 
 
 class DeleteShapeMessageBox(QMessageBox):
     def __init__(self, label: str, *args):
         super(DeleteShapeMessageBox, self).__init__(*args)
         self.setWindowTitle("Delete Annotation")
-        self.setIcon(QMessageBox.Question)
+        self.setIcon(QMessageBox.Icon.Question)
         self.setText("You are about to delete {}.\nContinue?".format(label))
-        self.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        self.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
 
 
 class ForgotToSaveMessageBox(QMessageBox):
@@ -99,16 +99,17 @@ class ForgotToSaveMessageBox(QMessageBox):
         super(ForgotToSaveMessageBox, self).__init__(*args)
 
         save_button = QPushButton(get_icon('save'), "Save Changes")
-        dismiss_button = QPushButton(self.style().standardIcon(QStyle.SP_DialogDiscardButton), "Dismiss Changes")
-        cancel_button = QPushButton(self.style().standardIcon(QStyle.SP_DialogCancelButton), "Cancel")
+        dismiss_button = QPushButton(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogDiscardButton),
+                                     "Dismiss Changes")
+        cancel_button = QPushButton(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton), "Cancel")
 
         self.setWindowTitle("Caution: Unsaved Changes")
         self.setText("Unsaved Changes: How do you want to progress?")
 
         # NOTE FOR SOME REASON THE ORDER IS IMPORTANT DESPITE THE ROLE - IDK WHY
-        self.addButton(save_button, QMessageBox.AcceptRole)
-        self.addButton(cancel_button, QMessageBox.RejectRole)
-        self.addButton(dismiss_button, QMessageBox.DestructiveRole)
+        self.addButton(save_button, QMessageBox.ButtonRole.AcceptRole)
+        self.addButton(cancel_button, QMessageBox.ButtonRole.RejectRole)
+        self.addButton(dismiss_button, QMessageBox.ButtonRole.DestructiveRole)
 
         if self.parentWidget():
             move_to_center(self, self.parentWidget().pos(), self.parentWidget().size())
@@ -135,12 +136,12 @@ class SelectionDialog(QDialog):
         # info label for when user is about to create a new class
         self.info = QLabel()
         self.info.setContentsMargins(0, 0, 0, 0)
-        self.info.setFrameShape(QFrame.NoFrame)
+        self.info.setFrameShape(QFrame.Shape.NoFrame)
         self.info.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # list widget with the already existing classes
         self.selection_list = selection_list
-        self.confirm = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.confirm = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
 
         # connect
         self.input.textChanged.connect(self.handle_shape_input)
@@ -273,8 +274,8 @@ class ProjectHandlerDialog(QDialog):
         self.added_files = QListWidget()
 
         # Accept & cancel buttons
-        self.confirmation = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        self.confirmation.button(QDialogButtonBox.Ok).setText("Create Project")
+        self.confirmation = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self.confirmation.button(QDialogButtonBox.StandardButton.Ok).setText("Create Project")
         self.confirmation.accepted.connect(self.check_path)
         self.confirmation.rejected.connect(self.close)
 
@@ -314,15 +315,15 @@ class ProjectHandlerDialog(QDialog):
             filepath, _ = QFileDialog.getOpenFileName(self,
                                                       caption="Select File",
                                                       directory=str(Path.home()),
-                                                      options=QFileDialog.DontUseNativeDialog)
+                                                      options=QFileDialog.Option.DontUseNativeDialog)
 
             # only care about the filename itself (not regarding its path), to make it easier to handle
             filename = os.path.basename(filepath)
             if self.exists(filename):
                 msg = QMessageBox()
-                msg.setIcon(QMessageBox.Information)
+                msg.setIcon(QMessageBox.Icon.Information)
                 msg.setText("The file\n{}\nalready exists.\nOverwrite?".format(filename))
-                msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+                msg.setStandardButtons(QMessageBox.ButtonRole.Ok | QMessageBox.ButtonRole.Cancel)
                 msg.accepted.connect(lambda: self.overwrite(filepath, filename, dlg.result))
                 msg.exec()
             elif filename:
@@ -341,10 +342,10 @@ class ProjectHandlerDialog(QDialog):
 
                 # confirmation dialog; directory will be cleared if user proceeds
                 msg = QMessageBox()
-                msg.setIcon(QMessageBox.Information)
+                msg.setIcon(QMessageBox.Icon.Information)
                 msg.setText("The directory\n{}\nis not empty.".format(project_path))
                 msg.setInformativeText("All existing files in that directory will be deleted.\nProceed?")
-                msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+                msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
                 msg.accepted.connect(lambda: self.create_project(project_path))
                 msg.exec()
             else:
@@ -394,12 +395,12 @@ class ProjectHandlerDialog(QDialog):
 
         # dialog to select a directory in the user's environment
         dialog = QFileDialog()
-        dialog.setOption(QFileDialog.DontUseNativeDialog)
-        dialog.setFileMode(QFileDialog.Directory)
+        dialog.setOption(QFileDialog.Option.DontUseNativeDialog)
+        dialog.setFileMode(QFileDialog.FileMode.Directory)
         dialog.setDirectory(str(Path.home()))
 
         # store selected path in the LineEdit
-        if dialog.exec_():
+        if dialog.exec():
             filename = dialog.selectedFiles()[0]
             self.enter_path.setText(filename)
 
@@ -417,7 +418,7 @@ class SettingDialog(QDialog):
         self.settings = list()
 
         # Accept & cancel buttons
-        self.confirmation = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        self.confirmation = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
         self.confirmation.accepted.connect(self.save_settings)
         self.confirmation.rejected.connect(self.close)
 
@@ -429,7 +430,7 @@ class SettingDialog(QDialog):
         for idx in range(self.preferences.count()):
             item = self.preferences.item(idx)
             key = item.text()
-            value = True if item.checkState() == Qt.Checked else False
+            value = True if item.checkState() == Qt.CheckState.Checked else False
             self.settings.append((key, value))
         self.close()
 

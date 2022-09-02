@@ -1,9 +1,9 @@
-from PyQt5.QtWidgets import QMenuBar, QMainWindow, QMenu
-from PyQt5.QtCore import QRect, pyqtSignal
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
 
 from typing import List
 
-from seg_utils.src.actions import Action
+from taplt.src.actions import Action
 
 
 class MenuBar(QMenuBar):

@@ -1,9 +1,9 @@
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtGui import *
+from PyQt6.QtCore import *
 
-from seg_utils.ui.dialogs import CommentDialog, DeleteAllMessageBox, DeleteClassMessageBox, DeleteShapeMessageBox
-from seg_utils.ui.shape import Shape
+from taplt.ui.dialogs import CommentDialog, DeleteAllMessageBox, DeleteClassMessageBox, DeleteShapeMessageBox
+from taplt.ui.shape import Shape
 
 from typing import List
 
@@ -12,14 +12,14 @@ class TreeWidgetItem(QTreeWidgetItem):
     def __init__(self, *args, shape: Shape = None):
         super(TreeWidgetItem, self).__init__(*args)
         self.pointer = shape
-        self.setFlags(self.flags() | Qt.ItemIsTristate)
-        self.setCheckState(0, Qt.Checked)
+        self.setFlags(self.flags() | Qt.ItemFlag.ItemIsAutoTristate)
+        self.setCheckState(0, Qt.CheckState.Checked)
 
     def shape(self) -> Shape:
         return self.pointer
 
 
-class TreeWidget(QTreeWidget):
+class AnnotationTree(QTreeWidget):
     """tree widget to display annotations in a list (all at top level)
     second column is used to let user enter or view comments"""
     sItemsDeleted = pyqtSignal(list)
@@ -27,10 +27,10 @@ class TreeWidget(QTreeWidget):
     sChange = pyqtSignal(int)
 
     def __init__(self):
-        super(TreeWidget, self).__init__()
+        super(AnnotationTree, self).__init__()
 
         self.setColumnCount(2)
-        self.setFrameShape(QFrame.NoFrame)
+        self.setFrameShape(QFrame.Shape.NoFrame)
         self.setHeaderLabels(["Annotation", "Your notes"])
 
         self.top = TreeWidgetItem(["Annotations", ""])
@@ -55,7 +55,7 @@ class TreeWidget(QTreeWidget):
         dlg.exec()
 
         # emit deletion signal
-        if dlg.result() == QMessageBox.Ok:
+        if dlg.result() == QMessageBox.StandardButton.Ok:
             self.sChange.emit(1)
             shapes = self.gather_shapes(item)
             self.sItemsDeleted.emit(shapes)
@@ -86,7 +86,7 @@ class TreeWidget(QTreeWidget):
     def handle_click(self, idx: QModelIndex):
         """handles an item click in the QTreeWidget, if user clicked at the right part, open up a comment dialog"""
 
-        # if this function was triggered by a check box, skip
+        # if this function was triggered by a checkbox, skip
         if self.ignore_selection:
             self.ignore_selection = False
             return
@@ -116,9 +116,9 @@ class TreeWidget(QTreeWidget):
             return
 
         state = item.checkState(column)
-        if state == Qt.Checked:
+        if state == Qt.CheckState.Checked:
             visible = True
-        elif state == Qt.Unchecked:
+        elif state == Qt.CheckState.Unchecked:
             visible = False
         else:  # intermediate State - not done by user
             return
@@ -142,15 +142,15 @@ class TreeWidget(QTreeWidget):
         return level_helper(self.top)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        super(TreeWidget, self).mousePressEvent(event)
-        if event.button() == Qt.RightButton:
+        super(AnnotationTree, self).mousePressEvent(event)
+        if event.button() == Qt.MouseButton.RightButton:
             item = self.itemAt(event.pos())
             if item:
                 self.sDeselectAll.emit()
                 self.set_shapes_selected(item)
 
                 # open context menu
-                pos = event.globalPos()
+                pos = event.globalPosition()
                 menu = QMenu()
                 action = QAction("Delete")
                 action.triggered.connect(lambda: self.delete_item(item))
@@ -211,7 +211,7 @@ class TreeWidget(QTreeWidget):
                 child = self.top.child(i)
                 if child.text(0) == txt:
                     if not lbl.isVisible():
-                        item.setCheckState(0, Qt.Unchecked)
+                        item.setCheckState(0, Qt.CheckState.Unchecked)
                     child.addChild(item)
 
 

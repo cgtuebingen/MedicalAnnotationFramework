@@ -1,13 +1,13 @@
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
 
 import os
 from typing import List
 
-from seg_utils.ui.shape import Shape
-from seg_utils.utils.qt import createListWidgetItemWithSquareIcon, get_icon
-from seg_utils.utils.stylesheets import TAB_STYLESHEET, SETTING_STYLESHEET
+from taplt.ui.shape import Shape
+from taplt.utils.qt import createListWidgetItemWithSquareIcon, get_icon
+from taplt.utils.stylesheets import TAB_STYLESHEET, SETTING_STYLESHEET
 
 
 class FileList(QListWidget):
@@ -18,7 +18,7 @@ class FileList(QListWidget):
         super(FileList, self).__init__()
         self.setIconSize(QSize(11, 11))
         self.setContentsMargins(0, 0, 0, 0)
-        self.setFrameShape(QFrame.NoFrame)
+        self.setFrameShape(QFrame.Shape.NoFrame)
         self.setItemAlignment(Qt.AlignmentFlag.AlignLeft)
 
     def contextMenuEvent(self, event: QContextMenuEvent) -> None:
@@ -36,7 +36,7 @@ class LabelList(QListWidget):
     def __init__(self, *args):
         super(QListWidget, self).__init__(*args)
         self._icon_size = 10
-        self.setFrameShape(QFrame.NoFrame)
+        self.setFrameShape(QFrame.Shape.NoFrame)
 
     def contextMenuEvent(self, event) -> None:
         pos = event.pos()
@@ -75,7 +75,7 @@ class LabelsViewingWidget(QWidget):
         self.file_label = QLabel()
         self.file_label.setStyleSheet("background-color: rgb(186, 189, 182);")
         self.file_label.setText("Labels")
-        self.file_label.setAlignment(Qt.AlignCenter)
+        self.file_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout().addWidget(self.file_label)
         self.label_list = LabelList()
         self.label_list.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
@@ -96,7 +96,7 @@ class FileViewingWidget(QWidget):
         self.file_label = QLabel()
         self.file_label.setStyleSheet("background-color: rgb(186, 189, 182);")
         self.file_label.setText("File List")
-        self.file_label.setAlignment(Qt.AlignCenter)
+        self.file_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout().addWidget(self.file_label)
 
         self.tab = QTabWidget()
@@ -105,7 +105,7 @@ class FileViewingWidget(QWidget):
         self.search_field = QTextEdit()
 
         # Size Policy
-        size_policy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        size_policy = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         size_policy.setHorizontalStretch(0)
         size_policy.setVerticalStretch(0)
         size_policy.setHeightForWidth(self.search_field.sizePolicy().hasHeightForWidth())
@@ -116,7 +116,7 @@ class FileViewingWidget(QWidget):
         font.setKerning(True)
 
         self.search_field.setFont(font)
-        self.search_field.setFrameShadow(QFrame.Sunken)
+        self.search_field.setFrameShadow(QFrame.Shadow.Sunken)
         self.search_field.setLineWidth(0)
         self.search_field.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.search_field.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -186,7 +186,7 @@ class SettingList(QListWidget):
         self.setStyleSheet(SETTING_STYLESHEET)
         for setting in settings:
             item = QListWidgetItem(setting[0])
-            checked = Qt.Checked if setting[1] else Qt.Unchecked
+            checked = Qt.CheckState.Checked if setting[1] else Qt.CheckState.Unchecked
             item.setCheckState(checked)
             item.setToolTip(setting[2])
             self.addItem(item)

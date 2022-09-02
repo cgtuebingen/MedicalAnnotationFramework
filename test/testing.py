@@ -1,17 +1,17 @@
-"""This file's purpose is to import various classes from seg_utils
+"""This file's purpose is to import various classes from taplt
 in order to test them in isolation"""
 import sys
 
-from seg_utils.ui.main_window import LabelingMainWindow
-from seg_utils.ui.dialogs import *
-from seg_utils.ui.list_widgets import *
-from seg_utils.ui.image_display import CenterDisplayWidget
-from seg_utils.ui.tree_widget import TreeWidget
-from seg_utils.ui.shape import Shape
-from seg_utils.ui.toolbar import Toolbar
-from seg_utils.src.main_logic import MainLogic
-from seg_utils.utils.qt import colormap_rgb
-from seg_utils.utils.stylesheets import TAB_STYLESHEET
+from taplt.ui.main_window import LabelingMainWindow
+from taplt.ui.dialogs import *
+from taplt.ui.list_widgets import *
+from taplt.ui.image_display import CenterDisplayWidget
+from taplt.ui.annotation_tree import AnnotationTree
+from taplt.ui.shape import Shape
+from taplt.ui.toolbar import Toolbar
+from taplt.src.main_logic import MainLogic
+from taplt.utils.qt import colormap_rgb
+from taplt.utils.stylesheets import TAB_STYLESHEET
 
 
 COLORS, _ = colormap_rgb(25)
@@ -137,7 +137,7 @@ def test_main_window():
 
 def test_tree_widget():
     # done
-    window = TreeWidget()
+    window = AnnotationTree()
     window.update_polygons(SHAPES)
     window.show()
     app.exec()

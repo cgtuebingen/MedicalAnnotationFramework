@@ -1,5 +1,5 @@
-from seg_utils.utils.database import SQLiteDatabase
-from seg_utils.ui.main_window import LabelingMainWindow
+from taplt.utils.database import SQLiteDatabase
+from taplt.ui.main_window import LabelingMainWindow
 
 
 class MainLogic:

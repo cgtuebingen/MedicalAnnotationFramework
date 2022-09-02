@@ -1,12 +1,11 @@
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
 
-from seg_utils.ui.image_viewer import ImageViewer
-from seg_utils.ui.annotation_group import AnnotationGroup
-from seg_utils.ui.shape import Shape
-from seg_utils.ui.dialogs import ForgotToSaveMessageBox, CommentDialog
-from seg_utils.utils.qt import get_icon
+from taplt.ui.image_viewer import ImageViewer
+from taplt.ui.annotation_group import AnnotationGroup
+from taplt.ui.shape import Shape
+from taplt.utils.qt import get_icon
 
 
 class CenterDisplayWidget(QWidget):
@@ -30,7 +29,7 @@ class CenterDisplayWidget(QWidget):
         self.annotations = AnnotationGroup()
         self.scene.addItem(self.annotations)
 
-        # QLabel displaying the patients id/name/alias
+        # QLabel displaying the patient's id/name/alias
         self.patient_label = QLabel()
         self.patient_label.setContentsMargins(10, 0, 10, 0)
 
@@ -38,14 +37,14 @@ class CenterDisplayWidget(QWidget):
         self.hide_button.setGeometry(0, 0, 40, 40)
 
         # put the viewer in the ImageDisplay-Frame
-        self.image_viewer.setFrameShape(QFrame.NoFrame)
+        self.image_viewer.setFrameShape(QFrame.Shape.NoFrame)
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.image_viewer)
         self.layout.addWidget(self.patient_label)
 
     def mousePressEvent(self, event: QMouseEvent):
         if self.annotations.mode == AnnotationGroup.AnnotationMode.DRAW:
-            if event.button() == Qt.LeftButton:
+            if event.button() == Qt.MouseButton.LeftButton:
                 self.annotations.create_shape()
         event.accept()
 

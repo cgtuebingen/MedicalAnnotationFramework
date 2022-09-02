@@ -1,14 +1,14 @@
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtGui import *
+from PyQt6.QtCore import *
 from dataclasses import dataclass
 import math
 from copy import deepcopy
 from typing import *
 import numpy as np
-from seg_utils.config import VERTEX_SIZE, SCALING_INITIAL
+from taplt.config import VERTEX_SIZE, SCALING_INITIAL
 
-from seg_utils.utils.qt import closest_euclidean_distance
+from taplt.utils.qt import closest_euclidean_distance
 
 
 class Shape(QGraphicsObject):
@@ -52,7 +52,7 @@ class Shape(QGraphicsObject):
         self.image_rect = QRectF(0, 0, self.image_size.width(), self.image_size.height())
         self.vertex_size = VERTEX_SIZE
         self.mode = mode
-        self.setFlag(QGraphicsItem.ItemIsSelectable)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setAcceptHoverEvents(True)
 
         # prioritize label dict
@@ -93,9 +93,9 @@ class Shape(QGraphicsObject):
     def set_mode(self, mode: Union[ShapeMode, int]):
         self.mode = mode
         if self.mode == Shape.ShapeMode.EDIT:
-            self.setFlag(QGraphicsItem.ItemIsMovable, True)
+            self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         else:
-            self.setFlag(QGraphicsItem.ItemIsMovable, False)
+            self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
 
         if self.mode == Shape.ShapeMode.CREATE:
             self.setSelected(True)
@@ -247,7 +247,7 @@ class Shape(QGraphicsObject):
         which results in the bounding rectangle. As both tempRectangle and tempTrace do not need
         a contain method due to being an unfinished shape, no method is here for them"""
         if self.shape_type in ['rectangle', 'polygon']:
-            return self.vertices.vertices.containsPoint(point, Qt.OddEvenFill)
+            return self.vertices.vertices.containsPoint(point, Qt.FillRule.OddEvenFill)
 
         elif self.shape_type in ['circle']:
             # elliptic formula is (x²/a² + y²/b² = 1) so if the point fulfills the equation respectively

@@ -1,10 +1,9 @@
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
 
 from typing import *
 
-from seg_utils.src.actions import Action
+from taplt.src.actions import Action
 
 
 class Toolbar(QToolBar):
@@ -131,7 +130,7 @@ class Toolbar(QToolBar):
 
     def init_margins(self):
         """This function is necessary because the call to addToolBar in label_ui.py alters the alignment
-        for some reason. Therefore this method will be called AFTER the toolbar is added to the main window"""
+        for some reason. Therefore, this method will be called AFTER the toolbar is added to the main window"""
         m = (0, 0, 0, 0)
         self.setContentsMargins(*m)
         self.layout().setSpacing(2)

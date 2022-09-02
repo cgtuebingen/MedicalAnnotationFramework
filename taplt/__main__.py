@@ -1,14 +1,14 @@
 import argparse
 import sys
 
-from PyQt5.QtWidgets import QApplication
-from seg_utils.src.main_logic import MainLogic
+from PyQt6.QtWidgets import QApplication
+from taplt.src.main_logic import MainLogic
 
 
 def main(_args):
     app = QApplication(sys.argv)
     _ = MainLogic()  # the labeling window
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":

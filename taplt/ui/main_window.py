@@ -1,22 +1,21 @@
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
 
 from pathlib import Path
 from dataclasses import dataclass
 
-from seg_utils.ui.image_display import CenterDisplayWidget
-from seg_utils.ui.toolbar import Toolbar
-from seg_utils.ui.dialogs import (SelectPatientDialog, CloseMessageBox, DeleteFileMessageBox,
-                                  ForgotToSaveMessageBox, SettingDialog, ProjectHandlerDialog)
-from seg_utils.ui.menu_bar import MenuBar
-from seg_utils.ui.list_widgets import FileViewingWidget, LabelsViewingWidget
-from seg_utils.ui.tree_widget import TreeWidget
-from seg_utils.ui.welcome_screen import WelcomeScreen
-from seg_utils.utils.qt import colormap_rgb, get_icon
-from seg_utils.utils.project_structure import check_environment, Structure
-from seg_utils.macros.macros import Macros
-from seg_utils.macros.macros_dialogs import PreviewDatabaseDialog
+from taplt.ui.image_display import CenterDisplayWidget
+from taplt.ui.toolbar import Toolbar
+from taplt.ui.dialogs import (SelectPatientDialog, CloseMessageBox, DeleteFileMessageBox,
+                              ForgotToSaveMessageBox, SettingDialog, ProjectHandlerDialog)
+from taplt.ui.menu_bar import MenuBar
+from taplt.ui.list_widgets import FileViewingWidget, LabelsViewingWidget
+from taplt.ui.annotation_tree import AnnotationTree
+from taplt.ui.welcome_screen import WelcomeScreen
+from taplt.utils.qt import colormap_rgb, get_icon
+from taplt.utils.project_structure import check_environment, Structure
+from taplt.macros.macros import Macros
+from taplt.macros.macros_dialogs import PreviewDatabaseDialog
 
 NUM_COLORS = 25
 
@@ -46,7 +45,7 @@ class LabelingMainWindow(QMainWindow):
         super(LabelingMainWindow, self).__init__()
         self.setWindowTitle("The All-Purpose Labeling Tool")
         self.resize(1276, 968)
-        self.setTabShape(QTabWidget.Rounded)
+        self.setTabShape(QTabWidget.TabShape.Rounded)
 
         # The main widget set as focus. Based on a horizontal layout
         self.main_widget = QWidget()
@@ -57,8 +56,8 @@ class LabelingMainWindow(QMainWindow):
         # Center Frame of the body where the image will be displayed in
         self.center_frame = QFrame()
         self.center_frame.setAutoFillBackground(False)
-        self.center_frame.setFrameShape(QFrame.NoFrame)
-        self.center_frame.setFrameShadow(QFrame.Raised)
+        self.center_frame.setFrameShape(QFrame.Shape.NoFrame)
+        self.center_frame.setFrameShadow(QFrame.Shadow.Raised)
         self.center_frame.setLayout(QVBoxLayout())
         self.center_frame.layout().setContentsMargins(0, 0, 0, 0)
         self.center_frame.layout().setSpacing(0)
@@ -84,7 +83,7 @@ class LabelingMainWindow(QMainWindow):
 
         # the label, polygons and file lists
         self.labels_list = LabelsViewingWidget()
-        self.polygons = TreeWidget()
+        self.polygons = AnnotationTree()
         self.file_list = FileViewingWidget()
 
         # widget for the polygons
@@ -96,7 +95,7 @@ class LabelingMainWindow(QMainWindow):
         self.poly_label = QLabel(self)
         self.poly_label.setStyleSheet("background-color: rgb(186, 189, 182);")
         self.poly_label.setText("Polygons")
-        self.poly_label.setAlignment(Qt.AlignCenter)
+        self.poly_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.poly_widget.layout().addWidget(self.poly_label)
         self.poly_widget.layout().addWidget(self.polygons)
 
@@ -172,8 +171,8 @@ class LabelingMainWindow(QMainWindow):
         if self.changes:
             dlg = ForgotToSaveMessageBox()
             dlg.exec()
-            if dlg.result() == QMessageBox.AcceptRole or dlg.result() == QMessageBox.DestructiveRole:
-                if dlg.result() == QMessageBox.AcceptRole:
+            if dlg.result() == QMessageBox.ButtonRole.AcceptRole or dlg.result() == QMessageBox.ButtonRole.DestructiveRole:
+                if dlg.result() == QMessageBox.ButtonRole.AcceptRole:
                     self.save_to_database()
                 else:
                     self.changes.clear()
@@ -187,7 +186,7 @@ class LabelingMainWindow(QMainWindow):
         if self.check_for_changes():
             dlg = CloseMessageBox()
             dlg.exec()
-            if dlg.result() == QMessageBox.AcceptRole:
+            if dlg.result() == QMessageBox.ButtonRole.AcceptRole:
                 event.accept()
             else:
                 event.ignore()
@@ -204,7 +203,7 @@ class LabelingMainWindow(QMainWindow):
         dlg = DeleteFileMessageBox(filename)
         dlg.exec()
 
-        if dlg.result() == QMessageBox.Ok:
+        if dlg.result() == QMessageBox.StandardButton.Ok:
             self.sDeleteFile.emit(filename, self.img_idx)
 
     def file_list_item_clicked(self, new_img_idx: int):
@@ -260,7 +259,7 @@ class LabelingMainWindow(QMainWindow):
                                                       caption="Select Database",
                                                       directory=str(Path.home()),
                                                       filter="Database (*.db)",
-                                                      options=QFileDialog.DontUseNativeDialog)
+                                                      options=QFileDialog.Option.DontUseNativeDialog)
             if database:
 
                 # make sure the database is inside a project environment
@@ -270,9 +269,9 @@ class LabelingMainWindow(QMainWindow):
                     self.menubar.enable_tools()
                 else:
                     msg = QMessageBox()
-                    msg.setIcon(QMessageBox.Information)
+                    msg.setIcon(QMessageBox.Icon.Information)
                     msg.setText("Invalid Project Location")
-                    msg.setStandardButtons(QMessageBox.Ok)
+                    msg.setStandardButtons(QMessageBox.StandardButton.Ok)
                     msg.exec()
 
     def open_settings(self, settings: list):

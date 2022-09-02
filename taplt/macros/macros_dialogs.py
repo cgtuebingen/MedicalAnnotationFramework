@@ -1,9 +1,9 @@
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QMessageBox, QTableWidget, QTableWidgetItem
-from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtGui import QFont
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QMessageBox, QTableWidget, QTableWidgetItem
+from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtGui import QFont
 
 from pathlib import Path
-from seg_utils.utils.stylesheets import BUTTON_STYLESHEET
+from taplt.utils.stylesheets import BUTTON_STYLESHEET
 
 
 class ExampleProjectDialog(QDialog):
@@ -16,7 +16,7 @@ class ExampleProjectDialog(QDialog):
         self.info = QLabel()
         self.info.setWordWrap(True)
         self.info.setText("Click the button below to create a new project with some example images \n")
-        self.info.setFont(QFont("Helvetica", 15, QFont.Bold))
+        self.info.setFont(QFont("Helvetica", 15, QFont.Weight.Bold))
 
         self.button = QPushButton("Show me an example project")
         self.button.setStyleSheet(BUTTON_STYLESHEET)
@@ -42,7 +42,7 @@ class ExampleProjectMessageBox(QMessageBox):
         self.setInformativeText("To your right, you can see the information displays, showing your project files. \n"
                                 "To your left, you can open up the drawing tools. \n \n "
                                 "Feel free to click around and see what can be done.")
-        self.setIcon(QMessageBox.Information)
+        self.setIcon(QMessageBox.Icon.Information)
 
 
 class PreviewDatabaseDialog(QDialog):

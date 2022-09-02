@@ -5,10 +5,10 @@ import shutil
 import os
 
 from typing import List, Union
-from seg_utils.utils.project_structure import modality, create_project_structure, Structure
-from seg_utils.utils.settings import SETTINGS, get_tooltip
+from taplt.utils.project_structure import modality, create_project_structure, Structure
+from taplt.utils.settings import SETTINGS, get_tooltip
 
-from PyQt5.QtCore import pyqtSignal, QObject, QSettings
+from PyQt6.QtCore import pyqtSignal, QObject, QSettings
 
 # TODO: 'file' value references the uid in either 'videos', 'images', or 'whole slide images'
 #  (depends on 'modality' value),
@@ -302,10 +302,10 @@ class SQLiteDatabase(QObject):
             self.create_initial_tables()
             for file, patient in files.items():
                 self.add_file(file, patient)
-            self.settings = QSettings(self.location + '/settings', QSettings.NativeFormat)
+            self.settings = QSettings(self.location + '/settings', QSettings.Format.NativeFormat)
             self.update_settings(SETTINGS)
         else:
-            self.settings = QSettings(self.location + '/settings', QSettings.NativeFormat)
+            self.settings = QSettings(self.location + '/settings', QSettings.Format.NativeFormat)
 
         with self.connection:
             self.cursor.execute(f"PRAGMA foreign_keys = ON;")

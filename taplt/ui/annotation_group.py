@@ -1,11 +1,11 @@
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
 from typing import *
 from dataclasses import dataclass
 
-from seg_utils.utils.qt import colormap_rgb
-from seg_utils.ui.shape import Shape
-from seg_utils.ui.dialogs import NewLabelDialog, DeleteShapeMessageBox
+from taplt.utils.qt import colormap_rgb
+from taplt.ui.shape import Shape
+from taplt.ui.dialogs import NewLabelDialog, DeleteShapeMessageBox
 
 
 class AnnotationGroup(QGraphicsObject):
@@ -164,7 +164,7 @@ class AnnotationGroup(QGraphicsObject):
 
 
 if __name__ == '__main__':
-    from PyQt5.QtGui import *
+    from PyQt6.QtGui import *
     import numpy as np
     from PIL.ImageQt import ImageQt
     from PIL import Image
