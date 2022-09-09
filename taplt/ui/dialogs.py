@@ -15,10 +15,10 @@ class CloseMessageBox(QMessageBox):
     def __init__(self, *args):
         super(CloseMessageBox, self).__init__(*args)
 
-        quit_button = QPushButton(get_icon('quit'), "Quit Program")
-        cancel_button = QPushButton(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton), "Cancel")
-        self.addButton(quit_button, QMessageBox.ButtonRole.AcceptRole)
-        self.addButton(cancel_button, QMessageBox.ButtonRole.RejectRole)
+        self.quit_button = QPushButton(get_icon('quit'), "Quit Program")
+        self.cancel_button = QPushButton(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton), "Cancel")
+        self.addButton(self.quit_button, QMessageBox.ButtonRole.AcceptRole)
+        self.addButton(self.cancel_button, QMessageBox.ButtonRole.RejectRole)
 
         self.setWindowTitle("Quit Program")
         self.setText("Are you sure you want to quit?")

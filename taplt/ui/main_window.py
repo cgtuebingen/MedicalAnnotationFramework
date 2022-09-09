@@ -186,8 +186,8 @@ class LabelingMainWindow(QMainWindow):
         if self.check_for_changes():
             dlg = CloseMessageBox()
             dlg.exec()
-            if dlg.result() == QMessageBox.ButtonRole.AcceptRole:
-                event.accept()
+            if dlg.clickedButton() == dlg.quit_button:
+                super(LabelingMainWindow, self).closeEvent(event)
             else:
                 event.ignore()
 
