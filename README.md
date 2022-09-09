@@ -57,12 +57,17 @@ Click "Macros -> Preview Database" to preview the current version of the databas
 ```bash
 clone https://github.com/cgtuebingen/MedicalAnnotationFramework.git
 cd MedicalAnnotationFramework
-pip install .
+pip install .  # add -e to use the cloned repository as the source for the package
 ```
 
 Launch the app with:
 ```bash
 python -m taplt
+```
+
+Build the executable with:
+```bash
+pyinstaller taplt.spec  # creates and puts the executable in ./dist
 ```
 
 ## Acknowledgement
