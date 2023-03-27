@@ -32,6 +32,7 @@ class AnnotationGroup(QGraphicsObject):
         self.color_map, new_color = colormap_rgb(n=self._num_colors)  # have a buffer for new classes
         self.draw_new_color = new_color
         self.mode = AnnotationGroup.AnnotationMode.EDIT
+        self.shapeType = Shape.ShapeType.POLYGON
 
     def boundingRect(self):
         return self.childrenBoundingRect()
@@ -43,7 +44,7 @@ class AnnotationGroup(QGraphicsObject):
     def create_shape(self):
         s = self.scene()  # type: QGraphicsScene
         self.temp_shape = Shape(image_size=QSize(s.width(), s.height()),
-                                shape_type='tempTrace',
+                                shape_type=self.shapeType,
                                 mode=Shape.ShapeMode.CREATE,
                                 color=self.draw_new_color)
         self.add_shapes(self.temp_shape)
@@ -153,6 +154,12 @@ class AnnotationGroup(QGraphicsObject):
 
     def set_mode(self, mode: Union[AnnotationMode, int]):
         self.mode = mode
+
+    def set_type(self, type_of_shape: Union[Shape.ShapeType, str]):
+        """
+        Sets the type of the shape when an icon is clicked in the annotation toolbar
+        """
+        self.shapeType = type_of_shape
 
     def update_annotations(self, current_labels: List[Shape]):
         self.clear()

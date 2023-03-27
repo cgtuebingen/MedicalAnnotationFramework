@@ -277,7 +277,7 @@ class Shape(QGraphicsObject):
 
     def init_shape(self):
         if self.shape_type not in ['polygon', 'rectangle', 'circle', 'tempTrace', 'tempPolygon']:
-            raise AttributeError("Unsupported Shape")
+            raise AttributeError("Unsupported Shape: " + str(self.shape_type))
         # Add additional points
         if self.shape_type in ['rectangle', 'circle'] and len(self.vertices.vertices) == 2:
             self.vertices.complete_poly()

@@ -12,6 +12,7 @@ class Toolbar(QToolBar):
     sOpenProject = pyqtSignal(str)
     sRequestPatients = pyqtSignal()
     sSetDrawingMode = pyqtSignal(int)
+    sSetShapeType = pyqtSignal(str)
 
     def __init__(self, parent):
         super(Toolbar, self).__init__(parent)
@@ -75,32 +76,32 @@ class Toolbar(QToolBar):
         # TODO: Figure out a more modular way to set up these actions
         action_select = Action(parent,
                                "Select",
-                               lambda: self.sSetDrawingMode.emit(0),
+                               lambda: self.set_draw_and_type(0, "polygon"),
                                icon="mouse",
                                tip="Select items in the image",
                                checkable=True,
                                checked=True)
         action_draw_poly = Action(parent,
                                   "Draw\nPolygon",
-                                  lambda: self.sSetDrawingMode.emit(1),
+                                  lambda: self.set_draw_and_type(1, "polygon"),
                                   icon="polygon",
                                   tip="Draw Polygon (right click to show options)",
                                   checkable=True)
         action_trace_outline = Action(parent,
                                       "Draw\nTrace",
-                                      lambda: self.sSetDrawingMode.emit(1),
+                                      lambda: self.set_draw_and_type(1, "tempTrace"),
                                       icon="outline",
                                       tip="Trace Outline",
                                       checkable=True)
         action_draw_circle = Action(parent,
                                     "Draw\nCircle",
-                                    lambda: self.sSetDrawingMode.emit(1),
+                                    lambda: self.set_draw_and_type(1, "circle"),
                                     icon="circle",
                                     tip="Draw Circle",
                                     checkable=True)
         action_draw_rectangle = Action(parent,
                                        "Draw\nRectangle",
-                                       lambda: self.sSetDrawingMode.emit(1),
+                                       lambda: self.set_draw_and_type(1, "rectangle"),
                                        icon="square",
                                        tip="Draw Rectangle",
                                        checkable=True)
@@ -113,6 +114,14 @@ class Toolbar(QToolBar):
 
         # Init Toolbar
         self.addActions(actions)
+
+    def set_draw_and_type(self, mode, shape_type):
+        """
+        sets the drawing mode and drawing type of the clicked icon in the toolbar
+        """
+        self.sSetDrawingMode.emit(mode)
+        self.sSetShapeType.emit(shape_type)
+
 
     def get_action(self, action_str: str) -> Action:
         if action_str not in self.actionsDict:

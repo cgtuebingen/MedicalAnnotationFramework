@@ -139,6 +139,7 @@ class LabelingMainWindow(QMainWindow):
         self.polygons.sDeselectAll.connect(self.image_display.annotations.deselect_all)
         self.polygons.sChange.connect(self.change_detected)
         self.toolBar.sSetDrawingMode.connect(self.image_display.annotations.set_mode)
+        self.toolBar.sSetShapeType.connect(self.image_display.annotations.set_type)
         self.macros.sEnableTools.connect(self.menubar.enable_tools)
         self.macros.sNewProject.connect(self.sCreateNewProject.emit)
         self.macros.sSetWelcomeScreen.connect(self.set_welcome_screen)
