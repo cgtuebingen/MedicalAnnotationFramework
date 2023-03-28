@@ -118,7 +118,10 @@ class Shape(QGraphicsObject):
             else:
                 delta = event.scenePos()
             if math.sqrt(delta.x() ** 2 + delta.y() ** 2) > 3:
-                self.vertices.vertices.append(self.check_out_of_bounds(event.scenePos()))
+                if self.shape_type in ["polygon", "tempTrace"] or len(self.vertices.vertices) <= 1:
+                    self.vertices.vertices.append(self.check_out_of_bounds(event.scenePos()))
+                else:
+                    self.vertices.vertices[1] = self.check_out_of_bounds(event.scenePos())
                 self.update()
         super(Shape, self).mouseMoveEvent(event)
 
@@ -142,12 +145,19 @@ class Shape(QGraphicsObject):
 
     @pyqtSlot(QGraphicsSceneMouseEvent)
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
-        if self.contains(event.pos()):
-            self.setSelected(True)
-            self.selected.emit()
-            self.clicked.emit(event)
-        else:
-            event.ignore()
+        # TODO: Add a new tip that tells the user, that they can end the annotation by right clicking
+        if event.button() == Qt.MouseButton.LeftButton:
+            if self.contains(event.pos()):
+                self.setSelected(True)
+                self.selected.emit()
+                self.clicked.emit(event)
+            else:
+                event.ignore()
+        elif all((self.mode == Shape.ShapeMode.CREATE, len(self.vertices) > 1)):
+            self.ungrabMouse()
+            self.is_closed_path = True
+
+            self.drawingDone.emit()
         super(Shape, self).mousePressEvent(event)
 
     def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent):
@@ -165,14 +175,6 @@ class Shape(QGraphicsObject):
             self.setPos(0, 0)  # reset the anchor to line up with the original origin
             self.set_mode(Shape.ShapeMode.FIXED)
             self.sChange.emit(2)
-        elif self.mode == Shape.ShapeMode.CREATE:
-            self.ungrabMouse()
-            self.is_closed_path = True
-
-            # TODO: base these off the actual values
-            self.shape_type = 'polygon'
-
-            self.drawingDone.emit()
 
     @pyqtSlot(QGraphicsSceneHoverEvent)
     def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent):
@@ -246,8 +248,11 @@ class Shape(QGraphicsObject):
         r"""Reimplementation as the initial method for a QGraphicsItem uses the shape,
         which results in the bounding rectangle. As both tempRectangle and tempTrace do not need
         a contain method due to being an unfinished shape, no method is here for them"""
-        if self.shape_type in ['rectangle', 'polygon']:
+        if self.shape_type in ['polygon']:
             return self.vertices.vertices.containsPoint(point, Qt.FillRule.OddEvenFill)
+
+        if self.shape_type in ['rectangle']:
+            return self.shape().contains(point)
 
         elif self.shape_type in ['circle']:
             # elliptic formula is (x²/a² + y²/b² = 1) so if the point fulfills the equation respectively
@@ -335,7 +340,7 @@ class Shape(QGraphicsObject):
                 painter.setBrush(QBrush())
 
             # SHAPES DRAWING
-            if self.shape_type in ['polygon', 'rectangle']:
+            if self.shape_type == 'polygon':
                 painter.drawPolygon(self.vertices.vertices)
                 self.vertices.paint(painter)
 
@@ -343,9 +348,14 @@ class Shape(QGraphicsObject):
                 painter.drawPath(self._path)
                 self.vertices.paint(painter)
 
-            elif self.shape_type == "circle":
-                painter.drawEllipse(QRectF(self.vertices.vertices[0], self.vertices.vertices[2]))
-                if self.isSelected or self.is_highlighted or self.vertices.selected_vertex != -1:
+            elif len(self.vertices.vertices) > 1:
+                if self.shape_type == "circle":
+                    painter.drawEllipse(QRectF(self.vertices.vertices[0], self.vertices.vertices[1]))
+
+                elif self.shape_type == "rectangle":
+                    painter.drawRect(QRectF(self.vertices.vertices[0], self.vertices.vertices[1]))
+
+                if any((self.isSelected, self.is_highlighted, self.vertices.selected_vertex != -1)):
                     self.vertices.paint(painter)
 
     def to_dict(self) -> Tuple[dict, str]:
