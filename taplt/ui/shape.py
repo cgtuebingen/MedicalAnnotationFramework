@@ -33,7 +33,7 @@ class Shape(QGraphicsObject):
     class ShapeType:
         POLYGON: str = 'polygon'
         RECTANGLE: str = 'rectangle'
-        CIRCLE: str = 'circle'
+        ELLIPSE: str = 'ellipse'
 
     def __init__(self,
                  image_size: QSize,
@@ -151,14 +151,17 @@ class Shape(QGraphicsObject):
                 self.setSelected(True)
                 self.selected.emit()
                 self.clicked.emit(event)
+                super(Shape, self).mousePressEvent(event)
             else:
                 event.ignore()
-        elif all((self.mode == Shape.ShapeMode.CREATE, len(self.vertices) > 1)):
+            pass
+        elif self.mode == Shape.ShapeMode.CREATE and len(self.vertices) > 1:
             self.ungrabMouse()
             self.is_closed_path = True
 
             self.drawingDone.emit()
-        super(Shape, self).mousePressEvent(event)
+            super(Shape, self).mousePressEvent(event)
+
 
     def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent):
         if self.contains(event.pos()):
@@ -254,7 +257,7 @@ class Shape(QGraphicsObject):
         if self.shape_type in ['rectangle']:
             return self.shape().contains(point)
 
-        elif self.shape_type in ['circle']:
+        elif self.shape_type in ['ellipse']:
             # elliptic formula is (x²/a² + y²/b² = 1) so if the point fulfills the equation respectively
             # is smaller than 1, the points is inside
             rect = self.boundingRect()
@@ -281,10 +284,10 @@ class Shape(QGraphicsObject):
                 self._path.lineTo(_pnt)
 
     def init_shape(self):
-        if self.shape_type not in ['polygon', 'rectangle', 'circle', 'tempTrace', 'tempPolygon']:
+        if self.shape_type not in ['polygon', 'rectangle', 'ellipse', 'tempTrace', 'tempPolygon']:
             raise AttributeError("Unsupported Shape: " + str(self.shape_type))
         # Add additional points
-        if self.shape_type in ['rectangle', 'circle'] and len(self.vertices.vertices) == 2:
+        if self.shape_type in ['rectangle', 'ellipse'] and len(self.vertices.vertices) == 2:
             self.vertices.complete_poly()
 
         # Generate path for the temporary Shapes
@@ -312,7 +315,7 @@ class Shape(QGraphicsObject):
         """Handles the movement of one vertex"""
         if self.shape_type == 'polygon':
             self.vertices.vertices[v_num] = QPointF(new_pos.x(), new_pos.y())
-        elif self.shape_type in ['rectangle', 'circle']:
+        elif self.shape_type in ['rectangle', 'ellipse']:
             if not self._anchorPoint:
                 # this point is the anchor a.k.a the point diagonally from the selected one
                 # however, as i am rebuilding the shape from there, i only need to select the anchor once and store it
@@ -320,7 +323,7 @@ class Shape(QGraphicsObject):
                 print("New Anchor Set")
             self.vertices.vertices = QPolygonF([self._anchorPoint, new_pos])
 
-        if self.shape_type in ['rectangle', 'circle'] and len(self.vertices.vertices) == 2:
+        if self.shape_type in ['rectangle', 'ellipse'] and len(self.vertices.vertices) == 2:
             self.vertices.complete_poly()
 
         self.vertices.update_sel_and_high(np.asarray([new_pos.x(), new_pos.y()]))
@@ -349,7 +352,7 @@ class Shape(QGraphicsObject):
                 self.vertices.paint(painter)
 
             elif len(self.vertices.vertices) > 1:
-                if self.shape_type == "circle":
+                if self.shape_type == "ellipse":
                     painter.drawEllipse(QRectF(self.vertices.vertices[0], self.vertices.vertices[1]))
 
                 elif self.shape_type == "rectangle":

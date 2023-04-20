@@ -94,10 +94,10 @@ class Toolbar(QToolBar):
                                       tip="Trace Outline",
                                       checkable=True)
         action_draw_circle = Action(parent,
-                                    "Draw\nCircle",
-                                    lambda: self.set_draw_and_type(1, "circle"),
-                                    icon="circle",
-                                    tip="Draw Circle",
+                                    "Draw\nEllipse",
+                                    lambda: self.set_draw_and_type(1, "ellipse"),
+                                    icon="ellipse",
+                                    tip="Draw Ellipse",
                                     checkable=True)
         action_draw_rectangle = Action(parent,
                                        "Draw\nRectangle",

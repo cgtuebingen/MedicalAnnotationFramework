@@ -33,6 +33,7 @@ class AnnotationGroup(QGraphicsObject):
         self.draw_new_color = new_color
         self.mode = AnnotationGroup.AnnotationMode.EDIT
         self.shapeType = Shape.ShapeType.POLYGON
+        self.drawing = False
 
     def boundingRect(self):
         return self.childrenBoundingRect()
@@ -41,14 +42,22 @@ class AnnotationGroup(QGraphicsObject):
         pass
 
     @pyqtSlot()
+    def set_drawing_to_false(self):
+        self.drawing = False
+
+    @pyqtSlot()
     def create_shape(self):
-        s = self.scene()  # type: QGraphicsScene
-        self.temp_shape = Shape(image_size=QSize(s.width(), s.height()),
-                                shape_type=self.shapeType,
-                                mode=Shape.ShapeMode.CREATE,
-                                color=self.draw_new_color)
-        self.add_shapes(self.temp_shape)
-        self.temp_shape.grabMouse()
+        if not self.drawing:
+            self.drawing = True
+            s = self.scene()  # type: QGraphicsScene
+            self.temp_shape = Shape(image_size=QSize(s.width(), s.height()),
+                                    shape_type=self.shapeType,
+                                    mode=Shape.ShapeMode.CREATE,
+                                    color=self.draw_new_color)
+            self.add_shapes(self.temp_shape)
+            self.temp_shape.grabMouse()
+        else:
+            pass
 
     def get_color_for_label(self, label_name: str):
         r"""Get a Color based on a label_name"""
@@ -72,6 +81,7 @@ class AnnotationGroup(QGraphicsObject):
             shape.selected.connect(self.shape_selected)
             shape.deleted.connect(lambda: self.remove_shapes(shape))
             shape.mode_changed.connect(self.shape_mode_changed)
+            shape.drawingDone.connect(self.set_drawing_to_false)
             shape.drawingDone.connect(self.set_label)
             shape.sChange.connect(self.sChange.emit)
             self.update()
@@ -147,10 +157,6 @@ class AnnotationGroup(QGraphicsObject):
         # if user entered no label, remove shape
         else:
             self.remove_shapes([self.temp_shape])
-            # self.scene().removeItem(self.temp_shape)
-
-        # in any case, remove temp shape reference
-        # self.temp_shape = None
 
     def set_mode(self, mode: Union[AnnotationMode, int]):
         self.mode = mode
