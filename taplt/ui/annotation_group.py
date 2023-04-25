@@ -55,6 +55,7 @@ class AnnotationGroup(QGraphicsObject):
                                     mode=Shape.ShapeMode.CREATE,
                                     color=self.draw_new_color)
             self.add_shapes(self.temp_shape)
+            self.temp_shape.drawingDone.connect(self.set_drawing_to_false)
             self.temp_shape.grabMouse()
         else:
             pass
@@ -81,7 +82,6 @@ class AnnotationGroup(QGraphicsObject):
             shape.selected.connect(self.shape_selected)
             shape.deleted.connect(lambda: self.remove_shapes(shape))
             shape.mode_changed.connect(self.shape_mode_changed)
-            shape.drawingDone.connect(self.set_drawing_to_false)
             shape.drawingDone.connect(self.set_label)
             shape.sChange.connect(self.sChange.emit)
             self.update()

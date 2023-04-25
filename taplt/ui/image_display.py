@@ -6,6 +6,7 @@ from taplt.ui.image_viewer import ImageViewer
 from taplt.ui.annotation_group import AnnotationGroup
 from taplt.ui.shape import Shape
 from taplt.utils.qt import get_icon
+from taplt.mediaViewingWidgets.image_view import ImageView
 
 
 class CenterDisplayWidget(QWidget):
