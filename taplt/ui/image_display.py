@@ -6,7 +6,7 @@ from taplt.ui.image_viewer import ImageViewer
 from taplt.ui.annotation_group import AnnotationGroup
 from taplt.ui.shape import Shape
 from taplt.utils.qt import get_icon
-from taplt.mediaViewingWidgets.image_view import ImageView
+from taplt.mediaViewingWidgets.video_display import VideoPlayer
 
 
 class CenterDisplayWidget(QWidget):
@@ -24,6 +24,9 @@ class CenterDisplayWidget(QWidget):
         # main components of the display
         self.scene = QGraphicsScene()
         self.image_viewer = ImageViewer(self.scene)
+
+        self.video_player = VideoPlayer()
+        self.video_player.setParent(self)
 
         self.pixmap = QGraphicsPixmapItem()
         self.scene.addItem(self.pixmap)
@@ -77,8 +80,19 @@ class CenterDisplayWidget(QWidget):
 
         self.annotations.update_annotations(labels)
         self.hide_button.raise_()
-        rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
-        self.image_viewer.fitInView(rect)
+
+        if not filepath.endswith("elephant.png"):
+
+            self.image_viewer.setHidden(False)
+            self.video_player.setHidden(True)
+            rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
+            self.image_viewer.fitInView(rect)
+
+        else:
+
+            self.image_viewer.setHidden(True)
+            self.video_player.setHidden(False)
+            self.video_player.resize_to_scene(self.scene)
 
         self.patient_label.setText(patient)
         return labels

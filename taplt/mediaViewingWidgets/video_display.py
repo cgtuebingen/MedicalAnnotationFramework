@@ -90,3 +90,6 @@ class VideoPlayer(QWidget):
             self.toggle_play_pause()
         elif key == Qt.Key.Key_Return:
             self.pause_and_grab()
+
+    def resize_to_scene(self, scene: QGraphicsScene):
+        self.setGeometry(QRect(QPoint(0, 0), QPoint(600, 600)))
