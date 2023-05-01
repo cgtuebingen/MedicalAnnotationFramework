@@ -118,6 +118,7 @@ class LabelingMainWindow(QMainWindow):
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.toolBar)
         self.toolBar.init_margins()
         self.toolBar.init_actions(self)
+        self.image_display.sDrawingTooltip.connect(self.test)
 
         # TODO: if possible, get rid of such variables
         self.img_idx = 0
@@ -150,6 +151,8 @@ class LabelingMainWindow(QMainWindow):
         self.menubar.sCloseProject.connect(self.close_project)
         self.menubar.sExampleProject.connect(self.macros.example_project)
 
+    def test(self, string:str):
+        self.toolBar.setToolTip(string)
     def apply_settings(self, settings: list):
         """applies the settings"""
         for setting in settings:

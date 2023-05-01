@@ -7,7 +7,7 @@ from taplt.ui.annotation_group import AnnotationGroup
 from taplt.ui.shape import Shape
 from taplt.utils.qt import get_icon
 from taplt.mediaViewingWidgets.video_display import VideoPlayer
-
+from taplt.mediaViewingWidgets.slideloader import SlideLoader
 
 class CenterDisplayWidget(QWidget):
     """ widget to manage the central display in the GUI
@@ -16,6 +16,7 @@ class CenterDisplayWidget(QWidget):
     sRequestLabelListUpdate = pyqtSignal(int)
     sRequestSave = pyqtSignal()
     sChangeFile = pyqtSignal(int)
+    sDrawingTooltip = pyqtSignal(str)
     CREATE, EDIT = 0, 1
 
     def __init__(self, *args):
@@ -29,10 +30,13 @@ class CenterDisplayWidget(QWidget):
         self.video_label = QLabel()
         self.video_player.frame_grabbed.connect(self.play_frames)
 
+        self.slide_viewer = SlideLoader(self.scene)
+
         self.pixmap = QGraphicsPixmapItem()
         self.scene.addItem(self.pixmap)
         self.annotations = AnnotationGroup()
         self.scene.addItem(self.annotations)
+        self.annotations.sToolTip.connect(self.sDrawingTooltip.emit)
 
         # QLabel displaying the patient's id/name/alias
         self.patient_label = QLabel()
@@ -100,6 +104,7 @@ class CenterDisplayWidget(QWidget):
             self.video_player.play()
 
         else:
+
             RuntimeError("This file type is not supported (yet)!")
 
         self.patient_label.setText(patient)

@@ -72,7 +72,6 @@ class Toolbar(QToolBar):
 
     def init_actions(self, parent):
         """Initialise all actions present which can be connected to buttons or menu items"""
-        # TODO: some shortcuts don't work
         # TODO: Figure out a more modular way to set up these actions
         action_select = Action(parent,
                                "Select",

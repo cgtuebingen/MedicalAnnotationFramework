@@ -2,6 +2,14 @@ from PyQt6.QtCore import *
 from typing import *
 from typing_extensions import TypedDict
 import numpy as np
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtMultimedia import *
+from PyQt6.QtMultimediaWidgets import *
+import os
+openslide_path = "C:\Philipp\Studium\SS23\openslide\\bin"
+os.add_dll_directory(openslide_path)
 from openslide import OpenSlide
 
 
@@ -12,10 +20,10 @@ class ZoomDict(TypedDict):
     """ image pixel array """
 
 
-class SlideLoader(QObject):
+class SlideLoader(QGraphicsView):
     update_slides = pyqtSignal()
 
-    def __init__(self, filepath: str = None, width: int = 800, height: int = 600):
+    def __init__(self, *args, filepath: str = None, width: int = 800, height: int = 600):
         """
         Initialization of SlideLoader
         :param filepath: path of the _slide data. The data type is based on the OpenSlide library and can handle:
@@ -25,7 +33,19 @@ class SlideLoader(QObject):
         :type filepath: str
 
         """
-        super(SlideLoader, self).__init__()
+        super(SlideLoader, self).__init__(*args)
+
+        self.b_isEmpty = True
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
+        self.setMouseTracking(True)
+
+        # Protected Item
+        self._scaling_factor = 5 / 4
+        self._enableZoomPan = False
 
         self._slide: OpenSlide = None
         self.current_file = filepath

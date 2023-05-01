@@ -16,6 +16,7 @@ class AnnotationGroup(QGraphicsObject):
     shapeSelected = pyqtSignal(Shape)
     sLabelClassDeleted = pyqtSignal(str)
     sChange = pyqtSignal(int)
+    sToolTip = pyqtSignal(str)
 
     @dataclass
     class AnnotationMode:
@@ -50,12 +51,13 @@ class AnnotationGroup(QGraphicsObject):
         if not self.drawing:
             self.drawing = True
             s = self.scene()  # type: QGraphicsScene
-            self.temp_shape = Shape(image_size=QSize(s.width(), s.height()),
+            self.temp_shape = Shape(image_size=QSize(int(s.width()), int(s.height())),
                                     shape_type=self.shapeType,
                                     mode=Shape.ShapeMode.CREATE,
                                     color=self.draw_new_color)
             self.add_shapes(self.temp_shape)
             self.temp_shape.drawingDone.connect(self.set_drawing_to_false)
+            self.sToolTip.emit("Press right click to end the annotation.")
             self.temp_shape.grabMouse()
         else:
             pass
