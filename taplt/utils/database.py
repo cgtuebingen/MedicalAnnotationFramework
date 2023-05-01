@@ -203,6 +203,12 @@ class SQLiteDatabase(QObject):
             image_paths = self.cursor.execute("SELECT filename FROM images").fetchall()
         return [image_path[0] for image_path in image_paths]
 
+    def get_videos(self) -> list:
+        """ returns a list of all image names which are currently stored in the database"""
+        with self.connection:
+            video_paths = self.cursor.execute("SELECT filename FROM videos").fetchall()
+        return [video_path[0] for video_path in video_paths]
+
     def get_label_classes(self) -> list:
         """
         :return: a list of all label classes which are currently stored in the database
@@ -230,9 +236,20 @@ class SQLiteDatabase(QObject):
 
     def get_patient_by_filename(self, filename: str):
         """returns the corresponding patient uid of an image"""
-        with self.connection:
-            self.cursor.execute("SELECT patient FROM images WHERE filename = ?", (filename,))
-            return self.cursor.fetchone()[0]
+        # TODO: This is a non modular way of finding out what type of file this is. We should create a dictionary,
+        #  or list for this
+        if filename.endswith(".png"):
+            with self.connection:
+                self.cursor.execute("SELECT patient FROM images WHERE filename = ?", (filename,))
+                return self.cursor.fetchone()[0]
+        elif filename.endswith(".mp4"):
+            with self.connection:
+                self.cursor.execute("SELECT patient FROM videos WHERE filename = ?", (filename,))
+                return self.cursor.fetchone()[0]
+        else:
+            with self.connection:
+                self.cursor.execute("SELECT patient FROM whole slide images WHERE filename = ?", (filename,))
+                return self.cursor.fetchone()[0]
 
     def get_patient_by_uid(self, patient_uid: int):
         """returns the id/patient info from the patients table by the corresponding uid"""
@@ -327,7 +344,12 @@ class SQLiteDatabase(QObject):
         for file in files:
             labels = self.get_label_from_image(file)
             populated = True if labels else False
-            file = self.location + Structure.IMAGES_DIR + file
+            if file.endswith(".png"):
+                file = self.location + Structure.IMAGES_DIR + file
+            elif file.endswith(".mp4"):
+                file = self.location + Structure.VIDEOS_DIR + file
+            else:
+                file = self.location + Structure.WSI_DIR + file
             result.append((file, populated))
         return result
 
@@ -374,7 +396,7 @@ class SQLiteDatabase(QObject):
 
     def update_gui(self, img_idx: int = 0):
         """gathers all information about the project and updates the database"""
-        files = self.get_images()
+        files = self.get_images() + self.get_videos()
         if files:
             file = files[img_idx]
             labels = self.get_label_from_image(file)

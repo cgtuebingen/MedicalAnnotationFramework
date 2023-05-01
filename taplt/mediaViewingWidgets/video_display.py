@@ -6,7 +6,7 @@ from PyQt6.QtMultimediaWidgets import *
 import os
 
 
-class VideoPlayer(QWidget):
+class VideoPlayer(QGraphicsView):
     """
     A custom widget for playing a video with an embedded frame extractor
     """
@@ -16,12 +16,25 @@ class VideoPlayer(QWidget):
     media_error = pyqtSignal(QMediaPlayer.Error)
     frame_grabbed = pyqtSignal(QImage, int)
 
-    def __init__(self):
-        super(VideoPlayer, self).__init__()
+    def __init__(self, *args):
+        super(VideoPlayer, self).__init__(*args)
+        self.b_isEmpty = True
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
+        self.setMouseTracking(True)
+
+        # Protected Item
+        self._scaling_factor = 5 / 4
+        self._enableZoomPan = False
+
         self.media_player = QMediaPlayer(None)
         self.video_player = QVideoWidget()
         self.setLayout(QVBoxLayout())
         self.layout().addWidget(self.video_player)
+        self.setStyleSheet("border: 0px")
         self.frame_grabber = QImageCapture()
         self.media_player.setVideoOutput(self.video_player.videoSink())
 
@@ -32,7 +45,6 @@ class VideoPlayer(QWidget):
         self.media_player.positionChanged.connect(self.playback_position_changed.emit)
         self.media_player.durationChanged.connect(self.video_duration_changed.emit)
         self.media_player.errorOccurred.connect(self.media_error.emit)
-        self.resize(700, 500)
 
     @property
     def duration(self):
@@ -91,5 +103,14 @@ class VideoPlayer(QWidget):
         elif key == Qt.Key.Key_Return:
             self.pause_and_grab()
 
-    def resize_to_scene(self, scene: QGraphicsScene):
-        self.setGeometry(QRect(QPoint(0, 0), QPoint(600, 600)))
+    def fitInView(self, rect: QRectF, mode: Qt.AspectRatioMode = Qt.AspectRatioMode.IgnoreAspectRatio) -> None:
+        if not rect.isNull():
+            self.setSceneRect(rect)
+
+            unity = self.transform().mapRect(QRectF(0, 0, 1, 1))
+            self.scale(1 / unity.width(), 1 / unity.height())
+            view_rect = self.viewport().rect()
+            scene_rect = self.transform().mapRect(rect)
+            factor = min(view_rect.width() / scene_rect.width(),
+                         view_rect.height() / scene_rect.height())
+            self.scale(factor, factor)

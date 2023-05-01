@@ -25,8 +25,9 @@ class CenterDisplayWidget(QWidget):
         self.scene = QGraphicsScene()
         self.image_viewer = ImageViewer(self.scene)
 
-        self.video_player = VideoPlayer()
-        self.video_player.setParent(self)
+        self.video_player = VideoPlayer(self.scene)
+        self.video_label = QLabel()
+        self.video_player.frame_grabbed.connect(self.play_frames)
 
         self.pixmap = QGraphicsPixmapItem()
         self.scene.addItem(self.pixmap)
@@ -45,6 +46,7 @@ class CenterDisplayWidget(QWidget):
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.image_viewer)
         self.layout.addWidget(self.patient_label)
+        self.layout.addWidget(self.video_player)
 
     def mousePressEvent(self, event: QMouseEvent):
         if self.annotations.mode == AnnotationGroup.AnnotationMode.DRAW:
@@ -81,18 +83,24 @@ class CenterDisplayWidget(QWidget):
         self.annotations.update_annotations(labels)
         self.hide_button.raise_()
 
-        if not filepath.endswith("elephant.png"):
+        if filepath.endswith(".png"):
 
             self.image_viewer.setHidden(False)
             self.video_player.setHidden(True)
             rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
             self.image_viewer.fitInView(rect)
 
-        else:
-
+        elif filepath.endswith(".mp4"):
             self.image_viewer.setHidden(True)
             self.video_player.setHidden(False)
-            self.video_player.resize_to_scene(self.scene)
+            self.video_player.set_video(filepath)
+            rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
+            self.video_player.fitInView(rect)
+            self.video_player.show()
+            self.video_player.play()
+
+        else:
+            RuntimeError("This file type is not supported (yet)!")
 
         self.patient_label.setText(patient)
         return labels
@@ -103,3 +111,8 @@ class CenterDisplayWidget(QWidget):
     def set_initialized(self):
         self.scene.b_isInitialized = True
         self.image_viewer.b_isEmpty = False
+
+    def play_frames(self,image: QImage, t):
+        pix = QPixmap.fromImage(image)
+        self.video_label.setPixmap(pix)
+        self.video_label.show()
