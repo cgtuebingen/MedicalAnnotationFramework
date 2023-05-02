@@ -34,7 +34,15 @@ def create_project_structure(project_path: str):
 def modality(filepath: str):
     """This method uses the 'filetype' library to detect the type of a given file
     returns: 0 if video, 1 if image, 2 if whole slide image, -1 if none of the above"""
-    detection = filetype.guess(filepath).mime
+    detection = filetype.guess(filepath)
+
+    if detection is None:
+        if filepath.endswith(".tif"):
+            return 2
+        else:
+            RuntimeError("Unknown Filetype!")
+
+    detection = detection.mime
     if detection.startswith('video'):
         return 0
     elif detection.startswith('image'):

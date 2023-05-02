@@ -7,7 +7,8 @@ from taplt.ui.annotation_group import AnnotationGroup
 from taplt.ui.shape import Shape
 from taplt.utils.qt import get_icon
 from taplt.mediaViewingWidgets.video_display import VideoPlayer
-from taplt.mediaViewingWidgets.slideloader import SlideLoader
+from taplt.mediaViewingWidgets.slide_view import SlideView
+from taplt.mediaViewingWidgets.examples.graphics_view import GraphicsView
 
 class CenterDisplayWidget(QWidget):
     """ widget to manage the central display in the GUI
@@ -30,7 +31,8 @@ class CenterDisplayWidget(QWidget):
         self.video_label = QLabel()
         self.video_player.frame_grabbed.connect(self.play_frames)
 
-        self.slide_viewer = SlideLoader(self.scene)
+        self.slide_handler = SlideView()
+        self.slide_wrapper = GraphicsView(self)
 
         self.pixmap = QGraphicsPixmapItem()
         self.scene.addItem(self.pixmap)
@@ -49,8 +51,9 @@ class CenterDisplayWidget(QWidget):
         self.image_viewer.setFrameShape(QFrame.Shape.NoFrame)
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.image_viewer)
-        self.layout.addWidget(self.patient_label)
         self.layout.addWidget(self.video_player)
+        self.layout.addWidget(self.slide_wrapper)
+        self.layout.addWidget(self.patient_label)
 
     def mousePressEvent(self, event: QMouseEvent):
         if self.annotations.mode == AnnotationGroup.AnnotationMode.DRAW:
@@ -87,26 +90,7 @@ class CenterDisplayWidget(QWidget):
         self.annotations.update_annotations(labels)
         self.hide_button.raise_()
 
-        if filepath.endswith(".png"):
-
-            self.image_viewer.setHidden(False)
-            self.video_player.setHidden(True)
-            rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
-            self.image_viewer.fitInView(rect)
-
-        elif filepath.endswith(".mp4"):
-            self.image_viewer.setHidden(True)
-            self.video_player.setHidden(False)
-            self.video_player.set_video(filepath)
-            rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
-            self.video_player.fitInView(rect)
-            self.video_player.show()
-            self.video_player.play()
-
-        else:
-
-            RuntimeError("This file type is not supported (yet)!")
-
+        self.switch_to_modality(filepath)
         self.patient_label.setText(patient)
         return labels
 
@@ -121,3 +105,40 @@ class CenterDisplayWidget(QWidget):
         pix = QPixmap.fromImage(image)
         self.video_label.setPixmap(pix)
         self.video_label.show()
+
+    def switch_to_modality(self, filepath: str):
+        """
+        A function that switches to the modality based on the ``filepath`` parameter
+        :param filepath: The path to the file that we want to switch to
+        """
+
+        if filepath.endswith(".png"):
+            self.image_viewer.setHidden(False)
+            self.video_player.setHidden(True)
+            #self.slide_wrapper.setHidden(True)
+
+            self.video_player.pause()
+
+            rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
+            self.image_viewer.fitInView(rect)
+
+        elif filepath.endswith(".mp4") or filepath.endswith(".mov"):
+            self.image_viewer.setHidden(True)
+            self.video_player.setHidden(False)
+            #self.slide_wrapper.setHidden(True)
+
+            rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
+            self.video_player.fitInView(rect)
+            self.video_player.set_video(filepath)
+            self.video_player.show()
+            self.video_player.play()
+
+        else:
+            self.image_viewer.setHidden(True)
+            self.video_player.setHidden(True)
+            self.slide_wrapper.setHidden(False)
+
+            self.video_player.pause()
+
+            self.slide_handler.load_new_image(QFileDialog().getOpenFileName()[0])
+            self.slide_wrapper.show()

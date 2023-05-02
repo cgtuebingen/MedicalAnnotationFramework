@@ -204,10 +204,16 @@ class SQLiteDatabase(QObject):
         return [image_path[0] for image_path in image_paths]
 
     def get_videos(self) -> list:
-        """ returns a list of all image names which are currently stored in the database"""
+        """ returns a list of all video names which are currently stored in the database"""
         with self.connection:
             video_paths = self.cursor.execute("SELECT filename FROM videos").fetchall()
         return [video_path[0] for video_path in video_paths]
+
+    def get_wsi(self) -> list:
+        """ returns a list of all wsi names which are currently stored in the database"""
+        with self.connection:
+            wsi_paths = self.cursor.execute("SELECT filename FROM 'whole slide images'").fetchall()
+        return [wsi_path[0] for wsi_path in wsi_paths]
 
     def get_label_classes(self) -> list:
         """
@@ -242,13 +248,13 @@ class SQLiteDatabase(QObject):
             with self.connection:
                 self.cursor.execute("SELECT patient FROM images WHERE filename = ?", (filename,))
                 return self.cursor.fetchone()[0]
-        elif filename.endswith(".mp4"):
+        elif filename.endswith(".mp4") or filename.endswith(".mov"):
             with self.connection:
                 self.cursor.execute("SELECT patient FROM videos WHERE filename = ?", (filename,))
                 return self.cursor.fetchone()[0]
         else:
             with self.connection:
-                self.cursor.execute("SELECT patient FROM whole slide images WHERE filename = ?", (filename,))
+                self.cursor.execute("SELECT patient FROM 'whole slide images' WHERE filename = ?", (filename,))
                 return self.cursor.fetchone()[0]
 
     def get_patient_by_uid(self, patient_uid: int):
@@ -346,7 +352,7 @@ class SQLiteDatabase(QObject):
             populated = True if labels else False
             if file.endswith(".png"):
                 file = self.location + Structure.IMAGES_DIR + file
-            elif file.endswith(".mp4"):
+            elif file.endswith(".mp4") or file.endswith(".mov"):
                 file = self.location + Structure.VIDEOS_DIR + file
             else:
                 file = self.location + Structure.WSI_DIR + file
@@ -396,7 +402,7 @@ class SQLiteDatabase(QObject):
 
     def update_gui(self, img_idx: int = 0):
         """gathers all information about the project and updates the database"""
-        files = self.get_images() + self.get_videos()
+        files = self.get_images() + self.get_videos() + self.get_wsi()
         if files:
             file = files[img_idx]
             labels = self.get_label_from_image(file)
