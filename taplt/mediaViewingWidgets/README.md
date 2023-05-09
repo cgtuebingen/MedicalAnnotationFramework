@@ -167,16 +167,16 @@ def update_image_check(self):
     areas).
     :return: /
     """
-    if self.scene():  # don't run code without a scene, prevents crashes
-        if self.view_width != self.scene().views()[0].viewport().width() or \
-           self.view_height != self.scene().views()[0].viewport().height():
-            self.refactor_image()
+    if self.image_scene():  # don't run code without a scene, prevents crashes
+        if self.view_width != self.image_scene().views()[0].viewport().width() or
+            self.view_height != self.image_scene().views()[0].viewport().height():
+        self.refactor_image()
 
         slides = self.slide_loader.get_zoom_stack()
-        view_up_left = self.scene().views()[0].mapToScene(int(0.02 * self.view_width),
-                                                          int(0.02 * self.view_height))  # 2% buffer for frame
-        view_low_right = self.scene().views()[0].mapToScene(int(0.98 * self.view_width),
-                                                            int(0.98 * self.view_height))  # 2% buffer for frame
+        view_up_left = self.image_scene().views()[0].mapToScene(int(0.02 * self.view_width),
+                                                                int(0.02 * self.view_height))  # 2% buffer for frame
+        view_low_right = self.image_scene().views()[0].mapToScene(int(0.98 * self.view_width),
+                                                                  int(0.98 * self.view_height))  # 2% buffer for frame
 
         for lvl in range(min(self.slide_lvl_goal, self.slide_lvl_active),
                          max(self.slide_lvl_goal, self.slide_lvl_active) + 1):
@@ -187,25 +187,27 @@ def update_image_check(self):
             if (view_up_left.x() > scene_up_left_goal[0] and  # check if _slide fits completely int the view
                 view_up_left.y() > scene_up_left_goal[1] and  # completely is the reason for use of "and"
                 view_low_right.x() < scene_low_right_goal[0] and
-                view_low_right.y() < scene_low_right_goal[1]) and \
-                    lvl < self.slide_lvl_active:  # to ensure that not every time an image will be displayed
-                self.slide_lvl_active = lvl
-                self.set_image()
-                break   # if a _slide fits, second check is not needed (code efficiency)
+                view_low_right.y() < scene_low_right_goal[1]) and
+                lvl < self.slide_lvl_active:  # to ensure that not every time an image will be displayed
+            self.slide_lvl_active = lvl
+            self.set_image()
+            break  # if a _slide fits, second check is not needed (code efficiency)
 
-            # check for unloaded areas
-            elif (view_up_left.x() < scene_up_left_goal[0] or  # check if one corner is unloaded
-                  view_up_left.y() < scene_up_left_goal[1] or  # cover of all corners needs "or"
-                  view_low_right.x() > scene_low_right_goal[0] or
-                  view_low_right.y() > scene_low_right_goal[1]) and lvl == self.slide_lvl_active:
-                self.slide_lvl_active += 1
-                if self.slide_lvl_active >= self.num_lvl:  # check if you are already on the highest level
-                    self.slide_lvl_active = self.num_lvl
-                    self.set_image()
-                    # Stop function, if on the highest level(no update is required
-                    # most of the time, the view on the highest level will be outside the _slide
-                    return  # prevents emitting start_checking/stops the function
+        # check for unloaded areas
+        elif (view_up_left.x() < scene_up_left_goal[0] or  # check if one corner is unloaded
+              view_up_left.y() < scene_up_left_goal[1] or  # cover of all corners needs "or"
+              view_low_right.x() > scene_low_right_goal[0] or
+              view_low_right.y() > scene_low_right_goal[1]) and lvl == self.slide_lvl_active:
+        self.slide_lvl_active += 1
+        if self.slide_lvl_active >= self.num_lvl:  # check if you are already on the highest level
+            self.slide_lvl_active = self.num_lvl
+            self.set_image()
+            # Stop function, if on the highest level(no update is required
+            # most of the time, the view on the highest level will be outside the _slide
+            return  # prevents emitting start_checking/stops the function
 
-                self.set_image()
-    self.start_checking.emit()
+        self.set_image()
+
+
+self.start_checking.emit()
 ```

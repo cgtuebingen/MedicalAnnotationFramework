@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import *
 from media_viewing_widgets import ImageView
-from graphics_view import GraphicsView
+from taplt.mediaViewingWidgets.slide_view import SlideView
 
 
 if __name__ == '__main__':
@@ -12,7 +12,7 @@ if __name__ == '__main__':
     scene = QGraphicsScene()
     scene.addItem(slide_view)
 
-    viewer = GraphicsView(scene)
+    viewer = SlideView(scene)
     viewer.resize(1000, 600)
     viewer.show()
     slide_view.set_image(QFileDialog().getOpenFileName()[0])

@@ -91,6 +91,7 @@ class SQLiteDatabase(QObject):
         self.file_tables = FILE_TABLES
         self.is_initialized = False
         self.settings = None  # type: QSettings
+        self.database_path = "none"
 
     def add_annotation(self, modality: int, file: int, patient: int, shape: bytes, label: int):
         """ adds an entry to the annotation table using the parameter values"""
@@ -142,7 +143,7 @@ class SQLiteDatabase(QObject):
 
     def create_annotation_entry(self, filename: str, label_dict: dict, label_class: str):
         mod, file_uid = self.get_uids_from_filename(filename)
-        patient_uid = self.get_patient_by_filename(filename)
+        patient_uid = self.get_patient_by_filename(filename, mod)
         label_class = self.get_uid_from_label(label_class)
 
         annotation_entry = {'modality': mod,
@@ -240,20 +241,21 @@ class SQLiteDatabase(QObject):
             result = self.cursor.execute("SELECT some_id FROM patients").fetchall()
         return [res[0] for res in result]
 
-    def get_patient_by_filename(self, filename: str):
+    def get_patient_by_filename(self, filename: str, moda: int):
         """returns the corresponding patient uid of an image"""
         # TODO: This is a non modular way of finding out what type of file this is. We should create a dictionary,
         #  or list for this
-        if filename.endswith(".png"):
+
+        if moda == 0:
             with self.connection:
                 self.cursor.execute("SELECT patient FROM images WHERE filename = ?", (filename,))
                 return self.cursor.fetchone()[0]
-        elif filename.endswith(".mp4") or filename.endswith(".mov"):
+        elif moda == 1:
             with self.connection:
                 self.cursor.execute("SELECT patient FROM videos WHERE filename = ?", (filename,))
                 return self.cursor.fetchone()[0]
         else:
-            with self.connection:
+            with moda == 2:
                 self.cursor.execute("SELECT patient FROM 'whole slide images' WHERE filename = ?", (filename,))
                 return self.cursor.fetchone()[0]
 
@@ -318,6 +320,7 @@ class SQLiteDatabase(QObject):
             create_project_structure(self.location)
 
         self.connection = sqlite3.connect(database_path)
+        self.database_path = database_path
         self.cursor = self.connection.cursor()
 
         # indicates a new project - add initial files
@@ -348,11 +351,12 @@ class SQLiteDatabase(QObject):
         in a tuple together with a boolean indicating whether there is at least 1 annotation in the image"""
         result = list()
         for file in files:
+            moda = modality(file)
             labels = self.get_label_from_image(file)
             populated = True if labels else False
-            if file.endswith(".png"):
+            if moda == 0:
                 file = self.location + Structure.IMAGES_DIR + file
-            elif file.endswith(".mp4") or file.endswith(".mov"):
+            elif moda == 1:
                 file = self.location + Structure.VIDEOS_DIR + file
             else:
                 file = self.location + Structure.WSI_DIR + file
@@ -402,11 +406,22 @@ class SQLiteDatabase(QObject):
 
     def update_gui(self, img_idx: int = 0):
         """gathers all information about the project and updates the database"""
-        files = self.get_images() + self.get_videos() + self.get_wsi()
+        images = self.get_images()
+        videos = self.get_videos()
+        wsis = self.get_wsi()
+        # TODO: eliminate for loop
+        moda = {}
+        for image in images:
+            moda[image] = 0
+        for video in videos:
+            moda[video] = 1
+        for wsi in wsis:
+            moda[wsi] = 2
+        files = list(zip(images, videos, wsis))
         if files:
             file = files[img_idx]
             labels = self.get_label_from_image(file)
-            patient = self.get_patient_by_uid(self.get_patient_by_filename(file))
+            patient = self.get_patient_by_uid(self.get_patient_by_filename(file, moda[file]))
         else:
             labels, patient = [], ""
         files = self.prepare_files(files)

@@ -1,3 +1,5 @@
+import magic
+
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
@@ -7,8 +9,9 @@ from taplt.ui.annotation_group import AnnotationGroup
 from taplt.ui.shape import Shape
 from taplt.utils.qt import get_icon
 from taplt.mediaViewingWidgets.video_display import VideoPlayer
+from taplt.mediaViewingWidgets.slide_loader import SlideLoader
 from taplt.mediaViewingWidgets.slide_view import SlideView
-from taplt.mediaViewingWidgets.examples.graphics_view import GraphicsView
+
 
 class CenterDisplayWidget(QWidget):
     """ widget to manage the central display in the GUI
@@ -23,21 +26,27 @@ class CenterDisplayWidget(QWidget):
     def __init__(self, *args):
         super(CenterDisplayWidget, self).__init__(*args)
 
-        # main components of the display
-        self.scene = QGraphicsScene()
-        self.image_viewer = ImageViewer(self.scene)
+        # for file types
+        self.mime = magic.Magic(mime=True)
 
-        self.video_player = VideoPlayer(self.scene)
+        # main components of the display
+        self.image_scene = QGraphicsScene()
+        self.image_viewer = ImageViewer(self.image_scene)
+
+        self.video_player = VideoPlayer(self.image_scene)
         self.video_label = QLabel()
         self.video_player.frame_grabbed.connect(self.play_frames)
 
-        self.slide_handler = SlideView()
-        self.slide_wrapper = GraphicsView(self)
+        # Setup of the slide viewer with its own scene
+        self.slide_scene = QGraphicsScene()
+        self.slide_loader = SlideLoader()
+        self.slide_scene.addItem(self.slide_loader)
+        self.slide_wrapper = SlideView(self.slide_scene)
 
         self.pixmap = QGraphicsPixmapItem()
-        self.scene.addItem(self.pixmap)
+        self.image_scene.addItem(self.pixmap)
         self.annotations = AnnotationGroup()
-        self.scene.addItem(self.annotations)
+        self.image_scene.addItem(self.annotations)
         self.annotations.sToolTip.connect(self.sDrawingTooltip.emit)
 
         # QLabel displaying the patient's id/name/alias
@@ -64,9 +73,9 @@ class CenterDisplayWidget(QWidget):
     def clear(self):
         """This function deletes all currently stored labels
         and triggers the image_viewer to display a default image"""
-        self.scene.b_isInitialized = False
+        self.image_scene.b_isInitialized = False
         self.image_viewer.b_isEmpty = True
-        self.scene.clear()
+        self.image_scene.clear()
         self.set_labels([])
 
     def get_pixmap_dimensions(self):
@@ -98,7 +107,7 @@ class CenterDisplayWidget(QWidget):
         return self.image_viewer.b_isEmpty
 
     def set_initialized(self):
-        self.scene.b_isInitialized = True
+        self.image_scene.b_isInitialized = True
         self.image_viewer.b_isEmpty = False
 
     def play_frames(self,image: QImage, t):
@@ -111,34 +120,38 @@ class CenterDisplayWidget(QWidget):
         A function that switches to the modality based on the ``filepath`` parameter
         :param filepath: The path to the file that we want to switch to
         """
+        rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
+        file_type = self.mime.from_file(filepath)
 
-        if filepath.endswith(".png"):
+        if file_type.startswith('image') and not file_type.endswith('tiff'):
             self.image_viewer.setHidden(False)
             self.video_player.setHidden(True)
-            #self.slide_wrapper.setHidden(True)
+            self.slide_wrapper.setHidden(True)
 
             self.video_player.pause()
 
-            rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
             self.image_viewer.fitInView(rect)
 
-        elif filepath.endswith(".mp4") or filepath.endswith(".mov"):
+        elif file_type.startswith('video'):
             self.image_viewer.setHidden(True)
             self.video_player.setHidden(False)
-            #self.slide_wrapper.setHidden(True)
+            self.slide_wrapper.setHidden(True)
 
-            rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
             self.video_player.fitInView(rect)
             self.video_player.set_video(filepath)
             self.video_player.show()
             self.video_player.play()
 
-        else:
+        elif file_type.endswith('tiff'):
             self.image_viewer.setHidden(True)
             self.video_player.setHidden(True)
             self.slide_wrapper.setHidden(False)
 
             self.video_player.pause()
 
-            self.slide_handler.load_new_image(QFileDialog().getOpenFileName()[0])
             self.slide_wrapper.show()
+            self.slide_loader.load_new_image(filepath)
+            self.slide_wrapper.fitInView()
+
+        else:
+            RuntimeError('The file type ' + file_type + ' is not supported.')

@@ -36,7 +36,7 @@ setup(
     install_requires=["numpy",
                       "Pillow>=2.8.0",
                       "PyQt6",
-                      "filetype"],
+                      "python-magic-bin"],
     license="GPLv3",
     keywords="Image Annotation, Machine Learning",
     classifiers=[
