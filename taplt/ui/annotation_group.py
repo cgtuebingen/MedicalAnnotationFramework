@@ -45,6 +45,7 @@ class AnnotationGroup(QGraphicsObject):
     @pyqtSlot()
     def set_drawing_to_false(self):
         self.drawing = False
+        self.sToolTip.emit("")
 
     @pyqtSlot()
     def create_shape(self):
@@ -159,6 +160,7 @@ class AnnotationGroup(QGraphicsObject):
         # if user entered no label, remove shape
         else:
             self.remove_shapes([self.temp_shape])
+            self.set_drawing_to_false()
 
     def set_mode(self, mode: Union[AnnotationMode, int]):
         self.mode = mode

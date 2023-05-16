@@ -118,7 +118,7 @@ class LabelingMainWindow(QMainWindow):
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.toolBar)
         self.toolBar.init_margins()
         self.toolBar.init_actions(self)
-        self.image_display.sDrawingTooltip.connect(self.test)
+        self.image_display.sDrawingTooltip.connect(self.set_tool_tip)
 
         # TODO: if possible, get rid of such variables
         self.img_idx = 0
@@ -151,8 +151,11 @@ class LabelingMainWindow(QMainWindow):
         self.menubar.sCloseProject.connect(self.close_project)
         self.menubar.sExampleProject.connect(self.macros.example_project)
 
-    def test(self, string:str):
-        self.toolBar.setToolTip(string)
+    def set_tool_tip(self, tip: str):
+        # TODO: This is kind of working, but not really. You have to hover out of the display widget.
+        self.main_widget.setStatusTip(tip)
+        self.main_widget.setToolTip(tip)
+
     def apply_settings(self, settings: list):
         """applies the settings"""
         for setting in settings:
