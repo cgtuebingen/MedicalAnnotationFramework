@@ -254,8 +254,8 @@ class SQLiteDatabase(QObject):
             with self.connection:
                 self.cursor.execute("SELECT patient FROM videos WHERE filename = ?", (filename,))
                 return self.cursor.fetchone()[0]
-        else:
-            with moda == 2:
+        elif moda == 2:
+            with self.connection:
                 self.cursor.execute("SELECT patient FROM 'whole slide images' WHERE filename = ?", (filename,))
                 return self.cursor.fetchone()[0]
 
@@ -346,17 +346,16 @@ class SQLiteDatabase(QObject):
         settings = self.get_settings()
         self.sOpenSettings.emit(settings)
 
-    def prepare_files(self, files: list) -> list:
+    def prepare_files(self, files: list, moda: dict) -> list:
         """goes through all filenames and returns them as full paths,
         in a tuple together with a boolean indicating whether there is at least 1 annotation in the image"""
         result = list()
         for file in files:
-            moda = modality(file)
             labels = self.get_label_from_image(file)
             populated = True if labels else False
-            if moda == 0:
+            if moda[file] == 0:
                 file = self.location + Structure.IMAGES_DIR + file
-            elif moda == 1:
+            elif moda[file] == 1:
                 file = self.location + Structure.VIDEOS_DIR + file
             else:
                 file = self.location + Structure.WSI_DIR + file
@@ -409,22 +408,22 @@ class SQLiteDatabase(QObject):
         images = self.get_images()
         videos = self.get_videos()
         wsis = self.get_wsi()
-        # TODO: eliminate for loop
-        moda = {}
-        for image in images:
-            moda[image] = 0
-        for video in videos:
-            moda[video] = 1
-        for wsi in wsis:
-            moda[wsi] = 2
-        files = list(zip(images, videos, wsis))
+
+        moda = {image: 0 for image in images}
+        moda.update({video: 1 for video in videos})
+        moda.update({wsi: 2 for wsi in wsis})
+
+        files = images
+        files.extend(videos)
+        files.extend(wsis)
+
         if files:
             file = files[img_idx]
             labels = self.get_label_from_image(file)
             patient = self.get_patient_by_uid(self.get_patient_by_filename(file, moda[file]))
         else:
             labels, patient = [], ""
-        files = self.prepare_files(files)
+        files = self.prepare_files(files, moda)
         classes = self.get_label_classes()
         self.sUpdate.emit(files, img_idx, patient, classes, labels)
 
