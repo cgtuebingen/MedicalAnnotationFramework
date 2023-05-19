@@ -67,6 +67,7 @@ cd MedicalAnnotationFramework
 git submodule init
 pip install .  # add -e to use the cloned repository as the source for the package
 ```
+Further information about submodules can be found [here](https://gist.github.com/gitaarik/8735255).
 
 Launch the app with:
 ```bash
