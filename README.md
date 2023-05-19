@@ -54,9 +54,17 @@ Click "Macros -> Preview Database" to preview the current version of the databas
 
 ## Installation
 
+This repository includes a submodule. Therefore, it can be either cloned using:
+```bash
+clone --recurse-submodules https://github.com/cgtuebingen/MedicalAnnotationFramework.git
+cd MedicalAnnotationFramework
+pip install .  # add -e to use the cloned repository as the source for the package
+```
+Or using:
 ```bash
 clone https://github.com/cgtuebingen/MedicalAnnotationFramework.git
 cd MedicalAnnotationFramework
+git submodule init
 pip install .  # add -e to use the cloned repository as the source for the package
 ```
 
