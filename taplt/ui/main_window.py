@@ -3,8 +3,9 @@ from PyQt6.QtCore import *
 
 from pathlib import Path
 from dataclasses import dataclass
+from taplt.src.actions import Action
 
-from taplt.ui.image_display import CenterDisplayWidget
+from taplt.ui.file_display import CenterDisplayWidget
 from taplt.ui.toolbar import Toolbar
 from taplt.ui.dialogs import (SelectPatientDialog, CloseMessageBox, DeleteFileMessageBox,
                               ForgotToSaveMessageBox, SettingDialog, ProjectHandlerDialog)
@@ -63,14 +64,14 @@ class LabelingMainWindow(QMainWindow):
         self.center_frame.layout().setSpacing(0)
 
         self.welcome_screen = WelcomeScreen()
-        self.image_display = CenterDisplayWidget()
+        self.file_display = CenterDisplayWidget()
 
         # default widget when no images exist in the project
         self.no_files = QLabel()
         self.no_files.setText("No files to display")
         self.no_files.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.center_frame.layout().addWidget(self.image_display)
+        self.center_frame.layout().addWidget(self.file_display)
         self.center_frame.layout().addWidget(self.no_files)
         self.center_frame.layout().addWidget(self.welcome_screen)
 
@@ -117,8 +118,15 @@ class LabelingMainWindow(QMainWindow):
         self.toolBar = Toolbar(self)
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.toolBar)
         self.toolBar.init_margins()
-        self.toolBar.init_actions(self)
-        self.image_display.sDrawingTooltip.connect(self.set_tool_tip)
+
+        # Toolbar setup actions for images, videos and whole slides
+        self.toolBar.init_actions('image', self.define_img_wsi_actions())
+        self.toolBar.init_actions('wsi', self.define_img_wsi_actions())
+        self.toolBar.init_actions('video', self.define_video_actions())
+        self.file_display.modalitySwitched.connect(self.toolBar.switch_modality)
+
+        # Show tooltip while drawing
+        self.file_display.sDrawingTooltip.connect(self.set_tool_tip)
 
         # TODO: if possible, get rid of such variables
         self.img_idx = 0
@@ -129,18 +137,16 @@ class LabelingMainWindow(QMainWindow):
         self.set_welcome_screen(True)
 
         # connect signals
-        self.image_display.sRequestSave.connect(self.save_to_database)
-        self.image_display.image_viewer.sNextFile.connect(self.next_image)
-        self.image_display.annotations.updateShapes.connect(self.polygons.update_polygons)
-        self.image_display.annotations.shapeSelected.connect(self.polygons.shape_selected)
-        self.image_display.annotations.sChange.connect(self.change_detected)
+        self.file_display.sRequestSave.connect(self.save_to_database)
+        self.file_display.image_viewer.sNextFile.connect(self.next_image)
+        self.file_display.annotations.updateShapes.connect(self.polygons.update_polygons)
+        self.file_display.annotations.shapeSelected.connect(self.polygons.shape_selected)
+        self.file_display.annotations.sChange.connect(self.change_detected)
         self.file_list.sDeleteFile.connect(self.delete_file)
         self.file_list.sRequestFileChange.connect(self.file_list_item_clicked)
-        self.polygons.sItemsDeleted.connect(self.image_display.annotations.remove_shapes)
-        self.polygons.sDeselectAll.connect(self.image_display.annotations.deselect_all)
+        self.polygons.sItemsDeleted.connect(self.file_display.annotations.remove_shapes)
+        self.polygons.sDeselectAll.connect(self.file_display.annotations.deselect_all)
         self.polygons.sChange.connect(self.change_detected)
-        self.toolBar.sSetDrawingMode.connect(self.image_display.annotations.set_mode)
-        self.toolBar.sSetShapeType.connect(self.image_display.annotations.set_type)
         self.macros.sEnableTools.connect(self.menubar.enable_tools)
         self.macros.sNewProject.connect(self.sCreateNewProject.emit)
         self.macros.sSetWelcomeScreen.connect(self.set_welcome_screen)
@@ -165,7 +171,7 @@ class LabelingMainWindow(QMainWindow):
                 self.file_list.show_check_box = setting[1]
                 self.sRequestUpdate.emit(self.img_idx)
             elif setting[0] == "Display patient name":
-                self.image_display.patient_label.setVisible(setting[1])
+                self.file_display.patient_label.setVisible(setting[1])
         self.sUpdateSettings.emit(settings)
 
     def change_detected(self, change: int):
@@ -227,10 +233,10 @@ class LabelingMainWindow(QMainWindow):
         """hides or shows the toolbar"""
         if self.toolBar.isHidden():
             self.toolBar.setHidden(False)
-            self.image_display.hide_button.setIcon(get_icon("prev"))
+            self.file_display.hide_button.setIcon(get_icon("prev"))
         else:
             self.toolBar.setHidden(True)
-            self.image_display.hide_button.setIcon(get_icon("next"))
+            self.file_display.hide_button.setIcon(get_icon("next"))
 
     def import_file(self, existing_patients: list):
         """executes a dialog to let the user enter all information regarding file import"""
@@ -241,7 +247,7 @@ class LabelingMainWindow(QMainWindow):
         if patient:
             filepath, _ = QFileDialog.getOpenFileName(self,
                                                       caption="Select File",
-                                                      directory=str(Path.home()),)
+                                                      directory=str(Path.home()), )
             # options = QFileDialog.DontUseNativeDialog
             if filepath:
                 if self.check_for_changes():
@@ -291,7 +297,7 @@ class LabelingMainWindow(QMainWindow):
 
     def next_image(self, direction: int):
         """proceeds to the next/previous image"""
-        if not self.image_display.is_empty():
+        if not self.file_display.is_empty():
             new_img_idx = (self.img_idx + direction) % self.file_list.image_list.count()
             if self.autoSave:
                 self.save_to_database()
@@ -308,18 +314,18 @@ class LabelingMainWindow(QMainWindow):
 
     def save_to_database(self):
         """stores the current state of the image to the database"""
-        annotations = list(self.image_display.annotations.annotations.values())
+        annotations = list(self.file_display.annotations.annotations.values())
         self.changes.clear()
         self.sSaveToDatabase.emit(annotations, self.img_idx)
 
     def set_no_files_screen(self, b: bool):
         """ either hides the default label or the image display"""
-        self.image_display.setHidden(b)
+        self.file_display.setHidden(b)
         self.no_files.setHidden(not b)
 
     def set_welcome_screen(self, b: bool):
         """sets or removes the welcome screen displayed when no project is opened"""
-        self.image_display.setHidden(b)
+        self.file_display.setHidden(b)
         self.no_files.setHidden(b)
         self.toolBar.setHidden(b)
         self.right_menu_widget.setHidden(b)
@@ -333,7 +339,77 @@ class LabelingMainWindow(QMainWindow):
         self.file_list.update_list(files, self.img_idx)
         if files:
             self.set_no_files_screen(False)
-            current_labels = self.image_display.init_image(files[self.img_idx][0], patient, labels, classes)
+            current_labels = self.file_display.init_image(files[self.img_idx][0], patient, labels, classes)
             self.polygons.update_polygons(current_labels)
         else:
             self.set_no_files_screen(True)
+
+    def define_img_wsi_actions(self):
+        actions = (Action(self,
+                          "Select",
+                          lambda: (self.file_display.annotations.set_mode(0),
+                                   self.file_display.annotations.set_type('polygon')),
+                          icon="mouse",
+                          tip="Select items in the image",
+                          checkable=True,
+                          checked=True),
+                   Action(self,
+                          "Draw\nPolygon",
+                          lambda: (self.file_display.annotations.set_mode(1),
+                                   self.file_display.annotations.set_type('polygon')),
+                          icon="polygon",
+                          tip="Draw Polygon",
+                          checkable=True),
+                   Action(self,
+                          "Draw\nTrace",
+                          lambda: (self.file_display.annotations.set_mode(1),
+                                   self.file_display.annotations.set_type('trace')),
+                          icon="outline",
+                          tip="Trace Outline",
+                          checkable=True),
+                   Action(self,
+                          "Draw\nEllipse",
+                          lambda: (self.file_display.annotations.set_mode(1),
+                                   self.file_display.annotations.set_type('ellipse')),
+                          icon="circle",
+                          tip="Draw Ellipse",
+                          checkable=True),
+                   Action(self,
+                          "Draw\nRectangle",
+                          lambda: (self.file_display.annotations.set_mode(1),
+                                   self.file_display.annotations.set_type('rectangle')),
+                          icon="square",
+                          tip="Draw Rectangle",
+                          checkable=True))
+        actions = list(actions)
+        return actions
+
+    def define_video_actions(self):
+        actions = (Action(self,
+                          "Play",
+                          lambda: self.file_display.video_player.play(),
+                          icon="play",
+                          tip="Play the video",
+                          checkable=True,
+                          checked=True),
+                   Action(self,
+                          "Pause",
+                          lambda: self.file_display.video_player.pause(),
+                          icon="pause",
+                          tip="Pause the video",
+                          checkable=True),
+                   Action(self,
+                          "Grab",
+                          lambda: self.file_display.video_player.grab_frame(),
+                          icon="magnifying_glass",
+                          tip="Grab the frame",
+                          checkable=True),
+                   Action(self,
+                          "Pause and\ngrab",
+                          lambda: self.file_display.video_player.pause_and_grab(),
+                          icon="image",
+                          tip="Pause the video and grab the frame",
+                          checkable=True)
+                   )
+        actions = list(actions)
+        return actions

@@ -21,6 +21,7 @@ class CenterDisplayWidget(QWidget):
     sRequestSave = pyqtSignal()
     sChangeFile = pyqtSignal(int)
     sDrawingTooltip = pyqtSignal(str)
+    modalitySwitched = pyqtSignal(str)
     CREATE, EDIT = 0, 1
 
     def __init__(self, *args):
@@ -124,6 +125,8 @@ class CenterDisplayWidget(QWidget):
         file_type = self.mime.from_file(filepath)
 
         if file_type.startswith('image') and not file_type.endswith('tiff'):
+            self.modalitySwitched.emit('image')
+
             self.image_viewer.setHidden(False)
             self.video_player.setHidden(True)
             self.slide_wrapper.setHidden(True)
@@ -133,6 +136,8 @@ class CenterDisplayWidget(QWidget):
             self.image_viewer.fitInView(rect)
 
         elif file_type.startswith('video'):
+            self.modalitySwitched.emit('video')
+
             self.image_viewer.setHidden(True)
             self.video_player.setHidden(False)
             self.slide_wrapper.setHidden(True)
@@ -143,6 +148,8 @@ class CenterDisplayWidget(QWidget):
             self.video_player.play()
 
         elif file_type.endswith('tiff'):
+            self.modalitySwitched.emit('wsi')
+
             self.image_viewer.setHidden(True)
             self.video_player.setHidden(True)
             self.slide_wrapper.setHidden(False)
