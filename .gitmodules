@@ -1,0 +1,3 @@
+[submodule "taplt/media-viewing_widgets"]
+	path = taplt/media-viewing_widgets
+	url = git@github.com:cgtuebingen/media-viewing-widgets.git
