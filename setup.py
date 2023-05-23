@@ -36,7 +36,10 @@ setup(
     install_requires=["numpy",
                       "Pillow>=2.8.0",
                       "PyQt6",
-                      "python-magic-bin"],
+                      "python-magic-bin",
+                      "filetype",
+                      "typing-extensions",
+                      "openslide-python"],
     license="GPLv3",
     keywords="Image Annotation, Machine Learning",
     classifiers=[
