@@ -20,7 +20,6 @@ from taplt.macros.macros_dialogs import PreviewDatabaseDialog
 
 NUM_COLORS = 25
 
-
 class LabelingMainWindow(QMainWindow):
     """The main window for the application"""
 
@@ -120,8 +119,8 @@ class LabelingMainWindow(QMainWindow):
         self.toolBar.init_margins()
 
         # Toolbar setup actions for images, videos and whole slides
-        self.toolBar.init_actions('image', self.define_img_wsi_actions())
-        self.toolBar.init_actions('wsi', self.define_img_wsi_actions())
+        self.toolBar.init_actions('image', self.define_img_actions())
+        self.toolBar.init_actions('wsi', self.define_wsi_actions())
         self.toolBar.init_actions('video', self.define_video_actions())
         self.file_display.modalitySwitched.connect(self.toolBar.switch_modality)
 
@@ -184,8 +183,8 @@ class LabelingMainWindow(QMainWindow):
         if self.changes:
             dlg = ForgotToSaveMessageBox()
             dlg.exec()
-            if dlg.result() == QMessageBox.ButtonRole.AcceptRole or dlg.result() == QMessageBox.ButtonRole.DestructiveRole:
-                if dlg.result() == QMessageBox.ButtonRole.AcceptRole:
+            if dlg.result() in {0, 2}:
+                if dlg.result() == 0:
                     self.save_to_database()
                 else:
                     self.changes.clear()
@@ -344,7 +343,7 @@ class LabelingMainWindow(QMainWindow):
         else:
             self.set_no_files_screen(True)
 
-    def define_img_wsi_actions(self):
+    def define_img_actions(self):
         actions = (Action(self,
                           "Select",
                           lambda: (self.file_display.annotations.set_mode(0),
@@ -378,6 +377,56 @@ class LabelingMainWindow(QMainWindow):
                           "Draw\nRectangle",
                           lambda: (self.file_display.annotations.set_mode(1),
                                    self.file_display.annotations.set_type('rectangle')),
+                          icon="square",
+                          tip="Draw Rectangle",
+                          checkable=True))
+        actions = list(actions)
+        return actions
+
+    def define_wsi_actions(self):
+        actions = (Action(self,
+                          "Select",
+                          lambda: (self.file_display.annotations.set_mode(0),
+                                   self.file_display.annotations.set_type('polygon'),
+                                   self.file_display.slide_wrapper.setAnnotationMode(False),
+                                   self.file_display.slide_loader.setAnnotationMode(False)),
+                          icon="mouse",
+                          tip="Select items in the image",
+                          checkable=True,
+                          checked=True),
+                   Action(self,
+                          "Draw\nPolygon",
+                          lambda: (self.file_display.annotations.set_mode(1),
+                                   self.file_display.annotations.set_type('polygon'),
+                                   self.file_display.slide_wrapper.setAnnotationMode(True),
+                                   self.file_display.slide_loader.setAnnotationMode(True)),
+                          icon="polygon",
+                          tip="Draw Polygon",
+                          checkable=True),
+                   Action(self,
+                          "Draw\nTrace",
+                          lambda: (self.file_display.annotations.set_mode(1),
+                                   self.file_display.annotations.set_type('trace'),
+                                   self.file_display.slide_wrapper.setAnnotationMode(True),
+                                   self.file_display.slide_loader.setAnnotationMode(True)),
+                          icon="outline",
+                          tip="Trace Outline",
+                          checkable=True),
+                   Action(self,
+                          "Draw\nEllipse",
+                          lambda: (self.file_display.annotations.set_mode(1),
+                                   self.file_display.annotations.set_type('ellipse'),
+                                   self.file_display.slide_wrapper.setAnnotationMode(True),
+                                   self.file_display.slide_loader.setAnnotationMode(True)),
+                          icon="circle",
+                          tip="Draw Ellipse",
+                          checkable=True),
+                   Action(self,
+                          "Draw\nRectangle",
+                          lambda: (self.file_display.annotations.set_mode(1),
+                                   self.file_display.annotations.set_type('rectangle'),
+                                   self.file_display.slide_wrapper.setAnnotationMode(True),
+                                   self.file_display.slide_loader.setAnnotationMode(True)),
                           icon="square",
                           tip="Draw Rectangle",
                           checkable=True))

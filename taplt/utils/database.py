@@ -52,7 +52,7 @@ CREATE_WSI_TABLE = """
     institution TEXT,
     FOREIGN KEY (patient) REFERENCES patients(uid));"""
 
-FILE_TABLES = ['videos', 'images', "'whole slide images'"]
+FILE_TABLES = ['images', 'videos', "'whole slide images'"]
 
 CREATE_PATIENTS_TABLE = """
     CREATE TABLE IF NOT EXISTS patients (
@@ -243,9 +243,6 @@ class SQLiteDatabase(QObject):
 
     def get_patient_by_filename(self, filename: str, moda: int):
         """returns the corresponding patient uid of an image"""
-        # TODO: This is a non modular way of finding out what type of file this is. We should create a dictionary,
-        #  or list for this
-
         if moda == 0:
             with self.connection:
                 self.cursor.execute("SELECT patient FROM images WHERE filename = ?", (filename,))

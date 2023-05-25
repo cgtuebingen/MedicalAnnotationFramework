@@ -126,6 +126,8 @@ class CenterDisplayWidget(QWidget):
 
         if file_type.startswith('image') and not file_type.endswith('tiff'):
             self.modalitySwitched.emit('image')
+            self.slide_scene.removeItem(self.annotations)
+            self.image_scene.addItem(self.annotations)
 
             self.image_viewer.setHidden(False)
             self.video_player.setHidden(True)
@@ -137,6 +139,8 @@ class CenterDisplayWidget(QWidget):
 
         elif file_type.startswith('video'):
             self.modalitySwitched.emit('video')
+            self.slide_scene.removeItem(self.annotations)
+            self.image_scene.addItem(self.annotations)
 
             self.image_viewer.setHidden(True)
             self.video_player.setHidden(False)
@@ -149,6 +153,8 @@ class CenterDisplayWidget(QWidget):
 
         elif file_type.endswith('tiff'):
             self.modalitySwitched.emit('wsi')
+            self.image_scene.removeItem(self.annotations)
+            self.slide_scene.addItem(self.annotations)
 
             self.image_viewer.setHidden(True)
             self.video_player.setHidden(True)

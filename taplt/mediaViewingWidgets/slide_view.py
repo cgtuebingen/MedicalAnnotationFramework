@@ -5,7 +5,6 @@ from taplt.mediaViewingWidgets.slide_loader import SlideLoader
 
 
 class SlideView(QGraphicsView):
-
     def __init__(self, *args):
         super(SlideView, self).__init__(*args)
 
@@ -19,13 +18,10 @@ class SlideView(QGraphicsView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         # self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
         self.setMouseTracking(True)
-
-    # def fitInView(self, *__args):
-    #     if self.scene():    # don't run code without a scene, prevents crashes
-    #         super(SlideView, self).fitInView(self.scene().itemsBoundingRect(), Qt.AspectRatioMode.KeepAspectRatio)
+        self.annotationMode = False
 
     def fitInView(self) -> None:
-        slide = self.items()[1].slide_handler._slide
+        slide = self.items()[2].slide_handler._slide
         (width, height) = slide.dimensions
         rect = QRectF(QPointF(0, 0), QPointF(width, height))
         unity = self.transform().mapRect(QRectF(0, 0, 1, 1))
@@ -36,6 +32,9 @@ class SlideView(QGraphicsView):
                      view_rect.height() / scene_rect.height())
         self.scale(factor, factor)
 
+    def setAnnotationMode(self, b: bool):
+        self.annotationMode = b
+
     def wheelEvent(self, event: QWheelEvent):
         """
         Scales the image and moves into the mouse position
@@ -43,12 +42,13 @@ class SlideView(QGraphicsView):
         :type event: QWheelEvent
         :return: /
         """
-        old_pos = self.mapToScene(event.position().toPoint())
-        scale_factor = 1.2 if event.angleDelta().y() > 0 else 1 / 1.2
-        self.scale(scale_factor, scale_factor)
-        new_pos = self.mapToScene(event.position().toPoint())
-        move = new_pos - old_pos
-        self.translate(move.x(), move.y())
+        if not self.annotationMode:
+            old_pos = self.mapToScene(event.position().toPoint())
+            scale_factor = 1.2 if event.angleDelta().y() > 0 else 1 / 1.2
+            self.scale(scale_factor, scale_factor)
+            new_pos = self.mapToScene(event.position().toPoint())
+            move = new_pos - old_pos
+            self.translate(move.x(), move.y())
         super(SlideView, self).wheelEvent(event)
 
     def mousePressEvent(self, event: QMouseEvent):
@@ -58,9 +58,10 @@ class SlideView(QGraphicsView):
         :type event: QMouseEvent
         :return: /
         """
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._panning = True
-            self._pan_start = self.mapToScene(event.pos())
+        if not self.annotationMode:
+            if event.button() == Qt.MouseButton.LeftButton:
+                self._panning = True
+                self._pan_start = self.mapToScene(event.pos())
         super(SlideView, self).mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent):
@@ -70,8 +71,9 @@ class SlideView(QGraphicsView):
         :type event: QMouseEvent
         :return: /
         """
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._panning = False
+        if not self.annotationMode:
+            if event.button() == Qt.MouseButton.LeftButton:
+                self._panning = False
         super(SlideView, self).mouseReleaseEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent):
@@ -81,10 +83,10 @@ class SlideView(QGraphicsView):
         :type event: QMouseEvent
         :return: /
         """
-        if self._panning:
-            new_pos = self.mapToScene(event.pos())
-            move = new_pos - self._pan_start
-            self.translate(move.x(), move.y())
-            self._pan_start = self.mapToScene(event.pos())
+        if not self.annotationMode:
+            if self._panning:
+                new_pos = self.mapToScene(event.pos())
+                move = new_pos - self._pan_start
+                self.translate(move.x(), move.y())
+                self._pan_start = self.mapToScene(event.pos())
         super(SlideView, self).mouseMoveEvent(event)
-

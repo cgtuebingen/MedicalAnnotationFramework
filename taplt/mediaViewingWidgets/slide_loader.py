@@ -33,6 +33,7 @@ class SlideLoader(QGraphicsObject):
         self.setAcceptHoverEvents(True)
         self.start_checking.connect(self.update_image_check, Qt.ConnectionType.QueuedConnection)
         self.in_scene: bool = self.scene() is not None
+        self.annotationMode = False
 
         if filepath is not None:
             self.load_new_image(filepath)
@@ -44,6 +45,9 @@ class SlideLoader(QGraphicsObject):
                     self._set_image()
                     self.start_checking.emit()
                     self.in_scene = True
+
+    def setAnnotationMode(self, b: bool):
+        self.annotationMode = b
 
     def boundingRect(self) -> QRectF:
         """
@@ -229,8 +233,11 @@ class SlideLoader(QGraphicsObject):
         :type event: QGraphicsSceneMouseEvent
         :return: /
         """
-        self.slide_lvl_active = min([self.slide_lvl_active + 1, self.num_lvl])
-        self._set_image()
+        if self.annotationMode:
+            event.ignore()
+        else:
+            self.slide_lvl_active = min([self.slide_lvl_active + 1, self.num_lvl])
+            self._set_image()
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
         """
@@ -239,7 +246,7 @@ class SlideLoader(QGraphicsObject):
         :type event: QGraphicsSceneMouseEvent
         :return: /
         """
-        pass
+        super(SlideLoader).mousePressEvent(event)
 
     def hoverMoveEvent(self, event: QGraphicsSceneHoverEvent):
         """
@@ -248,6 +255,9 @@ class SlideLoader(QGraphicsObject):
         :type event: QGraphicsSceneHoverEvent
         :return: /
         """
-        mouse_scene_pos = self.mapToScene(event.pos())
-        self.mouse_pos = np.array([mouse_scene_pos.x(), mouse_scene_pos.y()]).astype(int)
-        self.slide_handler._mouse_pos = self.mouse_pos
+        if self.annotationMode:
+            event.ignore()
+        else:
+            mouse_scene_pos = self.mapToScene(event.pos())
+            self.mouse_pos = np.array([mouse_scene_pos.x(), mouse_scene_pos.y()]).astype(int)
+            self.slide_handler._mouse_pos = self.mouse_pos
