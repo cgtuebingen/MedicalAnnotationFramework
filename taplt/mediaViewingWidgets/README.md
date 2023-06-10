@@ -167,16 +167,16 @@ def update_image_check(self):
     areas).
     :return: /
     """
-    if self.image_scene():  # don't run code without a scene, prevents crashes
-        if self.view_width != self.image_scene().views()[0].viewport().width() or
-            self.view_height != self.image_scene().views()[0].viewport().height():
+    if self.scene():  # don't run code without a scene, prevents crashes
+        if self.view_width != self.scene().views()[0].viewport().width() or
+            self.view_height != self.scene().views()[0].viewport().height():
         self.refactor_image()
 
         slides = self.slide_loader.get_zoom_stack()
-        view_up_left = self.image_scene().views()[0].mapToScene(int(0.02 * self.view_width),
-                                                                int(0.02 * self.view_height))  # 2% buffer for frame
-        view_low_right = self.image_scene().views()[0].mapToScene(int(0.98 * self.view_width),
-                                                                  int(0.98 * self.view_height))  # 2% buffer for frame
+        view_up_left = self.scene().views()[0].mapToScene(int(0.02 * self.view_width),
+                                                          int(0.02 * self.view_height))  # 2% buffer for frame
+        view_low_right = self.scene().views()[0].mapToScene(int(0.98 * self.view_width),
+                                                            int(0.98 * self.view_height))  # 2% buffer for frame
 
         for lvl in range(min(self.slide_lvl_goal, self.slide_lvl_active),
                          max(self.slide_lvl_goal, self.slide_lvl_active) + 1):

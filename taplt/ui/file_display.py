@@ -9,8 +9,8 @@ from taplt.ui.annotation_group import AnnotationGroup
 from taplt.ui.shape import Shape
 from taplt.utils.qt import get_icon
 from taplt.mediaViewingWidgets.video_display import VideoPlayer
-from taplt.mediaViewingWidgets.slide_loader import SlideLoader
-from taplt.mediaViewingWidgets.slide_view import SlideView
+
+from taplt.mediaViewingWidgets.slide_all_in_one import slide_view
 
 
 class CenterDisplayWidget(QWidget):
@@ -31,23 +31,21 @@ class CenterDisplayWidget(QWidget):
         self.mime = magic.Magic(mime=True)
 
         # main components of the display
-        self.image_scene = QGraphicsScene()
-        self.image_viewer = ImageViewer(self.image_scene)
+        self.scene = QGraphicsScene()
+        self.image_viewer = ImageViewer(self.scene)
 
-        self.video_player = VideoPlayer(self.image_scene)
+        self.video_player = VideoPlayer(self.scene)
         self.video_label = QLabel()
         self.video_player.frame_grabbed.connect(self.play_frames)
 
         # Setup of the slide viewer with its own scene
-        self.slide_scene = QGraphicsScene()
-        self.slide_loader = SlideLoader()
-        self.slide_scene.addItem(self.slide_loader)
-        self.slide_wrapper = SlideView(self.slide_scene)
+        self.slide_viewer = slide_view(self.scene)
+        self.slide_viewer.setScene(self.scene)
 
         self.pixmap = QGraphicsPixmapItem()
-        self.image_scene.addItem(self.pixmap)
+        self.scene.addItem(self.pixmap)
         self.annotations = AnnotationGroup()
-        self.image_scene.addItem(self.annotations)
+        self.scene.addItem(self.annotations)
         self.annotations.sToolTip.connect(self.sDrawingTooltip.emit)
 
         # QLabel displaying the patient's id/name/alias
@@ -62,7 +60,8 @@ class CenterDisplayWidget(QWidget):
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.image_viewer)
         self.layout.addWidget(self.video_player)
-        self.layout.addWidget(self.slide_wrapper)
+        self.layout.addWidget(self.slide_viewer)
+       # self.layout.addWidget(self.slide_wrapper)
         self.layout.addWidget(self.patient_label)
 
     def mousePressEvent(self, event: QMouseEvent):
@@ -74,9 +73,9 @@ class CenterDisplayWidget(QWidget):
     def clear(self):
         """This function deletes all currently stored labels
         and triggers the image_viewer to display a default image"""
-        self.image_scene.b_isInitialized = False
+        self.scene.b_isInitialized = False
         self.image_viewer.b_isEmpty = True
-        self.image_scene.clear()
+        self.scene.clear()
         self.set_labels([])
 
     def get_pixmap_dimensions(self):
@@ -108,10 +107,10 @@ class CenterDisplayWidget(QWidget):
         return self.image_viewer.b_isEmpty
 
     def set_initialized(self):
-        self.image_scene.b_isInitialized = True
+        self.scene.b_isInitialized = True
         self.image_viewer.b_isEmpty = False
 
-    def play_frames(self,image: QImage, t):
+    def play_frames(self, image: QImage, t):
         pix = QPixmap.fromImage(image)
         self.video_label.setPixmap(pix)
         self.video_label.show()
@@ -126,12 +125,10 @@ class CenterDisplayWidget(QWidget):
 
         if file_type.startswith('image') and not file_type.endswith('tiff'):
             self.modalitySwitched.emit('image')
-            self.slide_scene.removeItem(self.annotations)
-            self.image_scene.addItem(self.annotations)
 
             self.image_viewer.setHidden(False)
             self.video_player.setHidden(True)
-            self.slide_wrapper.setHidden(True)
+            self.slide_viewer.setHidden(True)
 
             self.video_player.pause()
 
@@ -139,12 +136,10 @@ class CenterDisplayWidget(QWidget):
 
         elif file_type.startswith('video'):
             self.modalitySwitched.emit('video')
-            self.slide_scene.removeItem(self.annotations)
-            self.image_scene.addItem(self.annotations)
 
             self.image_viewer.setHidden(True)
             self.video_player.setHidden(False)
-            self.slide_wrapper.setHidden(True)
+            self.slide_viewer.setHidden(True)
 
             self.video_player.fitInView(rect)
             self.video_player.set_video(filepath)
@@ -153,18 +148,16 @@ class CenterDisplayWidget(QWidget):
 
         elif file_type.endswith('tiff'):
             self.modalitySwitched.emit('wsi')
-            self.image_scene.removeItem(self.annotations)
-            self.slide_scene.addItem(self.annotations)
 
             self.image_viewer.setHidden(True)
             self.video_player.setHidden(True)
-            self.slide_wrapper.setHidden(False)
+            self.slide_viewer.setHidden(False)
 
             self.video_player.pause()
 
-            self.slide_wrapper.show()
-            self.slide_loader.load_new_image(filepath)
-            self.slide_wrapper.fitInView()
+            self.slide_viewer.set_slide(filepath)
+            self.slide_viewer.show()
+            #self.slide_viewer.fitInView(rect)
 
         else:
             RuntimeError('The file type ' + file_type + ' is not supported.')
