@@ -21,7 +21,7 @@ class SlideView(QGraphicsView):
         self.annotationMode = False
 
     def fitInView(self) -> None:
-        slide = self.items()[2].slide_handler._slide
+        slide = self.items()[2].slide_handler.slide
         (width, height) = slide.dimensions
         rect = QRectF(QPointF(0, 0), QPointF(width, height))
         unity = self.transform().mapRect(QRectF(0, 0, 1, 1))

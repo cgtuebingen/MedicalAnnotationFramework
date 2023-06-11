@@ -104,16 +104,17 @@ def updating_zoom_stack(self):
     new_stack: Dict[int, ZoomDict] = {}  # clear stack
 
     # set the centers for lowest and highest level
-    center_high_lvl = (np.asarray(self._slide.level_dimensions[0]) / 2).astype(int)
+    center_high_lvl = (np.asarray(self.slide.level_dimensions[0]) / 2).astype(int)
     center_low_lvl = self._mouse_pos
 
     # check if an update is necessary
     diff = np.abs(self._old_center - center_low_lvl)
     reserve = np.asarray([self._view_width, self._view_height]) / 2
 
-    if self._new_file or\
-       diff[0] > reserve[0] or\
-       diff[1] > reserve[1]:  # check if new position will fit into current slides; ensure stack loads for new files
+    if self._new_file or
+            diff[0] > reserve[0] or
+            diff[1] > reserve[
+        1]:  # check if new position will fit into current slides; ensure stack loads for new files
         # calculate the centers along a line with a geometrical distribution.
         # Caution: The absolut distance must be distributed to cover the case to zoom into the right-hand side
         distance = np.abs(center_high_lvl - center_low_lvl)
@@ -138,7 +139,7 @@ def updating_zoom_stack(self):
         # update the stack with the calculated centers
         for slide_lvl in range(self._num_lvl + 1):
             slide_pos = (slide_centers[slide_lvl, :] - self._slide_size[slide_lvl] * 2 ** slide_lvl / 2).astype(int)
-            data = np.array(self._slide.read_region(slide_pos, slide_lvl, self._slide_size[slide_lvl]).convert('RGB'))
+            data = np.array(self.slide.read_region(slide_pos, slide_lvl, self._slide_size[slide_lvl]).convert('RGB'))
             new_stack.update({slide_lvl: ZoomDict(position=slide_pos, data=data)})
 
         # override the zoom_stack with QMutexLocker to prevent parallel reading and writing

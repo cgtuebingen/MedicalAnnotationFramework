@@ -4,9 +4,13 @@ from PyQt6.QtWidgets import *
 from typing import *
 from typing_extensions import TypedDict
 import numpy as np
+import os
+openslide_path = os.path.abspath("../../openslide/bin")
+os.add_dll_directory(openslide_path)
 from openslide import OpenSlide
 
 class slide_view(QGraphicsView):
+    sendImage = pyqtSignal(QImage, float)
 
     def __init__(self, *args):
         super(slide_view, self).__init__(*args)
@@ -17,30 +21,33 @@ class slide_view(QGraphicsView):
         self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
         self.setMouseTracking(True)
 
-        self._slide: OpenSlide = None
+        self.slide: OpenSlide = None
         self.filepath = None
         self.width = self.scene().width()
         self.height = self.scene().height()
+        self.max_dims = (0.0, 0.0)
         self.panning = False
         self.pan_start = None
         self.cur_zoom: float = 0.0
         self.zoom_perc_levels = {}
         self.cur_level = 0
-        desired_type = QGraphicsPixmapItem
-        self.pixmap_item = self.scene().items()[0]
-
-        #self.pixmap_item: QGraphicsPixmapItem = QGraphicsPixmapItem()
+        self.dim_count = 0
         self.mouse_pos = np.array([0, 0])
+        self.scene_to_slide_ratio = 0.0
+        self.downsample_factors = {}
 
     def fitInView(self, rect, aspectratioMode = Qt.AspectRatioMode.KeepAspectRatio):
         if not self.filepath:
             RuntimeError("There was no slide set!")
 
         super(slide_view, self).fitInView(rect, aspectratioMode)
-        self.cur_zoom = 1.0
+        self.width = int(rect.width())
+        self.height = int(rect.height())
+        self.cur_zoom = max(self.width/self.max_dims[0], self.height/self.max_dims[1])
+        self.scene_to_slide_ratio = self.cur_zoom
+        self.check_for_update((0, 0))
 
-
-    def set_slide(self, filepath: str, width: int = None, height: int = None):
+    def load_slide(self, filepath: str, width: int = None, height: int = None):
         """
         Loads a new _slide. Needs an update_size after loading a new image.
         :param filepath: path of the _slide data. The data type is based on the OpenSlide library and can handle:
@@ -54,14 +61,12 @@ class slide_view(QGraphicsView):
         :type height: int
         :return: /
         """
-        self.blockSignals(True)
-        self._slide = OpenSlide(filepath)
+        self.slide = OpenSlide(filepath)
         self.filepath = filepath
         if not width or not height:
             width = self.scene().views()[0].viewport().width()
             height = self.scene().views()[0].viewport().height()
         self.calculate_zoom_levels(width, height)
-        self.blockSignals(False)
 
     def calculate_zoom_levels(self, width: int, height: int):
         """
@@ -73,13 +78,29 @@ class slide_view(QGraphicsView):
         :type height: int
         :return: /
         """
-        self.blockSignals(True)
         self.width = width  # assigned if window size changes
         self.height = height  # assigned if window size changes
 
-        dimensions = np.array(self._slide.level_dimensions)
+        dimensions = np.array(self.slide.level_dimensions)
+        self.dim_count = self.slide.level_count
 
-        self.zoom_perc_levels = {i: size[0] / dimensions[0][0] for i, size in enumerate(dimensions)}
+        self.max_dims = self.slide.dimensions
+
+        self.downsample_factors = [self.slide.level_downsamples[level] for level in range(self.slide.level_count)]
+
+        viewport_aspect_ratio = self.width / self.height
+        slide_aspect_ratio = self.max_dims[0] / self.max_dims[1]
+        desired_downsample = max(self.max_dims[0] / self.width, self.max_dims[1] / self.height)
+        initial_level = min(range(self.slide.level_count),
+                            key=lambda level: abs(self.downsample_factors[level] - desired_downsample))
+
+        self.zoom_perc_levels = {}
+        for i in range(len(dimensions) - 1, -1, -1):
+            if i == len(dimensions) - 1:
+                self.zoom_perc_levels[i] = 1.0  # Zoom percentage for lowest-resolution level
+            else:
+                downsampling_factor = dimensions[i][0] / dimensions[i + 1][0]
+                self.zoom_perc_levels[i] = self.zoom_perc_levels[i + 1] / downsampling_factor
 
         view_up_left = self.scene().views()[0].mapToScene(int(0.02 * self.width),
                                                           int(0.02 * self.height))  # 2% buffer for frame
@@ -87,11 +108,12 @@ class slide_view(QGraphicsView):
                                                             int(0.98 * self.height))
         cur_dims = view_low_right - view_up_left
 
-        self.cur_zoom = max(cur_dims.x()/dimensions[0][0], cur_dims.y()/dimensions[0][1])
-        for i in range(len(self.zoom_perc_levels)):
-            if self.zoom_perc_levels[i] <= self.cur_zoom:
-                self.cur_level = i
-                break
+        self.cur_zoom = max(cur_dims.x()/self.max_dims[0], cur_dims.y()/self.max_dims[1])
+        # for i in range(len(self.zoom_perc_levels)):
+        #     if self.zoom_perc_levels[i] >= self.cur_zoom:
+        #         self.cur_level = i
+        #         break
+        self.cur_level = initial_level
 
         self.set_image((0, 0), self.cur_level)
 
@@ -117,26 +139,31 @@ class slide_view(QGraphicsView):
         # # append the upper _slide with no resize factor (to display the original size on the highest level)
         # self.slide_size.append(np.asarray(self._slide.level_dimensions[self.num_lvl]).astype(int))
         # self._new_file = True  # ensure a new stack will be load
-        self.blockSignals(False)
         # self.updating_zoom_stack()
 
     def check_for_update(self, mouse_pos):
         new_level = 0
         for i in range(len(self.zoom_perc_levels)):
-            if self.zoom_perc_levels[i] <= self.cur_zoom:
+            if self.zoom_perc_levels[i] >= self.cur_zoom:
                 new_level = i
                 break
-        if new_level != self.cur_level:
-            self.cur_level = new_level
-            self.set_image(mouse_pos, self.cur_level)
+        self.cur_level = new_level
+        self.set_image(mouse_pos, self.cur_level)
+
+    # def calculate_cur_zoom(self):
+    #     view_up_left = self.scene().views()[0].mapToScene(int(0.02 * self.width),
+    #                                                       int(0.02 * self.height))  # 2% buffer for frame
+    #     view_low_right = self.scene().views()[0].mapToScene(int(0.98 * self.width),
+    #                                                         int(0.98 * self.height))
+    #     cur_dims = view_low_right - view_up_left
+    #
+    #     self.cur_zoom = self.cur_zoom = max(cur_dims.x()/self.max_width, cur_dims.y()/self.max_height)
 
     def set_image(self, location: (int, int), level: int):
-        image = self._slide.read_region(location, 0, (self.width, self.height))
+        region = (self.width/self.downsample_factors[level], self.width/self.downsample_factors[level])
+        image = self.slide.read_region(location, level, (self.width, self.height))
         q_image = QImage(image.tobytes(), image.width, image.height, QImage.Format.Format_RGBA8888)
-        self.pixmap_item.resetTransform()
-        self.pixmap_item.setPixmap(QPixmap(q_image))
-        self.pixmap_item.setScale(2 ** self.cur_level)
-        self.pixmap_item.setPos(*self.location)
+        self.sendImage.emit(q_image, 1)
 
     def refactor_image(self):
         """
@@ -159,8 +186,8 @@ class slide_view(QGraphicsView):
         """
         old_pos = self.mapToScene(event.position().toPoint())
         scale_factor = 1.2 if event.angleDelta().y() > 0 else 1 / 1.2
+        self.cur_zoom /= scale_factor
         self.scale(scale_factor, scale_factor)
-        self.cur_level *= scale_factor
         new_pos = self.mapToScene(event.position().toPoint())
         self.mouse_pos = new_pos
         new_pos_tuple = (int(new_pos.x()), int(new_pos.y()))
@@ -201,7 +228,9 @@ class slide_view(QGraphicsView):
         """
         if self.panning:
             new_pos = self.mapToScene(event.pos())
-            move = new_pos - self.pan_start
-            self.translate(move.x(), move.y())
-            self.pan_start = self.mapToScene(event.pos())
+            move = self.pan_start - new_pos
+            self.pan_start = self.pan_start + move
+            self.mouse_pos = self.pan_start
+            new_pos_tuple = (int(self.mouse_pos.x()), int(self.mouse_pos.y()))
+            self.check_for_update(new_pos_tuple)
         super(QGraphicsView, self).mouseMoveEvent(event)

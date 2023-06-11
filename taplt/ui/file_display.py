@@ -40,7 +40,7 @@ class CenterDisplayWidget(QWidget):
 
         # Setup of the slide viewer with its own scene
         self.slide_viewer = slide_view(self.scene)
-        self.slide_viewer.setScene(self.scene)
+        self.slide_viewer.sendImage.connect(self.display_slide)
 
         self.pixmap = QGraphicsPixmapItem()
         self.scene.addItem(self.pixmap)
@@ -115,6 +115,11 @@ class CenterDisplayWidget(QWidget):
         self.video_label.setPixmap(pix)
         self.video_label.show()
 
+    def display_slide(self, image: QImage, zoom_factor: float):
+        pix = QPixmap.fromImage(image)
+        self.pixmap.setPixmap(pix)
+        self.pixmap.setScale(zoom_factor)
+
     def switch_to_modality(self, filepath: str):
         """
         A function that switches to the modality based on the ``filepath`` parameter
@@ -155,7 +160,7 @@ class CenterDisplayWidget(QWidget):
 
             self.video_player.pause()
 
-            self.slide_viewer.set_slide(filepath)
+            self.slide_viewer.load_slide(filepath)
             self.slide_viewer.show()
             #self.slide_viewer.fitInView(rect)
 
