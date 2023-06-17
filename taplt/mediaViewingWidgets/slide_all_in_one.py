@@ -8,6 +8,7 @@ import os
 openslide_path = os.path.abspath("../../openslide/bin")
 os.add_dll_directory(openslide_path)
 from openslide import OpenSlide
+from openslide import OpenSlideCache
 
 class slide_view(QGraphicsView):
     sendImage = pyqtSignal(QImage, float)
@@ -26,15 +27,16 @@ class slide_view(QGraphicsView):
         self.width = self.scene().width()
         self.height = self.scene().height()
         self.max_dims = (0.0, 0.0)
-        self.panning = False
-        self.pan_start = None
+        self.panning: bool = False
+        self.pan_start: QPointF = QPointF()
         self.cur_zoom: float = 0.0
         self.zoom_perc_levels = {}
         self.cur_level = 0
         self.dim_count = 0
-        self.mouse_pos = np.array([0, 0])
+        self.mouse_pos: QPointF = QPointF()
         self.scene_to_slide_ratio = 0.0
         self.downsample_factors = {}
+        self.dimensions = {}
 
     def fitInView(self, rect, aspectratioMode = Qt.AspectRatioMode.KeepAspectRatio):
         if not self.filepath:
@@ -63,6 +65,7 @@ class slide_view(QGraphicsView):
         """
         self.slide = OpenSlide(filepath)
         self.filepath = filepath
+        self.mouse_pos = QPointF(self.slide.dimensions[0]/2, self.slide.dimensions[1]/2)
         if not width or not height:
             width = self.scene().views()[0].viewport().width()
             height = self.scene().views()[0].viewport().height()
@@ -81,11 +84,9 @@ class slide_view(QGraphicsView):
         self.width = width  # assigned if window size changes
         self.height = height  # assigned if window size changes
 
-        dimensions = np.array(self.slide.level_dimensions)
+        self.dimensions = np.array(self.slide.level_dimensions)
         self.dim_count = self.slide.level_count
-
         self.max_dims = self.slide.dimensions
-
         self.downsample_factors = [self.slide.level_downsamples[level] for level in range(self.slide.level_count)]
 
         viewport_aspect_ratio = self.width / self.height
@@ -95,11 +96,11 @@ class slide_view(QGraphicsView):
                             key=lambda level: abs(self.downsample_factors[level] - desired_downsample))
 
         self.zoom_perc_levels = {}
-        for i in range(len(dimensions) - 1, -1, -1):
-            if i == len(dimensions) - 1:
+        for i in range(len(self.dimensions) - 1, -1, -1):
+            if i == len(self.dimensions) - 1:
                 self.zoom_perc_levels[i] = 1.0  # Zoom percentage for lowest-resolution level
             else:
-                downsampling_factor = dimensions[i][0] / dimensions[i + 1][0]
+                downsampling_factor = self.dimensions[i][0] / self.dimensions[i + 1][0]
                 self.zoom_perc_levels[i] = self.zoom_perc_levels[i + 1] / downsampling_factor
 
         view_up_left = self.scene().views()[0].mapToScene(int(0.02 * self.width),
@@ -160,9 +161,9 @@ class slide_view(QGraphicsView):
     #     self.cur_zoom = self.cur_zoom = max(cur_dims.x()/self.max_width, cur_dims.y()/self.max_height)
 
     def set_image(self, location: (int, int), level: int):
-        region = (self.width/self.downsample_factors[level], self.width/self.downsample_factors[level])
-        image = self.slide.read_region(location, level, (self.width, self.height))
-        q_image = QImage(image.tobytes(), image.width, image.height, QImage.Format.Format_RGBA8888)
+        debug = self.dimensions
+        image = self.slide.read_region(location, level, (self.width*3, self.height*3))
+        q_image = QImage(image.tobytes(), image.width, image.height, QImage.Format.Format_RGBX8888)
         self.sendImage.emit(q_image, 1)
 
     def refactor_image(self):
@@ -186,12 +187,14 @@ class slide_view(QGraphicsView):
         """
         old_pos = self.mapToScene(event.position().toPoint())
         scale_factor = 1.2 if event.angleDelta().y() > 0 else 1 / 1.2
+        
+
         self.cur_zoom /= scale_factor
         self.scale(scale_factor, scale_factor)
         new_pos = self.mapToScene(event.position().toPoint())
         self.mouse_pos = new_pos
         new_pos_tuple = (int(new_pos.x()), int(new_pos.y()))
-        self.check_for_update(new_pos_tuple)
+        #self.check_for_update(new_pos_tuple)
         move = new_pos - old_pos
         self.translate(move.x(), move.y())
         super(QGraphicsView, self).wheelEvent(event)
@@ -229,8 +232,9 @@ class slide_view(QGraphicsView):
         if self.panning:
             new_pos = self.mapToScene(event.pos())
             move = self.pan_start - new_pos
-            self.pan_start = self.pan_start + move
-            self.mouse_pos = self.pan_start
+            self.pan_start = new_pos
+            self.mouse_pos += QPointF(move.x()/self.width*self.dimensions[self.cur_level][0],
+                                      move.y()/self.height*self.dimensions[self.cur_level][1])
             new_pos_tuple = (int(self.mouse_pos.x()), int(self.mouse_pos.y()))
             self.check_for_update(new_pos_tuple)
         super(QGraphicsView, self).mouseMoveEvent(event)
