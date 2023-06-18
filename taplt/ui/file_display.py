@@ -162,7 +162,6 @@ class CenterDisplayWidget(QWidget):
 
             self.slide_viewer.load_slide(filepath)
             self.slide_viewer.show()
-            #self.slide_viewer.fitInView(rect)
 
         else:
             RuntimeError('The file type ' + file_type + ' is not supported.')
