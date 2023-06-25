@@ -115,8 +115,8 @@ class CenterDisplayWidget(QWidget):
         self.video_label.setPixmap(pix)
         self.video_label.show()
 
-    def display_slide(self, image: QImage, zoom_factor: float):
-        pix = QPixmap.fromImage(image)
+    def display_slide(self, image: QPixmap, zoom_factor: float):
+        pix = image
         self.pixmap.setPixmap(pix)
         self.pixmap.setScale(zoom_factor)
 

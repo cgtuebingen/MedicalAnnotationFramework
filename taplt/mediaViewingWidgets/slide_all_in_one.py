@@ -1,3 +1,6 @@
+import concurrent.futures as mp
+import PIL.ImageQt as ImageQT
+
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import *
@@ -55,7 +58,7 @@ class Worker(QThread):
 
 
 class slide_view(QGraphicsView):
-    sendImage = pyqtSignal(QImage, float)
+    sendImage = pyqtSignal(QPixmap, float)
     blockProcessed = pyqtSignal(int, QImage)
 
     def __init__(self, *args):
@@ -128,41 +131,37 @@ class slide_view(QGraphicsView):
         self.relative_scaling_factor = self.cur_scaling_factor / self.down_sample_factors[self.cur_level]
         block_width = int(self.width * self.relative_scaling_factor / 4)
         block_height = int(self.height * self.relative_scaling_factor / 4)
+        block_offset_width = int(self.width * self.cur_scaling_factor / 4)
+        block_offset_height = int(self.height * self.cur_scaling_factor / 4)
 
         self.threads = []
+        parameters = []
 
-        for i in range(16):
-            worker = Worker()
-            worker.set_params(i, self.mouse_pos, block_width, block_height, self.cur_level, self.slide)
-            self.image_blocks[i] = None
-            #thread.started.connect(thread.process_image_block)
-            worker.output.connect(self.store_image_block)
-            worker.finished.connect(worker.deleteLater)
-            worker.finished.connect(self.stitch_image)
-            worker.start()
-            self.threads.append(worker)
+        with mp.ThreadPoolExecutor(max_workers=16) as executor:
+            futures = []
+            for i in range(16):
+                future = executor.submit(self.process_image_block, i, self.mouse_pos, block_width,
+                                         block_height, block_offset_width, block_offset_height)
+                futures.append(future)
 
-        print("threads started")
-        for thread in self.threads:
-            thread.wait()
+            for future in mp.as_completed(futures):
+                _index, result = future.result()
+                self.image_blocks[_index] = result
 
-    def process_image_block(self, block_index, mouse_pos, block_width, block_height):
+            self.stitch_image()
+
+    def process_image_block(self, block_index, mouse_pos, block_width, block_height, block_offset_width, block_offset_height):
         block_location = (
-            int((block_index % 4) * block_width),
-            int((block_index // 4) * block_height)
+            int((block_index % 4) * block_offset_width),
+            int((block_index // 4) * block_offset_height)
         )
-        level = self.cur_level
 
         image = self.slide.read_region(
             (int(mouse_pos.x() + block_location[0]), int(mouse_pos.y() + block_location[1])),
-            level,
+            self.cur_level,
             (block_width, block_height)
         )
-        q_image = QImage(image.tobytes(), image.width, image.height, QImage.Format.Format_RGBX8888)
-
-        self.image_blocks[block_index] = q_image
-
-        print(block_index)
+        return block_index, image
 
     @pyqtSlot(int, QImage)
     def store_image_block(self, index, image):
@@ -171,27 +170,25 @@ class slide_view(QGraphicsView):
 
     def stitch_image(self):
         # Check if all threads have finished
-        if all(thread.isFinished() for thread in self.threads):
+        width = int(self.width * self.relative_scaling_factor)
+        height = int(self.height * self.relative_scaling_factor)
+        # Create a new QImage with the dimensions of the first image
+        fused_image = QPixmap(width, height)
 
-            width = self.image_blocks[0].width() * 4
-            height = self.image_blocks[0].height() * 4
-            # Create a new QImage with the dimensions of the first image
-            fused_image = QImage(width, height, QImage.Format.Format_RGBX8888)
-            fused_image.fill(0)  # Fill the image with black (default color)
+        # Create a QPainter object to draw on the fused image
+        painter = QPainter(fused_image)
 
-            # Create a QPainter object to draw on the fused image
-            painter = QPainter(fused_image)
+        # Iterate over the image list and draw each image onto the fused image
+        for i in range(len(self.image_blocks)):
+            image = self.image_blocks[i]
+            print(type(image))
+            painter.drawPixmap((i % 4) * int(width/4), (i // 4) * int(height/4),
+                              int(width/4), int(height/4), QPixmap.fromImage(ImageQT.ImageQt(self.image_blocks[i])))
 
-            # Iterate over the image list and draw each image onto the fused image
-            for i in range(len(self.threads)):
-                image = self.image_blocks[i]
-                scaled_image = image.scaled(image.width() * 4, image.height() * 4)
-                painter.drawImage((i % 4) * scaled_image.width(), (i // 4) * scaled_image.height(), scaled_image)
+        painter.end()  # End painting
 
-            painter.end()  # End painting
-
-            # Emit the fused image
-            self.sendImage.emit(fused_image, self.down_sample_factors[self.cur_level] / self.cur_scaling_factor)
+        # Emit the fused image
+        self.sendImage.emit(fused_image, self.down_sample_factors[self.cur_level] / self.cur_scaling_factor)
 
     def wheelEvent(self, event: QWheelEvent):
         """
