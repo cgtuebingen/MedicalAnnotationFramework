@@ -56,17 +56,19 @@ Click "Macros -> Preview Database" to preview the current version of the databas
 
 This repository includes a submodule. Therefore, it can be either cloned using:
 ```bash
-git clone --recurse-submodules https://github.com/cgtuebingen/MedicalAnnotationFramework.git
+git clone --recurse-submodules https://github.com/FreshP-min/MedicalAnnotationFramework.git
 cd MedicalAnnotationFramework
 pip install .  # add -e to use the cloned repository as the source for the package
+python download_openslide.py
 ```
 Or using:
 ```bash
-git clone https://github.com/cgtuebingen/MedicalAnnotationFramework.git
+git clone https://github.com/FreshP-min/MedicalAnnotationFramework.git
 cd MedicalAnnotationFramework
 git submodule init
 git submodule update
 pip install .  # add -e to use the cloned repository as the source for the package
+python download_openslide.py
 ```
 Further information about submodules can be found [here](https://gist.github.com/gitaarik/8735255).
 

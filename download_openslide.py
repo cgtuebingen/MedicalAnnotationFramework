@@ -29,10 +29,11 @@ if response.status_code == 200:
             with open(filename, 'wb') as file:
                 file.write(response.content)
 
-            with zipfile.ZipFile(filename, 'r') as zip_ref:
+            with zipfile.ZipFile(filename) as zip_ref:
                 zip_ref.extractall()
 
             os.remove(filename)
+            os.rename(filename[:-4], "openslide")
             print(f"Openslide has been successfully downloaded.")
         else:
             print("Failed to download OpenSlide library.")

@@ -1,10 +1,6 @@
 import re
 from setuptools import find_packages
 from setuptools import setup
-from setuptools.command.install import install
-from setuptools.command.develop import develop
-from setuptools.command.egg_info import egg_info
-import subprocess
 
 
 def get_version():
@@ -23,28 +19,6 @@ def get_long_description():
     with open("README.md") as f:
         long_description = f.read()
     return long_description
-
-
-class CustomInstallCommand(install):
-    def run(self):
-        print("ran custom install 1")
-        install.run(self)
-        subprocess.run(["python", "download_openslide.py"])
-        print("ran custom install 2")
-
-
-class CustomDevelopCommand(develop):
-    def run(self):
-        develop.run(self)
-        subprocess.run(["python", "download_openslide.py"])
-        print("ran custom install 2")
-
-
-class CustomEggInfoCommand(egg_info):
-    def run(self):
-        egg_info.run(self)
-        subprocess.run(["python", "download_openslide.py"])
-        print("ran custom install 2")
 
 
 version = get_version()
@@ -68,11 +42,6 @@ setup(
                       "openslide-python",
                       "requests",
                       "bs4"],
-    cmdclass={
-        'install': CustomInstallCommand,
-        'develop': CustomDevelopCommand,
-        'egg_info': CustomEggInfoCommand,
-    },
     license="GPLv3",
     keywords="Image Annotation, Machine Learning",
     classifiers=[

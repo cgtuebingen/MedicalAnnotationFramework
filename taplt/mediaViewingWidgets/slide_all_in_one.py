@@ -1,12 +1,11 @@
 import concurrent.futures as mp
 import PIL.ImageQt as ImageQT
-
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import *
 import numpy as np
 import os
-openslide_path = os.path.abspath("../../openslide/bin")
+openslide_path = os.path.abspath("../openslide/bin")
 os.add_dll_directory(openslide_path)
 from openslide import OpenSlide
 
