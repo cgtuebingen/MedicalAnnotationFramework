@@ -36,7 +36,7 @@ setup(
     install_requires=["numpy",
                       "Pillow>=2.8.0",
                       "PyQt6",
-                      "python-magic-bin",
+                      "python-magic",
                       "filetype",
                       "typing-extensions",
                       "openslide-python",

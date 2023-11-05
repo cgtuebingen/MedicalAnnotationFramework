@@ -58,6 +58,8 @@ This repository includes a submodule. Therefore, it can be either cloned using:
 ```bash
 git clone --recurse-submodules https://github.com/FreshP-min/MedicalAnnotationFramework.git
 cd MedicalAnnotationFramework
+conda create -n taplt python=3.10 setuptools=65.5.1
+conda activate taplt
 pip install .  # add -e to use the cloned repository as the source for the package
 python download_openslide.py
 ```
@@ -65,6 +67,8 @@ Or using:
 ```bash
 git clone https://github.com/FreshP-min/MedicalAnnotationFramework.git
 cd MedicalAnnotationFramework
+conda create -n taplt python=3.10 setuptools=65.5.1
+conda activate taplt
 git submodule init
 git submodule update
 pip install .  # add -e to use the cloned repository as the source for the package
