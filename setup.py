@@ -40,7 +40,7 @@ if sys.platform.startswith("win"):
                           "Pillow>=2.8.0",
                           "PyQt6",
                           "python-magic",
-                          "python-magic-bin==0.4.14",
+                          "python-magic-bin",
                           "filetype",
                           "typing-extensions",
                           "openslide-python",

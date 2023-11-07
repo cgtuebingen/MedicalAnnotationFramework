@@ -61,7 +61,8 @@ class CenterDisplayWidget(QWidget):
         self.layout.addWidget(self.image_viewer)
         self.layout.addWidget(self.video_player)
         self.layout.addWidget(self.slide_viewer)
-       # self.layout.addWidget(self.slide_wrapper)
+
+        # self.layout.addWidget(self.slide_wrapper)
         self.layout.addWidget(self.patient_label)
 
     def mousePressEvent(self, event: QMouseEvent):

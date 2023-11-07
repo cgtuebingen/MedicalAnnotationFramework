@@ -22,6 +22,8 @@ class slide_view(QGraphicsView):
         self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
         self.setMouseTracking(True)
 
+        self.annotationMode = False
+
         self.slide: OpenSlide = None
         self.filepath = None
 
@@ -149,6 +151,9 @@ class slide_view(QGraphicsView):
                                 idx_height * block_height_vp,
                                 block_width_vp, block_height_vp, QPixmap.fromImage(ImageQT.ImageQt(image)))
 
+    def setAnnotationMode(self, b: bool):
+        self.annotationMode = b
+
     def resizeEvent(self, event: QResizeEvent) -> None:
         """
         Updates the pixmap of the widget is resized
@@ -195,7 +200,7 @@ class slide_view(QGraphicsView):
         :type event: QMouseEvent
         :return: /
         """
-        if event.button() == Qt.MouseButton.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton and not self.annotationMode:
             self.panning = True
             self.pan_start = self.mapToScene(event.pos())
         super(QGraphicsView, self).mousePressEvent(event)
@@ -207,7 +212,7 @@ class slide_view(QGraphicsView):
         :type event: QMouseEvent
         :return: /
         """
-        if event.button() == Qt.MouseButton.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton and not self.annotationMode:
             self.panning = False
         super(QGraphicsView, self).mouseReleaseEvent(event)
 
@@ -218,7 +223,7 @@ class slide_view(QGraphicsView):
         :type event: QMouseEvent
         :return: /
         """
-        if self.panning:
+        if self.panning and not self.annotationMode:
             new_pos = self.mapToScene(event.pos())
             move = self.pan_start - new_pos
             move *= 2

@@ -284,7 +284,7 @@ class Shape(QGraphicsObject):
                 self._path.lineTo(_pnt)
 
     def init_shape(self):
-        if self.shape_type not in ['polygon', 'rectangle', 'ellipse', 'tempTrace', 'tempPolygon']:
+        if self.shape_type not in ['polygon', 'rectangle', 'ellipse', 'trace', 'tempPolygon']:
             raise AttributeError("Unsupported Shape: " + str(self.shape_type))
         # Add additional points
         if self.shape_type in ['rectangle', 'ellipse'] and len(self.vertices.vertices) == 2:
