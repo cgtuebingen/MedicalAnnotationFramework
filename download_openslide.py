@@ -18,13 +18,11 @@ if response.status_code == 200:
     download_link = None
     for link in soup.find_all('a'):
         if link.get('href') and "openslide-win64" in link.get('href'):
-        # if link.get('href') and "tar.xz" in link.get('href'):
             download_link = link.get('href')
             break
-    print(download_link)
+
     if download_link:
         filename = os.path.basename(download_link)
-        print(filename)
 
         response = requests.get(download_link)
         if response.status_code == 200:
