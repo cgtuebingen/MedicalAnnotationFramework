@@ -5,8 +5,10 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import *
 import numpy as np
 import os
-openslide_path = os.path.abspath("../openslide/bin")
-os.add_dll_directory(openslide_path)
+import sys
+if sys.platform.startswith("win"):
+    openslide_path = os.path.abspath("../openslide/bin")
+    os.add_dll_directory(openslide_path)
 from openslide import OpenSlide
 
 
@@ -106,6 +108,7 @@ class slide_view(QGraphicsView):
         block_height_slide = int(self.height * self.cur_downsample / sqrt_thread_count)
 
         self.painter = QPainter(self.fused_image)
+        self.fused_image.fill(0)
 
         with mp.ThreadPoolExecutor(max_workers=max_threads) as executor:
             futures = [executor.submit(self.process_image_block, i, self.mouse_pos, block_width_vp,
