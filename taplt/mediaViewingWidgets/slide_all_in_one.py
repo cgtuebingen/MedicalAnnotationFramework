@@ -5,8 +5,10 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import *
 import numpy as np
 import os
-openslide_path = os.path.abspath("../openslide/bin")
-os.add_dll_directory(openslide_path)
+import sys
+if sys.platform.startswith("win"):
+    openslide_path = os.path.abspath("../openslide/bin")
+    os.add_dll_directory(openslide_path)
 from openslide import OpenSlide
 
 
