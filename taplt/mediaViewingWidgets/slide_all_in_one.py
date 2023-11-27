@@ -250,13 +250,7 @@ class slide_view(QGraphicsView):
         old_downsample = self.cur_downsample
 
         old_mouse = self.get_mouse_vp(event)
-        old_vp = self.get_middle_vp()
-        old_zoom_level = self.cur_level_zoom
         mouse_vp = event.position()
-        mouse_vec_slide = mouse_vp * self.cur_downsample
-
-        old_width = self.width * self.cur_downsample
-        old_height = self.height * self.cur_downsample
 
         scale_factor = 1.1 if event.angleDelta().y() <= 0 else 1 / 1.1
         new_downsample = min(max(self.cur_downsample * scale_factor, 0.3), self.max_downsample)
@@ -267,62 +261,33 @@ class slide_view(QGraphicsView):
         if self.cur_level != self.slide.get_best_level_for_downsample(new_downsample):
             self.zoomed = True
 
-        self.mouse_pos += mouse_vp * self.cur_downsample * (1 - scale_factor)
-
         self.cur_downsample = new_downsample
         self.cur_level = self.slide.get_best_level_for_downsample(self.cur_downsample)
         self.cur_level_zoom = self.cur_downsample / self.level_downsamples[self.cur_level]
 
-        # Zoom offset
-        # self.mouse_pos += QPointF((old_width - old_width * scale_factor) * 0.5,
-        #                           (old_height - old_height * scale_factor) * 0.5)
-
-        #self.mouse_pos += mouse_vp * self.cur_downsample * (1 - scale_factor)
-
-        if self.zoomed:
-            self.pixmap_item.setScale(old_zoom_level * scale_factor)
-
-            new_mouse = self.get_mouse_vp(event)
-
-            self.pixmap_item.moveBy((new_mouse.x() - old_mouse.x()) / self.cur_level_zoom,
-                                    (new_mouse.y() - old_mouse.y()) / self.cur_level_zoom)
-
-            new_vp = self.get_middle_vp()
-
-            # TODO: This is calculating the mouse position wrongly
-            #self.mouse_pos += (old_vp - new_vp) * self.cur_downsample
-
-            self.pixmap_item.setPos(-self.width / self.cur_level_zoom, -self.height / self.cur_level_zoom)
-            old_mouse = self.get_mouse_vp(event)
+        self.mouse_pos += mouse_vp * old_downsample * (1 - scale_factor)
 
         self.pixmap_item.setScale(1 / self.cur_level_zoom)
 
-        new_mouse = self.get_mouse_vp(event)
-
-        self.pixmap_item.moveBy((new_mouse.x() - old_mouse.x()) / self.cur_level_zoom,
-                                (new_mouse.y() - old_mouse.y()) / self.cur_level_zoom)
-
-        new_vp = self.get_middle_vp()
-
-        # if not self.zoomed:
-        #     # Mouse offset
-        #     # TODO: This is calculating the mouse position wrongly
-        #     vector = (new_vp - old_vp) * self.cur_downsample
-        #     self.mouse_pos += vector
-
         if self.zoomed:
+            # TODO: This is still dependent on calling the mouse pos twice. This could be fixed by directly calculating
+            #  the necessary vector. But I do not know how to calculate this vector.
             self.anchor_point = self.mouse_pos.toPoint()
+            self.pixmap_item.setPos(-self.width / self.cur_level_zoom, -self.height / self.cur_level_zoom)
+            old_mouse = self.get_mouse_vp(event)
+            self.pixmap_item.setScale(1 / self.cur_level_zoom)
+            new_mouse = self.get_mouse_vp(event)
+            pix_move = (new_mouse - old_mouse) / self.cur_level_zoom
+            self.pixmap_item.moveBy(pix_move.x(),
+                                    pix_move.y())
+        else:
+            self.pixmap_item.setScale(1 / self.cur_level_zoom)
 
+            pix_move = old_mouse * (1 - scale_factor) / self.cur_level_zoom
 
-        # new_pos = self.mapToScene(event.position().toPoint())
-        # new_pos = QPointF((new_pos.x()/self.width - 0.5) *
-        #                   self.slide.level_dimensions[self.dim_count - self.cur_level - 1][0] * relative_scaling_factor,
-        #                   (new_pos.y()/self.height - 0.5) *
-        #                   self.slide.level_dimensions[self.dim_count - self.cur_level - 1][1] * relative_scaling_factor)
-        #
-        # self.mouse_pos += QPointF(self.width / 2 * (old_scaling_factor - self.cur_downsample),
-        #                           self.height / 2 * (old_scaling_factor - self.cur_downsample))
-        # self.mouse_pos += new_pos
+            self.pixmap_item.moveBy(-pix_move.x(),
+                                    -pix_move.y())
+
         self.update_pixmap()
 
     def mousePressEvent(self, event: QMouseEvent):
@@ -367,20 +332,6 @@ class slide_view(QGraphicsView):
             self.update_pixmap()
         super(QGraphicsView, self).mouseMoveEvent(event)
 
-    def get_cur_slide_width(self):
-        """
-        Utility method to calculate the lowest width
-        :return: zoomed slide-level width
-        """
-        return self.width * self.cur_downsample
-
-    def get_cur_slide_height(self):
-        """
-        Utility method to calculate the lowest height
-        :return: zoomed slide-level height
-        """
-        return self.height * self.cur_downsample
-
     def get_cur_zoomed_patch_width(self):
         """
         Utility method to calculate the current width of a patch relative to the zoom
@@ -409,24 +360,6 @@ class slide_view(QGraphicsView):
         """
         return int(self.height * self.level_downsamples[self.cur_level])
 
-    def get_middle_vp(self):
-        """
-        This method calculates the middel of the viewport relative to the position of the QPixmapItem
-        :return: relative pos of viewport
-        """
-        top_left = - self.pixmap_item.pos() * self.cur_level_zoom
-        offset_to_middle = QPointF(0.5 * self.width * self.cur_level_zoom,
-                                   0.5 * self.height * self.cur_level_zoom)
-        return top_left + offset_to_middle
-
-    def get_middle_vp_slide(self):
-        """
-        This method calculates the middle of the viewport on slide level
-        """
-        offset = QPointF(self.width * self.cur_downsample * 0.5,
-                         self.height * self.cur_downsample * 0.5)
-        return self.mouse_pos + offset
-
     def get_mouse_vp(self, event):
         """
         This method calculates the mouse position in the viewport relative to the position of the QPixmapItem during an
@@ -434,5 +367,5 @@ class slide_view(QGraphicsView):
         :return: mouse pos in viewport during event
         """
         top_left = - self.pixmap_item.pos()
-        mouse_pos = self.mapToScene(event.position().toPoint())
+        mouse_pos = event.position()
         return (top_left + mouse_pos) * self.cur_level_zoom
