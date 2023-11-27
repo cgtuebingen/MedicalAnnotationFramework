@@ -252,6 +252,8 @@ class slide_view(QGraphicsView):
         old_mouse = self.get_mouse_vp(event)
         old_vp = self.get_middle_vp()
         old_zoom_level = self.cur_level_zoom
+        mouse_vp = event.position()
+        mouse_vec_slide = mouse_vp * self.cur_downsample
 
         old_width = self.width * self.cur_downsample
         old_height = self.height * self.cur_downsample
@@ -265,13 +267,17 @@ class slide_view(QGraphicsView):
         if self.cur_level != self.slide.get_best_level_for_downsample(new_downsample):
             self.zoomed = True
 
+        self.mouse_pos += mouse_vp * self.cur_downsample * (1 - scale_factor)
+
         self.cur_downsample = new_downsample
         self.cur_level = self.slide.get_best_level_for_downsample(self.cur_downsample)
         self.cur_level_zoom = self.cur_downsample / self.level_downsamples[self.cur_level]
 
         # Zoom offset
-        self.mouse_pos += QPointF((old_width - old_width * scale_factor) * 0.5,
-                                  (old_height - old_height * scale_factor) * 0.5)
+        # self.mouse_pos += QPointF((old_width - old_width * scale_factor) * 0.5,
+        #                           (old_height - old_height * scale_factor) * 0.5)
+
+        #self.mouse_pos += mouse_vp * self.cur_downsample * (1 - scale_factor)
 
         if self.zoomed:
             self.pixmap_item.setScale(old_zoom_level * scale_factor)
@@ -284,7 +290,7 @@ class slide_view(QGraphicsView):
             new_vp = self.get_middle_vp()
 
             # TODO: This is calculating the mouse position wrongly
-            self.mouse_pos += (old_vp - new_vp) * self.cur_downsample
+            #self.mouse_pos += (old_vp - new_vp) * self.cur_downsample
 
             self.pixmap_item.setPos(-self.width / self.cur_level_zoom, -self.height / self.cur_level_zoom)
             old_mouse = self.get_mouse_vp(event)
@@ -298,18 +304,14 @@ class slide_view(QGraphicsView):
 
         new_vp = self.get_middle_vp()
 
-        print(f"before: {self.mouse_pos}")
-
-        if not self.zoomed:
-            # Mouse offset
-            # TODO: This is calculating the mouse position wrongly
-            vector = (new_vp - old_vp) * self.cur_downsample
-            self.mouse_pos += vector
+        # if not self.zoomed:
+        #     # Mouse offset
+        #     # TODO: This is calculating the mouse position wrongly
+        #     vector = (new_vp - old_vp) * self.cur_downsample
+        #     self.mouse_pos += vector
 
         if self.zoomed:
             self.anchor_point = self.mouse_pos.toPoint()
-
-        print(f"after: {self.mouse_pos}")
 
 
         # new_pos = self.mapToScene(event.position().toPoint())
