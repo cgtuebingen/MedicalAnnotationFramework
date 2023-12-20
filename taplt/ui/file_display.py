@@ -88,6 +88,10 @@ class CenterDisplayWidget(QWidget):
         self.set_initialized()
         self.annotations.classes = classes
 
+        self.scene.removeItem(self.pixmap)
+        self.pixmap = QGraphicsPixmapItem()
+        self.scene.addItem(self.pixmap)
+
         pixmap = QPixmap(filepath)
         self.image_size = pixmap.size()
         self.pixmap.setPixmap(pixmap)
@@ -117,8 +121,7 @@ class CenterDisplayWidget(QWidget):
         self.video_label.show()
 
     def set_pixmap_to_slide(self, pixmap_item):
-        self.pixmap = pixmap_item
-        self.scene.addItem(self.pixmap)
+        self.scene.addItem(pixmap_item)
 
     def switch_to_modality(self, filepath: str):
         """
@@ -127,6 +130,7 @@ class CenterDisplayWidget(QWidget):
         """
         rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
         file_type = self.mime.from_file(filepath)
+        self.scene.removeItem(self.slide_viewer.pixmap_item)
 
         if file_type.startswith('image') and not file_type.endswith('tiff'):
             self.modalitySwitched.emit('image')
