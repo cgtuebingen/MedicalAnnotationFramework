@@ -113,6 +113,7 @@ class Shape(QGraphicsObject):
 
     @pyqtSlot(QGraphicsSceneMouseEvent)
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
+        # print('im moving')
         if self.mode == Shape.ShapeMode.CREATE:
             if len(self.vertices.vertices) > 0:
                 delta = self.vertices.vertices[-1] - event.scenePos()
@@ -148,7 +149,9 @@ class Shape(QGraphicsObject):
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
         # TODO: Add a new tip that tells the user, that they can end the annotation by right clicking
         if event.button() == Qt.MouseButton.LeftButton:
-            if self.contains(event.pos()):
+            if self.mode == Shape.ShapeMode.CREATE:
+                pass
+            elif self.contains(event.pos()):
                 self.setSelected(True)
                 self.selected.emit()
                 self.clicked.emit(event)
