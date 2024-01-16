@@ -112,17 +112,20 @@ class Shape(QGraphicsObject):
 
     @pyqtSlot(QGraphicsSceneMouseEvent)
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
+        print(self.shape_type)
         if self.mode == Shape.ShapeMode.CREATE:
             if len(self.vertices.vertices) > 0:
                 delta = self.vertices.vertices[-1] - event.scenePos()
             else:
                 delta = event.scenePos()
             if math.sqrt(delta.x() ** 2 + delta.y() ** 2) > 3:
-                if self.shape_type in ["polygon", "tempTrace"] or len(self.vertices.vertices) <= 1:
+                if self.shape_type in ["polygon", "tempTrace","trace"] or len(self.vertices.vertices) <= 1:
                     self.vertices.vertices.append(self.check_out_of_bounds(event.scenePos()))
+                    print(self.vertices.vertices)
                 else:
                     self.vertices.vertices[1] = self.check_out_of_bounds(event.scenePos())
                 self.update()
+        
         super(Shape, self).mouseMoveEvent(event)
 
     def check_out_of_bounds(self, pos: QPointF):
