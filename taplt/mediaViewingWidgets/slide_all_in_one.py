@@ -123,6 +123,7 @@ class slide_view(QGraphicsView):
 
         if any(new_patches):
             self.fused_image = QPixmap(self.width * 4, self.height * 4)
+            self.fused_image.fill(0)
             self.painter = QPainter(self.fused_image)
 
             with mp.ThreadPoolExecutor(max_workers=self.max_threads) as executor:

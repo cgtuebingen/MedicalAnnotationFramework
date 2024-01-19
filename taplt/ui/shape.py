@@ -34,6 +34,7 @@ class Shape(QGraphicsObject):
         POLYGON: str = 'polygon'
         RECTANGLE: str = 'rectangle'
         ELLIPSE: str = 'ellipse'
+        CIRCLE: str = 'circle'
 
     def __init__(self,
                  image_size: QSize,
@@ -112,7 +113,6 @@ class Shape(QGraphicsObject):
 
     @pyqtSlot(QGraphicsSceneMouseEvent)
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
-        print(self.shape_type)
         if self.mode == Shape.ShapeMode.CREATE:
             if len(self.vertices.vertices) > 0:
                 delta = self.vertices.vertices[-1] - event.scenePos()
@@ -150,7 +150,9 @@ class Shape(QGraphicsObject):
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
         # TODO: Add a new tip that tells the user, that they can end the annotation by right clicking
         if event.button() == Qt.MouseButton.LeftButton:
-            if self.contains(event.pos()):
+            if self.mode == Shape.ShapeMode.CREATE:
+                pass
+            elif self.contains(event.pos()):
                 self.setSelected(True)
                 self.selected.emit()
                 self.clicked.emit(event)
@@ -260,7 +262,7 @@ class Shape(QGraphicsObject):
         if self.shape_type in ['rectangle']:
             return self.shape().contains(point)
 
-        elif self.shape_type in ['ellipse']:
+        elif self.shape_type in ['ellipse', 'circle']:
             # elliptic formula is (x²/a² + y²/b² = 1) so if the point fulfills the equation respectively
             # is smaller than 1, the points is inside
             rect = self.boundingRect()
@@ -287,10 +289,10 @@ class Shape(QGraphicsObject):
                 self._path.lineTo(_pnt)
 
     def init_shape(self):
-        if self.shape_type not in ['polygon', 'rectangle', 'ellipse', 'trace', 'tempPolygon']:
+        if self.shape_type not in ['polygon', 'rectangle', 'ellipse', 'circle', 'trace', 'tempPolygon']:
             raise AttributeError("Unsupported Shape: " + str(self.shape_type))
         # Add additional points
-        if self.shape_type in ['rectangle', 'ellipse'] and len(self.vertices.vertices) == 2:
+        if self.shape_type in ['rectangle', 'ellipse', 'circle'] and len(self.vertices.vertices) == 2:
             self.vertices.complete_poly()
 
         # Generate path for the temporary Shapes
@@ -318,7 +320,7 @@ class Shape(QGraphicsObject):
         """Handles the movement of one vertex"""
         if self.shape_type == 'polygon':
             self.vertices.vertices[v_num] = QPointF(new_pos.x(), new_pos.y())
-        elif self.shape_type in ['rectangle', 'ellipse']:
+        elif self.shape_type in ['rectangle', 'ellipse', 'circle']:
             if not self._anchorPoint:
                 # this point is the anchor a.k.a the point diagonally from the selected one
                 # however, as i am rebuilding the shape from there, i only need to select the anchor once and store it
@@ -326,7 +328,7 @@ class Shape(QGraphicsObject):
                 print("New Anchor Set")
             self.vertices.vertices = QPolygonF([self._anchorPoint, new_pos])
 
-        if self.shape_type in ['rectangle', 'ellipse'] and len(self.vertices.vertices) == 2:
+        if self.shape_type in ['rectangle', 'ellipse', 'circle'] and len(self.vertices.vertices) == 2:
             self.vertices.complete_poly()
 
         self.vertices.update_sel_and_high(np.asarray([new_pos.x(), new_pos.y()]))
@@ -357,7 +359,12 @@ class Shape(QGraphicsObject):
             elif len(self.vertices.vertices) > 1:
                 if self.shape_type == "ellipse":
                     painter.drawEllipse(QRectF(self.vertices.vertices[0], self.vertices.vertices[1]))
-
+                elif self.shape_type == "circle":
+                    radius = math.sqrt(
+                        (self.vertices.vertices[0].x() - self.vertices.vertices[1]. x()) ** 2 + 
+                        (self.vertices.vertices[0].y() - self.vertices.vertices[1]. y()) ** 2
+                        )
+                    painter.drawEllipse(self.vertices.vertices[0], radius, radius)
                 elif self.shape_type == "rectangle":
                     painter.drawRect(QRectF(self.vertices.vertices[0], self.vertices.vertices[1]))
 

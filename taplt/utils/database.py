@@ -232,7 +232,8 @@ class SQLiteDatabase(QObject):
         with self.connection:
             image_id = self.get_uid_from_filename("images", image)
             labels = self.cursor.execute("""SELECT shape FROM annotations
-                                            WHERE modality = 1 AND file = ?""", (image_id,)).fetchall()
+                                            WHERE modality = 0 AND file = ?""", (image_id,)).fetchall()
+
         return check_for_bytes(labels)
 
     def get_patients(self):
@@ -368,6 +369,7 @@ class SQLiteDatabase(QObject):
         self.sPreviewDatabase.emit(headers, content)
 
     def save(self, current_labels: list, img_idx: int):
+        # print('im saving')
         files = self.get_images()
         if files:
             file = files[img_idx]
@@ -377,6 +379,7 @@ class SQLiteDatabase(QObject):
                 self.add_label(label_class)
                 entries.append(self.create_annotation_entry(file, label_dict, label_class))
             self.update_image_annotations(image_name=file, entries=entries)
+        self.update_gui()
 
     def send_import_info(self):
         existing_patients = self.get_patients()

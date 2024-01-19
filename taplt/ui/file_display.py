@@ -88,14 +88,16 @@ class CenterDisplayWidget(QWidget):
         self.set_initialized()
         self.annotations.classes = classes
 
-        self.scene.removeItem(self.pixmap)
-        self.pixmap = QGraphicsPixmapItem()
-        self.scene.addItem(self.pixmap)
+        file_type = self.mime.from_file(filepath)
 
-        pixmap = QPixmap(filepath)
+        if not file_type.endswith('tiff'):
+            pixmap = QPixmap(filepath)
+        else:
+            pixmap = QPixmap()
+
         self.image_size = pixmap.size()
         self.pixmap.setPixmap(pixmap)
-
+        
         labels = [Shape(image_size=self.image_size,
                         label_dict=_label,
                         color=self.annotations.get_color_for_label(_label['label']))
@@ -134,7 +136,6 @@ class CenterDisplayWidget(QWidget):
 
         if file_type.startswith('image') and not file_type.endswith('tiff'):
             self.modalitySwitched.emit('image')
-
             self.image_viewer.setHidden(False)
             self.video_player.setHidden(True)
             self.slide_viewer.setHidden(True)
@@ -156,6 +157,7 @@ class CenterDisplayWidget(QWidget):
             self.video_player.play()
 
         elif file_type.endswith('tiff'):
+
             self.modalitySwitched.emit('wsi')
 
             self.image_viewer.setHidden(True)
