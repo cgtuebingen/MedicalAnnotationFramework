@@ -94,6 +94,7 @@ class CenterDisplayWidget(QWidget):
             pixmap = QPixmap(filepath)
         else:
             pixmap = QPixmap()
+
         self.image_size = pixmap.size()
         self.pixmap.setPixmap(pixmap)
         
