@@ -358,7 +358,7 @@ class Shape(QGraphicsObject):
 
             elif len(self.vertices.vertices) > 1:
                 if self.shape_type == "ellipse":
-                    painter.drawEllipse(QRectF(self.vertices.vertices[0], self.vertices.vertices[1]))
+                    painter.drawEllipse(QRectF(self.vertices.vertices[0], self.vertices.vertices[len(self.vertices.vertices)//2]))
                 elif self.shape_type == "circle":
                     radius = math.sqrt(
                         (self.vertices.vertices[0].x() - self.vertices.vertices[1]. x()) ** 2 + 
@@ -366,7 +366,7 @@ class Shape(QGraphicsObject):
                         )
                     painter.drawEllipse(self.vertices.vertices[0], radius, radius)
                 elif self.shape_type == "rectangle":
-                    painter.drawRect(QRectF(self.vertices.vertices[0], self.vertices.vertices[1]))
+                    painter.drawRect(QRectF(self.vertices.vertices[0], self.vertices.vertices[len(self.vertices.vertices)//2]))
 
                 if any((self.isSelected, self.is_highlighted, self.vertices.selected_vertex != -1)):
                     self.vertices.paint(painter)
