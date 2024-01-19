@@ -8,9 +8,9 @@ from taplt.ui.image_viewer import ImageViewer
 from taplt.ui.annotation_group import AnnotationGroup
 from taplt.ui.shape import Shape
 from taplt.utils.qt import get_icon
-from taplt.mediaViewingWidgets.video_display import VideoPlayer
+from taplt.media_viewing_widgets.widgets.video_viewer import VideoPlayer
 
-from taplt.mediaViewingWidgets.slide_all_in_one import slide_view
+from taplt.media_viewing_widgets.widgets.slide_viewer import slide_view
 
 
 class CenterDisplayWidget(QWidget):
