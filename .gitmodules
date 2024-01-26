@@ -1,3 +1,4 @@
 [submodule "media_viewing_widgets"]
 	path = taplt/media_viewing_widgets
 	url = git@github.com:cgtuebingen/media_viewing_widgets.git
+	update = merge
