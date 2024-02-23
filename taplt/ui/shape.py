@@ -360,11 +360,16 @@ class Shape(QGraphicsObject):
                 if self.shape_type == "ellipse":
                     painter.drawEllipse(QRectF(self.vertices.vertices[0], self.vertices.vertices[len(self.vertices.vertices)//2]))
                 elif self.shape_type == "circle":
+                    center = self.vertices.vertices[0]
+                    if len(self.vertices.vertices) == 2:
+                        second_point = self.vertices.vertices[1]
+                    elif len(self.vertices.vertices) == 4:
+                        second_point = self.vertices.vertices[2]
                     radius = math.sqrt(
-                        (self.vertices.vertices[0].x() - self.vertices.vertices[1]. x()) ** 2 + 
-                        (self.vertices.vertices[0].y() - self.vertices.vertices[1]. y()) ** 2
-                        )
-                    painter.drawEllipse(self.vertices.vertices[0], radius, radius)
+                        (center.x() - second_point.x()) ** 2 + 
+                        (center.y() - second_point.y()) ** 2
+                    )
+                    painter.drawEllipse(center, radius, radius)
                 elif self.shape_type == "rectangle":
                     painter.drawRect(QRectF(self.vertices.vertices[0], self.vertices.vertices[len(self.vertices.vertices)//2]))
 
