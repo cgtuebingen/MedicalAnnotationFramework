@@ -123,7 +123,9 @@ class CenterDisplayWidget(QWidget):
         self.video_label.show()
 
     def set_pixmap_to_slide(self, pixmap_item):
+        self.scene.removeItem(self.annotations)
         self.scene.addItem(pixmap_item)
+        self.scene.addItem(self.annotations)
 
     def switch_to_modality(self, filepath: str):
         """

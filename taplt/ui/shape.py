@@ -121,7 +121,6 @@ class Shape(QGraphicsObject):
             if math.sqrt(delta.x() ** 2 + delta.y() ** 2) > 3:
                 if self.shape_type in ["polygon", "tempTrace","trace"] or len(self.vertices.vertices) <= 1:
                     self.vertices.vertices.append(self.check_out_of_bounds(event.scenePos()))
-                    print(self.vertices.vertices)
                 else:
                     self.vertices.vertices[1] = self.check_out_of_bounds(event.scenePos())
                 self.update()

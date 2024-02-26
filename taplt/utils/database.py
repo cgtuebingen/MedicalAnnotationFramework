@@ -224,15 +224,16 @@ class SQLiteDatabase(QObject):
             label_classes = self.cursor.execute("SELECT label_class FROM labels").fetchall()
         return [label_class[0] for label_class in label_classes]
 
-    def get_label_from_image(self, image: str):
+    def get_label_from_file(self, image: str, moda=0):
         """
         :param image: the image name to be searched in
         :return: a list of all label shapes related to the specified image
         """
         with self.connection:
-            image_id = self.get_uid_from_filename("images", image)
+            table = self.file_tables[moda]
+            image_id = self.get_uid_from_filename(table, image)
             labels = self.cursor.execute("""SELECT shape FROM annotations
-                                            WHERE modality = 0 AND file = ?""", (image_id,)).fetchall()
+                                            WHERE modality = ? AND file = ?""", (moda, image_id,)).fetchall()
 
         return check_for_bytes(labels)
 
@@ -349,7 +350,7 @@ class SQLiteDatabase(QObject):
         in a tuple together with a boolean indicating whether there is at least 1 annotation in the image"""
         result = list()
         for file in files:
-            labels = self.get_label_from_image(file)
+            labels = self.get_label_from_file(file)
             populated = True if labels else False
             if moda[file] == 0:
                 file = self.location + Structure.IMAGES_DIR + file
@@ -369,8 +370,9 @@ class SQLiteDatabase(QObject):
         self.sPreviewDatabase.emit(headers, content)
 
     def save(self, current_labels: list, img_idx: int):
-        # print('im saving')
         files = self.get_images()
+        files += self.get_videos()
+        files += self.get_wsi()
         if files:
             file = files[img_idx]
             entries = list()
@@ -379,7 +381,7 @@ class SQLiteDatabase(QObject):
                 self.add_label(label_class)
                 entries.append(self.create_annotation_entry(file, label_dict, label_class))
             self.update_image_annotations(image_name=file, entries=entries)
-        self.update_gui()
+        self.update_gui(img_idx)
 
     def send_import_info(self):
         existing_patients = self.get_patients()
@@ -419,7 +421,7 @@ class SQLiteDatabase(QObject):
 
         if files:
             file = files[img_idx]
-            labels = self.get_label_from_image(file)
+            labels = self.get_label_from_file(file, moda[file])
             patient = self.get_patient_by_uid(self.get_patient_by_filename(file, moda[file]))
         else:
             labels, patient = [], ""

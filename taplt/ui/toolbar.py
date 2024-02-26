@@ -107,7 +107,6 @@ class Toolbar(QToolBar):
 
         :returns: Nothing or an error, if the modality does not exist/was not initialized.
         """
-        # print('switching')
         if self.current_modality != modality_name:
             self.clear_actions()
 

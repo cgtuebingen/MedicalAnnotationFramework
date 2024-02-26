@@ -52,7 +52,6 @@ class AnnotationGroup(QGraphicsObject):
         if not self.drawing:
             self.drawing = True
             s = self.scene()  # type: QGraphicsScene
-            # print("Im DRAWING")
             self.temp_shape = Shape(image_size=QSize(int(s.width()), int(s.height())),
                                     shape_type=self.shapeType,
                                     mode=Shape.ShapeMode.CREATE,
@@ -61,7 +60,6 @@ class AnnotationGroup(QGraphicsObject):
             self.temp_shape.drawingDone.connect(self.set_drawing_to_false)
             self.sToolTip.emit("Press right click to end the annotation.")
             self.temp_shape.grabMouse()
-            # print('drawing done')
         else:
             pass
 
