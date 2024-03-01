@@ -1,7 +1,5 @@
 import os
 import shutil
-import filetype
-import magic
 
 
 class Structure:
@@ -35,14 +33,10 @@ def create_project_structure(project_path: str):
 def modality(filepath: str):
     """This method uses the 'filetype' library to detect the type of a given file
     returns: 0 if video, 1 if image, 2 if whole slide image, -1 if none of the above"""
-    mime = magic.Magic(mime=True)
-    detection = mime.from_file(filepath)
-
-    if detection.startswith('video'):
+    if filepath.endswith('mp4'):
         return 0
-    elif detection.startswith('image'):
-        if detection.endswith('tiff'):
-            return 2
+    if filepath.endswith('jpg') or filepath.endswith('png'):
         return 1
-    else:
-        return -1
+    if filepath.endswith('tif'):
+        return 2
+    return -1
