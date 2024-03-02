@@ -1,5 +1,5 @@
-from PyQt6.QtWidgets import *
-from PyQt6.QtCore import *
+from PySide6.QtWidgets import *
+from PySide6.QtCore import *
 
 from pathlib import Path
 from dataclasses import dataclass
@@ -23,16 +23,16 @@ NUM_COLORS = 25
 class LabelingMainWindow(QMainWindow):
     """The main window for the application"""
 
-    sCreateNewProject = pyqtSignal(str, dict)
-    sOpenProject = pyqtSignal(str)
-    sAddPatient = pyqtSignal(str)
-    sAddFile = pyqtSignal(str, str)
-    sRequestUpdate = pyqtSignal(int)
-    sRequestCheckForChanges = pyqtSignal(int, int)
-    sSaveToDatabase = pyqtSignal(list, int)
-    sDeleteFile = pyqtSignal(str, int)
-    sUpdateSettings = pyqtSignal(list)
-    sDisconnect = pyqtSignal()
+    sCreateNewProject = Signal(str, dict)
+    sOpenProject = Signal(str)
+    sAddPatient = Signal(str)
+    sAddFile = Signal(str, str)
+    sRequestUpdate = Signal(int)
+    sRequestCheckForChanges = Signal(int, int)
+    sSaveToDatabase = Signal(list, int)
+    sDeleteFile = Signal(str, int)
+    sUpdateSettings = Signal(list)
+    sDisconnect = Signal()
 
     @dataclass
     class Changes:
@@ -182,6 +182,7 @@ class LabelingMainWindow(QMainWindow):
         """ asks whether user wants to save; returns False on cancellation"""
         if self.changes:
             dlg = ForgotToSaveMessageBox()
+            dlg.show()
             dlg.exec()
             if dlg.result() in {0, 2}:
                 if dlg.result() == 0:

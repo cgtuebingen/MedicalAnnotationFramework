@@ -1,6 +1,7 @@
-from PyQt6.QtWidgets import *
-from PyQt6.QtCore import *
-from PyQt6.QtGui import *
+from PySide6.QtWidgets import QMessageBox, QPushButton, QStyle, QDialog, QTextEdit, QDialogButtonBox, QVBoxLayout, \
+    QLineEdit, QLabel, QFrame, QListWidgetItem, QListWidget, QHBoxLayout, QFileDialog
+from PySide6.QtCore import QSize, QPoint
+from PySide6.QtGui import Qt, QColor
 
 from typing import List
 from pathlib import Path
@@ -13,10 +14,11 @@ from taplt.utils.stylesheets import BUTTON_STYLESHEET
 
 class CloseMessageBox(QMessageBox):
     def __init__(self, *args):
-        super(CloseMessageBox, self).__init__(*args)
+        super().__init__(*args)
 
         self.quit_button = QPushButton(get_icon('quit'), "Quit Program")
-        self.cancel_button = QPushButton(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton), "Cancel")
+        self.cancel_button = QPushButton(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton),
+                                         "Cancel")
         self.addButton(self.quit_button, QMessageBox.ButtonRole.AcceptRole)
         self.addButton(self.cancel_button, QMessageBox.ButtonRole.RejectRole)
 
@@ -30,7 +32,7 @@ class CommentDialog(QDialog):
     """QDialog to let the user enter notes regarding a specific annotation"""
 
     def __init__(self, comment: str):
-        super(CommentDialog, self).__init__()
+        super().__init__()
         self.setWindowTitle("Notes")
         self.setFixedSize(500, 300)
         self.comment = comment
@@ -40,7 +42,8 @@ class CommentDialog(QDialog):
         self.enter_comment.setText(self.comment)
 
         # Accept & cancel buttons
-        self.confirmation = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self.confirmation = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         self.confirmation.accepted.connect(self.create_comment)
         self.confirmation.rejected.connect(self.close)
 
@@ -56,7 +59,7 @@ class CommentDialog(QDialog):
 
 class DeleteAllMessageBox(QMessageBox):
     def __init__(self, *args):
-        super(DeleteAllMessageBox, self).__init__(*args)
+        super().__init__(*args)
 
         self.setText("You are about to delete all annotations.\nContinue?")
         self.setInformativeText("This will clear the image.\n\n")
@@ -66,7 +69,7 @@ class DeleteAllMessageBox(QMessageBox):
 
 class DeleteClassMessageBox(QMessageBox):
     def __init__(self, class_name: str, *args):
-        super(DeleteClassMessageBox, self).__init__(*args)
+        super().__init__(*args)
 
         self.setText("You are about to delete the '{}'-class.\nContinue?".format(class_name))
         self.setInformativeText("This will remove all occurrences of '{}' from the image.\n\n".format(class_name))
@@ -76,7 +79,7 @@ class DeleteClassMessageBox(QMessageBox):
 
 class DeleteFileMessageBox(QMessageBox):
     def __init__(self, filename):
-        super(DeleteFileMessageBox, self).__init__()
+        super().__init__()
         self.setWindowTitle("Delete File")
         self.setText("You are about to delete the file \n {}".format(filename))
         self.setInformativeText("All annotations in this image will be lost.\n"
@@ -87,7 +90,7 @@ class DeleteFileMessageBox(QMessageBox):
 
 class DeleteShapeMessageBox(QMessageBox):
     def __init__(self, label: str, *args):
-        super(DeleteShapeMessageBox, self).__init__(*args)
+        super().__init__(*args)
         self.setWindowTitle("Delete Annotation")
         self.setIcon(QMessageBox.Icon.Question)
         self.setText("You are about to delete {}.\nContinue?".format(label))
@@ -96,23 +99,23 @@ class DeleteShapeMessageBox(QMessageBox):
 
 class ForgotToSaveMessageBox(QMessageBox):
     def __init__(self, *args):
-        super(ForgotToSaveMessageBox, self).__init__(*args)
-
-        save_button = QPushButton(get_icon('save'), "Save Changes")
-        dismiss_button = QPushButton(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogDiscardButton),
-                                     "Dismiss Changes")
-        cancel_button = QPushButton(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton), "Cancel")
+        super().__init__(*args)
 
         self.setWindowTitle("Caution: Unsaved Changes")
-        self.setText("Unsaved Changes: How do you want to progress?")
+        self.setText("You have unsaved changes. \n Do you want to save your changes?")
 
-        # NOTE FOR SOME REASON THE ORDER IS IMPORTANT DESPITE THE ROLE - IDK WHY
-        self.addButton(save_button, QMessageBox.ButtonRole.AcceptRole)
-        self.addButton(cancel_button, QMessageBox.ButtonRole.RejectRole)
-        self.addButton(dismiss_button, QMessageBox.ButtonRole.DestructiveRole)
+        self.save_button = QPushButton(get_icon('save'), "Save Changes")
+        self.dismiss_button = QPushButton(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogDiscardButton),
+                                          "Dismiss Changes")
+        self.cancel_button = QPushButton(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton),
+                                         "Cancel")
 
         if self.parentWidget():
             move_to_center(self, self.parentWidget().pos(), self.parentWidget().size())
+
+        self.addButton(self.save_button, QMessageBox.ButtonRole.AcceptRole)
+        self.addButton(self.dismiss_button, QMessageBox.ButtonRole.DestructiveRole)
+        self.addButton(self.cancel_button, QMessageBox.ButtonRole.RejectRole)
 
 
 class SelectionDialog(QDialog):
@@ -120,8 +123,9 @@ class SelectionDialog(QDialog):
         and (b) the possibility to create a new item from user input
 
         used as scaffolding for other classes that may fill the list with items """
+
     def __init__(self, selection_list, *args):
-        super(SelectionDialog, self).__init__(*args)
+        super().__init__(*args)
         self.result = ""
 
         self.setFixedSize(QSize(300, 400))
@@ -206,8 +210,9 @@ class SelectionDialog(QDialog):
 
 class NewLabelDialog(SelectionDialog):
     """ inherits the SelectionDialog, uses it to display label classes"""
+
     def __init__(self, classes: List[str], color_map: List[QColor], *args):
-        super(NewLabelDialog, self).__init__(LabelList(), *args)
+        super().__init__(LabelList(), *args)
         self.setWindowTitle("Select class of new shape")
         self.input.setPlaceholderText("Enter shape label")
 
@@ -217,8 +222,9 @@ class NewLabelDialog(SelectionDialog):
 
 class SelectPatientDialog(SelectionDialog):
     """ inherits the SelectionDialog, uses it to display patient names"""
+
     def __init__(self, existing_patients: list, *args):
-        super(SelectPatientDialog, self).__init__(QListWidget(), *args)
+        super().__init__(QListWidget(), *args)
         self.setWindowTitle("Select a patient")
         self.input.setPlaceholderText("Enter patient name")
 
@@ -230,8 +236,9 @@ class SelectPatientDialog(SelectionDialog):
 
 class ProjectHandlerDialog(QDialog):
     """ provides a dialog for the user to enter a project location and add initial files, if desired"""
+
     def __init__(self):
-        super(ProjectHandlerDialog, self).__init__()
+        super().__init__()
         self.setFixedSize(800, 500)
         self.setWindowTitle('Create new Project')
 
@@ -274,7 +281,8 @@ class ProjectHandlerDialog(QDialog):
         self.added_files = QListWidget()
 
         # Accept & cancel buttons
-        self.confirmation = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self.confirmation = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         self.confirmation.button(QDialogButtonBox.StandardButton.Ok).setText("Create Project")
         self.confirmation.accepted.connect(self.check_path)
         self.confirmation.rejected.connect(self.close)
@@ -407,7 +415,7 @@ class ProjectHandlerDialog(QDialog):
 
 class SettingDialog(QDialog):
     def __init__(self, settings: list):
-        super(SettingDialog, self).__init__()
+        super().__init__()
         self.setFixedSize(300, 500)
         self.setLayout(QVBoxLayout())
         self.setWindowTitle("Settings")
@@ -418,7 +426,8 @@ class SettingDialog(QDialog):
         self.settings = list()
 
         # Accept & cancel buttons
-        self.confirmation = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
+        self.confirmation = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
         self.confirmation.accepted.connect(self.save_settings)
         self.confirmation.rejected.connect(self.close)
 
@@ -439,5 +448,5 @@ def move_to_center(widget, parent_pos: QPoint, parent_size: QSize):
     # TODO: implement move_to_center somewhere else, so the dialogs don't have to demand a parent widget
     r"""Moves the QDialog to the center of the parent Widget.
     As self.move moves the upper left corner to the place, one needs to subtract the own size of the window"""
-    widget.move(parent_pos.x() + (parent_size.width() - widget.size().width())/2,
-                parent_pos.y() + (parent_size.height() - widget.size().height())/2)
+    widget.move(parent_pos.x() + (parent_size.width() - widget.size().width()) / 2,
+                parent_pos.y() + (parent_size.height() - widget.size().height()) / 2)

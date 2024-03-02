@@ -1,4 +1,4 @@
-from PyQt6.QtCore import *
+from PySide6.QtCore import *
 
 from taplt.macros.macros_dialogs import ExampleProjectDialog, ExampleProjectMessageBox
 
@@ -7,9 +7,9 @@ import os
 
 
 class Macros(QObject):
-    sNewProject = pyqtSignal(str, dict)
-    sEnableTools = pyqtSignal(list)
-    sSetWelcomeScreen = pyqtSignal(bool)
+    sNewProject = Signal(str, dict)
+    sEnableTools = Signal(list)
+    sSetWelcomeScreen = Signal(bool)
 
     def __init__(self):
         super(Macros, self).__init__()

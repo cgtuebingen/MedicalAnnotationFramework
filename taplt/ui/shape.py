@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import *
-from PyQt6.QtGui import *
-from PyQt6.QtCore import *
+from PySide6.QtWidgets import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *
 from dataclasses import dataclass
 import math
 from copy import deepcopy
@@ -13,15 +13,15 @@ from taplt.utils.qt import closest_euclidean_distance
 
 class Shape(QGraphicsObject):
     # TODO: Maybe we should make these QGraphicsItems again to reduce overhead.
-    hover_enter = pyqtSignal()
-    hover_exit = pyqtSignal()
-    clicked = pyqtSignal(QGraphicsSceneMouseEvent)
-    selected = pyqtSignal()
-    deselected = pyqtSignal()
-    mode_changed = pyqtSignal(int)
-    deleted = pyqtSignal()
-    drawingDone = pyqtSignal()
-    sChange = pyqtSignal(int)
+    hover_enter = Signal()
+    hover_exit = Signal()
+    clicked = Signal(QGraphicsSceneMouseEvent)
+    selected = Signal()
+    deselected = Signal()
+    mode_changed = Signal(int)
+    deleted = Signal()
+    drawingDone = Signal()
+    sChange = Signal(int)
 
     @dataclass
     class ShapeMode:
@@ -111,7 +111,7 @@ class Shape(QGraphicsObject):
     def sceneEvent(self, event: QEvent) -> bool:
         return super(Shape, self).sceneEvent(event)
 
-    @pyqtSlot(QGraphicsSceneMouseEvent)
+    @Slot(QGraphicsSceneMouseEvent)
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
         if self.mode == Shape.ShapeMode.CREATE:
             if len(self.vertices.vertices) > 0:
@@ -145,7 +145,7 @@ class Shape(QGraphicsObject):
         self.selected.emit()
         menu.exec(pos)
 
-    @pyqtSlot(QGraphicsSceneMouseEvent)
+    @Slot(QGraphicsSceneMouseEvent)
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
         # TODO: Add a new tip that tells the user, that they can end the annotation by right clicking
         if event.button() == Qt.MouseButton.LeftButton:
@@ -174,7 +174,7 @@ class Shape(QGraphicsObject):
             event.ignore()
         super(Shape, self).mouseDoubleClickEvent(event)
 
-    @pyqtSlot(QGraphicsSceneMouseEvent)
+    @Slot(QGraphicsSceneMouseEvent)
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         super(Shape, self).mousePressEvent(event)
         if self.mode == Shape.ShapeMode.EDIT:
@@ -183,12 +183,12 @@ class Shape(QGraphicsObject):
             self.set_mode(Shape.ShapeMode.FIXED)
             self.sChange.emit(2)
 
-    @pyqtSlot(QGraphicsSceneHoverEvent)
+    @Slot(QGraphicsSceneHoverEvent)
     def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent):
         event.ignore()
         super(Shape, self).hoverEnterEvent(event)
 
-    @pyqtSlot(QGraphicsSceneHoverEvent)
+    @Slot(QGraphicsSceneHoverEvent)
     def hoverMoveEvent(self, event: QGraphicsSceneHoverEvent):
         if self.mode == Shape.ShapeMode.CREATE:
             pass
@@ -206,7 +206,7 @@ class Shape(QGraphicsObject):
         event.ignore()
         super(Shape, self).hoverMoveEvent(event)
 
-    @pyqtSlot(QGraphicsSceneHoverEvent)
+    @Slot(QGraphicsSceneHoverEvent)
     def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent):
         if self.is_highlighted:
             self.is_highlighted = False

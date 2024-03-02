@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import *
-from PyQt6.QtCore import *
-from PyQt6.QtGui import *
+from PySide6.QtWidgets import *
+from PySide6.QtCore import *
+from PySide6.QtGui import *
 
 import os
 from typing import List
@@ -12,7 +12,7 @@ from taplt.utils.stylesheets import TAB_STYLESHEET, SETTING_STYLESHEET
 
 class FileList(QListWidget):
     """ a list widget subclass to make use of context menu"""
-    sDeleteFile = pyqtSignal(str)
+    sDeleteFile = Signal(str)
 
     def __init__(self):
         super(FileList, self).__init__()
@@ -34,7 +34,7 @@ class FileList(QListWidget):
 class LabelList(QListWidget):
     """ a list widget to store annotation labels"""
     def __init__(self, *args):
-        super(QListWidget, self).__init__(*args)
+        super().__init__(*args)
         self._icon_size = 10
         self.setFrameShape(QFrame.Shape.NoFrame)
 
@@ -84,9 +84,9 @@ class LabelsViewingWidget(QWidget):
 
 class FileViewingWidget(QWidget):
     """ holds a QTabWidget to be able to display both images and whole slide images"""
-    itemClicked = pyqtSignal(QListWidgetItem)
-    sRequestFileChange = pyqtSignal(int)
-    sDeleteFile = pyqtSignal(str)
+    itemClicked = Signal(QListWidgetItem)
+    sRequestFileChange = Signal(int)
+    sDeleteFile = Signal(str)
 
     def __init__(self):
         super(FileViewingWidget, self).__init__()

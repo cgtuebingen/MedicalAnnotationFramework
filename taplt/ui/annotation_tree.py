@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import *
-from PyQt6.QtGui import *
-from PyQt6.QtCore import *
+from PySide6.QtWidgets import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *
 
 from taplt.ui.dialogs import CommentDialog, DeleteAllMessageBox, DeleteClassMessageBox, DeleteShapeMessageBox
 from taplt.ui.shape import Shape
@@ -22,9 +22,9 @@ class TreeWidgetItem(QTreeWidgetItem):
 class AnnotationTree(QTreeWidget):
     """tree widget to display annotations in a list (all at top level)
     second column is used to let user enter or view comments"""
-    sItemsDeleted = pyqtSignal(list)
-    sDeselectAll = pyqtSignal()
-    sChange = pyqtSignal(int)
+    sItemsDeleted = Signal(list)
+    sDeselectAll = Signal()
+    sChange = Signal(int)
 
     def __init__(self):
         super(AnnotationTree, self).__init__()

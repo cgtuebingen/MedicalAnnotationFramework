@@ -8,7 +8,7 @@ from typing import List, Union
 from taplt.utils.project_structure import modality, create_project_structure, Structure
 from taplt.utils.settings import SETTINGS, get_tooltip
 
-from PyQt6.QtCore import pyqtSignal, QObject, QSettings
+from PySide6.QtCore import Signal, QObject, QSettings
 
 # TODO: 'file' value references the uid in either 'videos', 'images', or 'whole slide images'
 #  (depends on 'modality' value),
@@ -77,11 +77,11 @@ DELETE_FILE_ANNOTATIONS = "DELETE FROM annotations WHERE modality = ? AND file =
 
 class SQLiteDatabase(QObject):
     """class to control an SQL database. inherits a QObject to enable pyqt-signal transfer"""
-    sUpdate = pyqtSignal(list, int, str, list, list)
-    sImportFile = pyqtSignal(list)
-    sOpenSettings = pyqtSignal(list)
-    sApplySettings = pyqtSignal(list)
-    sPreviewDatabase = pyqtSignal(list, list)
+    sUpdate = Signal(list, int, str, list, list)
+    sImportFile = Signal(list)
+    sOpenSettings = Signal(list)
+    sApplySettings = Signal(list)
+    sPreviewDatabase = Signal(list, list)
 
     def __init__(self):
         super(SQLiteDatabase, self).__init__()

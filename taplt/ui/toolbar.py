@@ -1,5 +1,5 @@
-from PyQt6.QtWidgets import *
-from PyQt6.QtCore import *
+from PySide6.QtWidgets import *
+from PySide6.QtCore import *
 
 from typing import *
 
@@ -8,9 +8,9 @@ from taplt.src.actions import Action
 
 class Toolbar(QToolBar):
 
-    sCreateNewProject = pyqtSignal(str, dict)
-    sOpenProject = pyqtSignal(str)
-    sRequestPatients = pyqtSignal()
+    sCreateNewProject = Signal(str, dict)
+    sOpenProject = Signal(str)
+    sRequestPatients = Signal()
 
     def __init__(self, parent):
         super(Toolbar, self).__init__(parent)

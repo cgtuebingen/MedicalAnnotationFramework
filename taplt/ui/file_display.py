@@ -1,8 +1,8 @@
 import magic
 
-from PyQt6.QtWidgets import *
-from PyQt6.QtCore import *
-from PyQt6.QtGui import *
+from PySide6.QtWidgets import *
+from PySide6.QtCore import *
+from PySide6.QtGui import *
 
 from taplt.ui.image_viewer import ImageViewer
 from taplt.ui.annotation_group import AnnotationGroup
@@ -17,11 +17,11 @@ class CenterDisplayWidget(QWidget):
     """ widget to manage the central display in the GUI
     controls a QGraphicsView and a QGraphicsScene for drawing on top of a pixmap """
 
-    sRequestLabelListUpdate = pyqtSignal(int)
-    sRequestSave = pyqtSignal()
-    sChangeFile = pyqtSignal(int)
-    sDrawingTooltip = pyqtSignal(str)
-    modalitySwitched = pyqtSignal(str)
+    sRequestLabelListUpdate = Signal(int)
+    sRequestSave = Signal()
+    sChangeFile = Signal(int)
+    sDrawingTooltip = Signal(str)
+    modalitySwitched = Signal(str)
     CREATE, EDIT = 0, 1
 
     def __init__(self, *args):
@@ -134,7 +134,8 @@ class CenterDisplayWidget(QWidget):
         """
         rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
         file_type = self.mime.from_file(filepath)
-        self.scene.removeItem(self.slide_viewer.pixmap_item)
+        if self.slide_viewer.pixmap_item and self.slide_viewer.pixmap_item in self.scene.items():
+            self.scene.removeItem(self.slide_viewer.pixmap_item)
 
         if file_type.startswith('image') and not file_type.endswith('tiff'):
             self.modalitySwitched.emit('image')
