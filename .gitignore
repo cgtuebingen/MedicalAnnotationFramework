@@ -128,9 +128,10 @@ dmypy.json
 
 # Submodule
 taplt/media_viewing_widgets
+taplt/media_viewing_widgets/
 
 # Openslide
-openslide/*
+openslide/
 
 # example images
 taplt/macros/examples/*
