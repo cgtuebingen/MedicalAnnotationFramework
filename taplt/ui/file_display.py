@@ -10,7 +10,7 @@ from taplt.ui.shape import Shape
 from taplt.utils.qt import get_icon
 from taplt.media_viewing_widgets.widgets.video_viewer import VideoPlayer
 
-from taplt.media_viewing_widgets.widgets.slide_viewer import slide_view
+from taplt.media_viewing_widgets.widgets.slide_viewer import SlideView
 
 
 class CenterDisplayWidget(QWidget):
@@ -39,7 +39,7 @@ class CenterDisplayWidget(QWidget):
         self.video_player.frame_grabbed.connect(self.play_frames)
 
         # Setup of the slide viewer with its own scene
-        self.slide_viewer = slide_view(self.scene)
+        self.slide_viewer = SlideView(self.scene)
         self.slide_viewer.sendPixmap.connect(self.set_pixmap_to_slide)
 
         self.pixmap = QGraphicsPixmapItem()
@@ -122,6 +122,7 @@ class CenterDisplayWidget(QWidget):
         self.video_label.setPixmap(pix)
         self.video_label.show()
 
+    @Slot(QGraphicsPixmapItem)
     def set_pixmap_to_slide(self, pixmap_item):
         self.scene.removeItem(self.annotations)
         self.scene.addItem(pixmap_item)
