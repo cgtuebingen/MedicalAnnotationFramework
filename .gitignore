@@ -126,10 +126,6 @@ dmypy.json
 .idea/
 .DS_Store
 
-# Submodule
-taplt/media_viewing_widgets
-taplt/media_viewing_widgets/
-
 # Openslide
 openslide/
 
