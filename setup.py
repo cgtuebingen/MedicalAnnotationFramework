@@ -75,8 +75,6 @@ elif sys.platform.startswith("darwin"):
         install_requires=["numpy",
                           "Pillow>=2.8.0",
                           "PySide6",
-                          "python-magic",
-                          "python-magic-bin==0.4.14",
                           "filetype",
                           "typing-extensions",
                           "openslide-python",
