@@ -1,5 +1,3 @@
-import magic
-
 from PySide6.QtWidgets import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
@@ -11,6 +9,7 @@ from taplt.utils.qt import get_icon
 from taplt.media_viewing_widgets.widgets.video_viewer import VideoPlayer
 
 from taplt.media_viewing_widgets.widgets.slide_viewer import SlideView
+from taplt.utils.project_structure import modality, Modality
 
 
 class CenterDisplayWidget(QWidget):
@@ -26,9 +25,6 @@ class CenterDisplayWidget(QWidget):
 
     def __init__(self, *args):
         super(CenterDisplayWidget, self).__init__(*args)
-
-        # for file types
-        self.mime = magic.Magic(mime=True)
 
         # main components of the display
         self.scene = QGraphicsScene()
@@ -88,9 +84,9 @@ class CenterDisplayWidget(QWidget):
         self.set_initialized()
         self.annotations.classes = classes
 
-        file_type = self.mime.from_file(filepath)
+        file_type = modality(filepath)
 
-        if not file_type.endswith('tiff'):
+        if not file_type == Modality.slide:
             pixmap = QPixmap(filepath)
         else:
             pixmap = QPixmap()
@@ -134,11 +130,11 @@ class CenterDisplayWidget(QWidget):
         :param filepath: The path to the file that we want to switch to
         """
         rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
-        file_type = self.mime.from_file(filepath)
+        file_type = modality(filepath)
         if self.slide_viewer.pixmap_item and self.slide_viewer.pixmap_item in self.scene.items():
             self.scene.removeItem(self.slide_viewer.pixmap_item)
 
-        if file_type.startswith('image') and not file_type.endswith('tiff'):
+        if file_type == Modality.image:
             self.modalitySwitched.emit('image')
             self.image_viewer.setHidden(False)
             self.video_player.setHidden(True)
@@ -148,7 +144,7 @@ class CenterDisplayWidget(QWidget):
 
             self.image_viewer.fitInView(rect)
 
-        elif file_type.startswith('video'):
+        elif file_type == Modality.video:
             self.modalitySwitched.emit('video')
 
             self.image_viewer.setHidden(True)
@@ -160,9 +156,9 @@ class CenterDisplayWidget(QWidget):
             self.video_player.show()
             self.video_player.play()
 
-        elif file_type.endswith('tiff'):
+        elif file_type == Modality.slide:
 
-            self.modalitySwitched.emit('wsi')
+            self.modalitySwitched.emit('slide')
 
             self.image_viewer.setHidden(True)
             self.video_player.setHidden(True)

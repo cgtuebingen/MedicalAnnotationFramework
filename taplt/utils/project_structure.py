@@ -1,12 +1,19 @@
 import os
 import shutil
+import enum
+
+
+class Modality(enum.IntEnum):
+    video = 0
+    image = 1
+    slide = 2
 
 
 class Structure:
     IMAGES_DIR = "/data/images/"
     VIDEOS_DIR = "/data/videos/"
-    WSI_DIR = "/data/whole slide images/"
-    FILE_DIRS = [IMAGES_DIR, VIDEOS_DIR, WSI_DIR]
+    SLIDES_DIR = "/data/slides/"
+    FILE_DIRS = [IMAGES_DIR, VIDEOS_DIR, SLIDES_DIR]
     DATABASE_DEFAULT_NAME = '/database.db'
 
 
@@ -30,13 +37,13 @@ def create_project_structure(project_path: str):
         os.makedirs(project_path + file_dir)
 
 
-def modality(filepath: str):
-    """This method uses the 'filetype' library to detect the type of a given file
-    returns: 0 if video, 1 if image, 2 if whole slide image, -1 if none of the above"""
+def modality(filepath: str) -> Modality:
+    """This method uses the 'filetype' library to detect the type of the given file
+    returns: 'video', 'image' or 'slide'"""
     if filepath.endswith('mp4'):
-        return 0
+        return Modality.video
     if filepath.endswith('jpg') or filepath.endswith('png'):
-        return 1
+        return Modality.image
     if filepath.endswith('tif'):
-        return 2
-    return -1
+        return Modality.slide
+    raise Exception("This filetype is not supported")

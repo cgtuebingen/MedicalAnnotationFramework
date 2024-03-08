@@ -120,7 +120,7 @@ class LabelingMainWindow(QMainWindow):
 
         # Toolbar setup actions for images, videos and whole slides
         self.toolBar.init_actions('image', self.define_img_actions())
-        self.toolBar.init_actions('wsi', self.define_wsi_actions())
+        self.toolBar.init_actions('slide', self.define_wsi_actions())
         self.toolBar.init_actions('video', self.define_video_actions())
         self.file_display.modalitySwitched.connect(self.toolBar.switch_modality)
 
@@ -270,7 +270,7 @@ class LabelingMainWindow(QMainWindow):
         if self.check_for_changes():
             database, _ = QFileDialog.getOpenFileName(self,
                                                       caption="Select Database",
-                                                      directory=str(Path.home()),
+                                                      dir=str(Path.home()),
                                                       filter="Database (*.db)",
                                                       options=QFileDialog.Option.DontUseNativeDialog)
             if database:

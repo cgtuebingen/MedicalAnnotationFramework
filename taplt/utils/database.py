@@ -1,3 +1,4 @@
+import enum
 import sqlite3
 import pickle
 import pathlib
@@ -5,7 +6,7 @@ import shutil
 import os
 
 from typing import List, Union
-from taplt.utils.project_structure import modality, create_project_structure, Structure
+from taplt.utils.project_structure import modality, create_project_structure, Structure, Modality
 from taplt.utils.settings import SETTINGS, get_tooltip
 
 from PySide6.QtCore import Signal, QObject, QSettings
@@ -39,7 +40,7 @@ CREATE_IMAGES_TABLE = """
     FOREIGN KEY (patient) REFERENCES patients(uid));"""
 
 CREATE_WSI_TABLE = """
-    CREATE TABLE IF NOT EXISTS 'whole slide images' (
+    CREATE TABLE IF NOT EXISTS 'slides' (
     uid INTEGER PRIMARY KEY,
     filename TEXT NOT NULL UNIQUE,
     patient INTEGER,
@@ -52,7 +53,7 @@ CREATE_WSI_TABLE = """
     institution TEXT,
     FOREIGN KEY (patient) REFERENCES patients(uid));"""
 
-FILE_TABLES = ['images', 'videos', "'whole slide images'"]
+FILE_TABLES = ['images', 'videos', 'slides']
 
 CREATE_PATIENTS_TABLE = """
     CREATE TABLE IF NOT EXISTS patients (
@@ -68,7 +69,7 @@ CREATE_LABELS_TABLE = """
 ADD_ANNOTATION = "INSERT INTO annotations (modality, file, patient, shape, label) VALUES (?, ?, ?, ?, ?);"
 ADD_VIDEO = "INSERT INTO videos (filename, patient) VALUES (?, ?);"
 ADD_IMAGE = "INSERT INTO images (filename, patient) VALUES (?, ?);"
-ADD_WSI = "INSERT INTO 'whole slide images' (filename, patient) VALUES (?, ?);"
+ADD_WSI = "INSERT INTO 'slides' (filename, patient) VALUES (?, ?);"
 ADD_PATIENT = "INSERT INTO patients (some_id, another_id) VALUES (?, ?);"
 ADD_LABEL = "INSERT INTO labels (label_class) VALUES (?);"
 
@@ -112,14 +113,14 @@ class SQLiteDatabase(QObject):
             mod = modality(filepath)
 
             # copy to project location and add to database
-            if mod == 0:
+            if mod == Modality.video:
                 shutil.copy(filepath, self.location + Structure.VIDEOS_DIR)
                 self.cursor.execute(ADD_VIDEO, (os.path.basename(filepath), patient))
-            elif mod == 1:
+            elif mod == Modality.image:
                 shutil.copy(filepath, self.location + Structure.IMAGES_DIR)
                 self.cursor.execute(ADD_IMAGE, (os.path.basename(filepath), patient))
-            elif mod == 2:
-                shutil.copy(filepath, self.location + Structure.WSI_DIR)
+            elif mod == Modality.slide:
+                shutil.copy(filepath, self.location + Structure.SLIDES_DIR)
                 self.cursor.execute(ADD_WSI, (os.path.basename(filepath), patient))
 
     def add_label(self, label_class: str):
@@ -210,10 +211,10 @@ class SQLiteDatabase(QObject):
             video_paths = self.cursor.execute("SELECT filename FROM videos").fetchall()
         return [video_path[0] for video_path in video_paths]
 
-    def get_wsi(self) -> list:
+    def get_slides(self) -> list:
         """ returns a list of all wsi names which are currently stored in the database"""
         with self.connection:
-            wsi_paths = self.cursor.execute("SELECT filename FROM 'whole slide images'").fetchall()
+            wsi_paths = self.cursor.execute("SELECT filename FROM slides").fetchall()
         return [wsi_path[0] for wsi_path in wsi_paths]
 
     def get_label_classes(self) -> list:
@@ -245,17 +246,17 @@ class SQLiteDatabase(QObject):
 
     def get_patient_by_filename(self, filename: str, moda: int):
         """returns the corresponding patient uid of an image"""
-        if moda == 0:
+        if moda == Modality.image:
             with self.connection:
                 self.cursor.execute("SELECT patient FROM images WHERE filename = ?", (filename,))
                 return self.cursor.fetchone()[0]
-        elif moda == 1:
+        elif moda == Modality.video:
             with self.connection:
                 self.cursor.execute("SELECT patient FROM videos WHERE filename = ?", (filename,))
                 return self.cursor.fetchone()[0]
-        elif moda == 2:
+        elif moda == Modality.slide:
             with self.connection:
-                self.cursor.execute("SELECT patient FROM 'whole slide images' WHERE filename = ?", (filename,))
+                self.cursor.execute("SELECT patient FROM 'slides' WHERE filename = ?", (filename,))
                 return self.cursor.fetchone()[0]
 
     def get_patient_by_uid(self, patient_uid: int):
@@ -352,12 +353,12 @@ class SQLiteDatabase(QObject):
         for file in files:
             labels = self.get_label_from_file(file)
             populated = True if labels else False
-            if moda[file] == 0:
+            if moda[file] == Modality.image:
                 file = self.location + Structure.IMAGES_DIR + file
-            elif moda[file] == 1:
+            elif moda[file] == Modality.video:
                 file = self.location + Structure.VIDEOS_DIR + file
             else:
-                file = self.location + Structure.WSI_DIR + file
+                file = self.location + Structure.SLIDES_DIR + file
             result.append((file, populated))
         return result
 
@@ -372,7 +373,7 @@ class SQLiteDatabase(QObject):
     def save(self, current_labels: list, img_idx: int):
         files = self.get_images()
         files += self.get_videos()
-        files += self.get_wsi()
+        files += self.get_slides()
         if files:
             file = files[img_idx]
             entries = list()
@@ -409,15 +410,15 @@ class SQLiteDatabase(QObject):
         """gathers all information about the project and updates the database"""
         images = self.get_images()
         videos = self.get_videos()
-        wsis = self.get_wsi()
+        slides = self.get_slides()
 
-        moda = {image: 0 for image in images}
-        moda.update({video: 1 for video in videos})
-        moda.update({wsi: 2 for wsi in wsis})
+        moda = {image: Modality.image for image in images}
+        moda.update({video: Modality.video for video in videos})
+        moda.update({slide: Modality.slide for slide in slides})
 
         files = images
         files.extend(videos)
-        files.extend(wsis)
+        files.extend(slides)
 
         if files:
             file = files[img_idx]

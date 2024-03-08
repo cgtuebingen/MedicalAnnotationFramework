@@ -39,8 +39,6 @@ if sys.platform.startswith("win"):
         install_requires=["numpy",
                           "Pillow>=2.8.0",
                           "PySide6",
-                          "python-magic",
-                          "python-magic-bin",
                           "filetype",
                           "typing-extensions",
                           "openslide-python",
