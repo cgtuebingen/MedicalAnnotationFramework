@@ -1,3 +1,4 @@
+import enum
 import sqlite3
 import pickle
 import pathlib
@@ -5,10 +6,10 @@ import shutil
 import os
 
 from typing import List, Union
-from taplt.utils.project_structure import modality, create_project_structure, Structure
+from taplt.utils.project_structure import modality, create_project_structure, Structure, Modality
 from taplt.utils.settings import SETTINGS, get_tooltip
 
-from PyQt6.QtCore import pyqtSignal, QObject, QSettings
+from PySide6.QtCore import Signal, QObject, QSettings
 
 # TODO: 'file' value references the uid in either 'videos', 'images', or 'whole slide images'
 #  (depends on 'modality' value),
@@ -39,7 +40,7 @@ CREATE_IMAGES_TABLE = """
     FOREIGN KEY (patient) REFERENCES patients(uid));"""
 
 CREATE_WSI_TABLE = """
-    CREATE TABLE IF NOT EXISTS 'whole slide images' (
+    CREATE TABLE IF NOT EXISTS 'slides' (
     uid INTEGER PRIMARY KEY,
     filename TEXT NOT NULL UNIQUE,
     patient INTEGER,
@@ -52,7 +53,7 @@ CREATE_WSI_TABLE = """
     institution TEXT,
     FOREIGN KEY (patient) REFERENCES patients(uid));"""
 
-FILE_TABLES = ['videos', 'images', "'whole slide images'"]
+FILE_TABLES = ['images', 'videos', 'slides']
 
 CREATE_PATIENTS_TABLE = """
     CREATE TABLE IF NOT EXISTS patients (
@@ -68,7 +69,7 @@ CREATE_LABELS_TABLE = """
 ADD_ANNOTATION = "INSERT INTO annotations (modality, file, patient, shape, label) VALUES (?, ?, ?, ?, ?);"
 ADD_VIDEO = "INSERT INTO videos (filename, patient) VALUES (?, ?);"
 ADD_IMAGE = "INSERT INTO images (filename, patient) VALUES (?, ?);"
-ADD_WSI = "INSERT INTO 'whole slide images' (filename, patient) VALUES (?, ?);"
+ADD_WSI = "INSERT INTO 'slides' (filename, patient) VALUES (?, ?);"
 ADD_PATIENT = "INSERT INTO patients (some_id, another_id) VALUES (?, ?);"
 ADD_LABEL = "INSERT INTO labels (label_class) VALUES (?);"
 
@@ -77,11 +78,11 @@ DELETE_FILE_ANNOTATIONS = "DELETE FROM annotations WHERE modality = ? AND file =
 
 class SQLiteDatabase(QObject):
     """class to control an SQL database. inherits a QObject to enable pyqt-signal transfer"""
-    sUpdate = pyqtSignal(list, int, str, list, list)
-    sImportFile = pyqtSignal(list)
-    sOpenSettings = pyqtSignal(list)
-    sApplySettings = pyqtSignal(list)
-    sPreviewDatabase = pyqtSignal(list, list)
+    sUpdate = Signal(list, int, str, list, list)
+    sImportFile = Signal(list)
+    sOpenSettings = Signal(list)
+    sApplySettings = Signal(list)
+    sPreviewDatabase = Signal(list, list)
 
     def __init__(self):
         super(SQLiteDatabase, self).__init__()
@@ -91,6 +92,7 @@ class SQLiteDatabase(QObject):
         self.file_tables = FILE_TABLES
         self.is_initialized = False
         self.settings = None  # type: QSettings
+        self.database_path = "none"
 
     def add_annotation(self, modality: int, file: int, patient: int, shape: bytes, label: int):
         """ adds an entry to the annotation table using the parameter values"""
@@ -111,14 +113,14 @@ class SQLiteDatabase(QObject):
             mod = modality(filepath)
 
             # copy to project location and add to database
-            if mod == 0:
+            if mod == Modality.video:
                 shutil.copy(filepath, self.location + Structure.VIDEOS_DIR)
                 self.cursor.execute(ADD_VIDEO, (os.path.basename(filepath), patient))
-            elif mod == 1:
+            elif mod == Modality.image:
                 shutil.copy(filepath, self.location + Structure.IMAGES_DIR)
                 self.cursor.execute(ADD_IMAGE, (os.path.basename(filepath), patient))
-            elif mod == 2:
-                shutil.copy(filepath, self.location + Structure.WSI_DIR)
+            elif mod == Modality.slide:
+                shutil.copy(filepath, self.location + Structure.SLIDES_DIR)
                 self.cursor.execute(ADD_WSI, (os.path.basename(filepath), patient))
 
     def add_label(self, label_class: str):
@@ -142,7 +144,7 @@ class SQLiteDatabase(QObject):
 
     def create_annotation_entry(self, filename: str, label_dict: dict, label_class: str):
         mod, file_uid = self.get_uids_from_filename(filename)
-        patient_uid = self.get_patient_by_filename(filename)
+        patient_uid = self.get_patient_by_filename(filename, mod)
         label_class = self.get_uid_from_label(label_class)
 
         annotation_entry = {'modality': mod,
@@ -203,6 +205,18 @@ class SQLiteDatabase(QObject):
             image_paths = self.cursor.execute("SELECT filename FROM images").fetchall()
         return [image_path[0] for image_path in image_paths]
 
+    def get_videos(self) -> list:
+        """ returns a list of all video names which are currently stored in the database"""
+        with self.connection:
+            video_paths = self.cursor.execute("SELECT filename FROM videos").fetchall()
+        return [video_path[0] for video_path in video_paths]
+
+    def get_slides(self) -> list:
+        """ returns a list of all wsi names which are currently stored in the database"""
+        with self.connection:
+            wsi_paths = self.cursor.execute("SELECT filename FROM slides").fetchall()
+        return [wsi_path[0] for wsi_path in wsi_paths]
+
     def get_label_classes(self) -> list:
         """
         :return: a list of all label classes which are currently stored in the database
@@ -211,15 +225,17 @@ class SQLiteDatabase(QObject):
             label_classes = self.cursor.execute("SELECT label_class FROM labels").fetchall()
         return [label_class[0] for label_class in label_classes]
 
-    def get_label_from_image(self, image: str):
+    def get_label_from_file(self, image: str, moda=0):
         """
         :param image: the image name to be searched in
         :return: a list of all label shapes related to the specified image
         """
         with self.connection:
-            image_id = self.get_uid_from_filename("images", image)
+            table = self.file_tables[moda]
+            image_id = self.get_uid_from_filename(table, image)
             labels = self.cursor.execute("""SELECT shape FROM annotations
-                                            WHERE modality = 1 AND file = ?""", (image_id,)).fetchall()
+                                            WHERE modality = ? AND file = ?""", (moda, image_id,)).fetchall()
+
         return check_for_bytes(labels)
 
     def get_patients(self):
@@ -228,11 +244,20 @@ class SQLiteDatabase(QObject):
             result = self.cursor.execute("SELECT some_id FROM patients").fetchall()
         return [res[0] for res in result]
 
-    def get_patient_by_filename(self, filename: str):
+    def get_patient_by_filename(self, filename: str, moda: int):
         """returns the corresponding patient uid of an image"""
-        with self.connection:
-            self.cursor.execute("SELECT patient FROM images WHERE filename = ?", (filename,))
-            return self.cursor.fetchone()[0]
+        if moda == Modality.image:
+            with self.connection:
+                self.cursor.execute("SELECT patient FROM images WHERE filename = ?", (filename,))
+                return self.cursor.fetchone()[0]
+        elif moda == Modality.video:
+            with self.connection:
+                self.cursor.execute("SELECT patient FROM videos WHERE filename = ?", (filename,))
+                return self.cursor.fetchone()[0]
+        elif moda == Modality.slide:
+            with self.connection:
+                self.cursor.execute("SELECT patient FROM 'slides' WHERE filename = ?", (filename,))
+                return self.cursor.fetchone()[0]
 
     def get_patient_by_uid(self, patient_uid: int):
         """returns the id/patient info from the patients table by the corresponding uid"""
@@ -295,6 +320,7 @@ class SQLiteDatabase(QObject):
             create_project_structure(self.location)
 
         self.connection = sqlite3.connect(database_path)
+        self.database_path = database_path
         self.cursor = self.connection.cursor()
 
         # indicates a new project - add initial files
@@ -320,14 +346,19 @@ class SQLiteDatabase(QObject):
         settings = self.get_settings()
         self.sOpenSettings.emit(settings)
 
-    def prepare_files(self, files: list) -> list:
+    def prepare_files(self, files: list, moda: dict) -> list:
         """goes through all filenames and returns them as full paths,
         in a tuple together with a boolean indicating whether there is at least 1 annotation in the image"""
         result = list()
         for file in files:
-            labels = self.get_label_from_image(file)
+            labels = self.get_label_from_file(file)
             populated = True if labels else False
-            file = self.location + Structure.IMAGES_DIR + file
+            if moda[file] == Modality.image:
+                file = self.location + Structure.IMAGES_DIR + file
+            elif moda[file] == Modality.video:
+                file = self.location + Structure.VIDEOS_DIR + file
+            else:
+                file = self.location + Structure.SLIDES_DIR + file
             result.append((file, populated))
         return result
 
@@ -341,6 +372,8 @@ class SQLiteDatabase(QObject):
 
     def save(self, current_labels: list, img_idx: int):
         files = self.get_images()
+        files += self.get_videos()
+        files += self.get_slides()
         if files:
             file = files[img_idx]
             entries = list()
@@ -349,6 +382,7 @@ class SQLiteDatabase(QObject):
                 self.add_label(label_class)
                 entries.append(self.create_annotation_entry(file, label_dict, label_class))
             self.update_image_annotations(image_name=file, entries=entries)
+        self.update_gui(img_idx)
 
     def send_import_info(self):
         existing_patients = self.get_patients()
@@ -374,14 +408,25 @@ class SQLiteDatabase(QObject):
 
     def update_gui(self, img_idx: int = 0):
         """gathers all information about the project and updates the database"""
-        files = self.get_images()
+        images = self.get_images()
+        videos = self.get_videos()
+        slides = self.get_slides()
+
+        moda = {image: Modality.image for image in images}
+        moda.update({video: Modality.video for video in videos})
+        moda.update({slide: Modality.slide for slide in slides})
+
+        files = images
+        files.extend(videos)
+        files.extend(slides)
+
         if files:
             file = files[img_idx]
-            labels = self.get_label_from_image(file)
-            patient = self.get_patient_by_uid(self.get_patient_by_filename(file))
+            labels = self.get_label_from_file(file, moda[file])
+            patient = self.get_patient_by_uid(self.get_patient_by_filename(file, moda[file]))
         else:
             labels, patient = [], ""
-        files = self.prepare_files(files)
+        files = self.prepare_files(files, moda)
         classes = self.get_label_classes()
         self.sUpdate.emit(files, img_idx, patient, classes, labels)
 

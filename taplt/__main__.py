@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 from taplt.src.main_logic import MainLogic
 
 

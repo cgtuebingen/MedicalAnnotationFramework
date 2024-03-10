@@ -3,10 +3,10 @@ import numpy as np
 import colorsys
 from typing import List, Tuple, Union
 
-from PyQt6.QtWidgets import QListWidgetItem
-from PyQt6.QtGui import QPixmap, QIcon, QColor
-from PyQt6.QtGui import QPainter
-from PyQt6.QtCore import QRect
+from PySide6.QtWidgets import QListWidgetItem
+from PySide6.QtGui import QPixmap, QIcon, QColor
+from PySide6.QtGui import QPainter
+from PySide6.QtCore import QRect
 
 
 def closest_euclidean_distance(point: np.ndarray, points: np.ndarray):

@@ -1,5 +1,5 @@
-from PyQt6.QtWidgets import *
-from PyQt6.QtCore import *
+from PySide6.QtWidgets import *
+from PySide6.QtCore import *
 from typing import *
 from dataclasses import dataclass
 
@@ -10,12 +10,13 @@ from taplt.ui.dialogs import NewLabelDialog, DeleteShapeMessageBox
 
 class AnnotationGroup(QGraphicsObject):
     """ A group for managing annotation objects and their signals with a scene """
-    item_highlighted = pyqtSignal(Shape)
-    item_dehighlighted = pyqtSignal(Shape)
-    updateShapes = pyqtSignal(list)
-    shapeSelected = pyqtSignal(Shape)
-    sLabelClassDeleted = pyqtSignal(str)
-    sChange = pyqtSignal(int)
+    item_highlighted = Signal(Shape)
+    item_dehighlighted = Signal(Shape)
+    updateShapes = Signal(list)
+    shapeSelected = Signal(Shape)
+    sLabelClassDeleted = Signal(str)
+    sChange = Signal(int)
+    sToolTip = Signal(str)
 
     @dataclass
     class AnnotationMode:
@@ -32,6 +33,8 @@ class AnnotationGroup(QGraphicsObject):
         self.color_map, new_color = colormap_rgb(n=self._num_colors)  # have a buffer for new classes
         self.draw_new_color = new_color
         self.mode = AnnotationGroup.AnnotationMode.EDIT
+        self.shapeType = Shape.ShapeType.POLYGON
+        self.drawing = False
 
     def boundingRect(self):
         return self.childrenBoundingRect()
@@ -39,15 +42,26 @@ class AnnotationGroup(QGraphicsObject):
     def paint(self, *args):
         pass
 
-    @pyqtSlot()
+    @Slot()
+    def set_drawing_to_false(self):
+        self.drawing = False
+        self.sToolTip.emit("")
+
+    @Slot()
     def create_shape(self):
-        s = self.scene()  # type: QGraphicsScene
-        self.temp_shape = Shape(image_size=QSize(s.width(), s.height()),
-                                shape_type='tempTrace',
-                                mode=Shape.ShapeMode.CREATE,
-                                color=self.draw_new_color)
-        self.add_shapes(self.temp_shape)
-        self.temp_shape.grabMouse()
+        if not self.drawing:
+            self.drawing = True
+            s = self.scene()  # type: QGraphicsScene
+            self.temp_shape = Shape(image_size=QSize(int(s.width()), int(s.height())),
+                                    shape_type=self.shapeType,
+                                    mode=Shape.ShapeMode.CREATE,
+                                    color=self.draw_new_color)
+            self.add_shapes(self.temp_shape)
+            self.temp_shape.drawingDone.connect(self.set_drawing_to_false)
+            self.sToolTip.emit("Press right click to end the annotation.")
+            self.temp_shape.grabMouse()
+        else:
+            pass
 
     def get_color_for_label(self, label_name: str):
         r"""Get a Color based on a label_name"""
@@ -100,7 +114,7 @@ class AnnotationGroup(QGraphicsObject):
             if self.annotations[shape_id] in shapes:
                 ids_to_remove.append(shape_id)
                 self.annotations[shape_id].deleteLater()
-        [(self.annotations[x].disconnect(), self.annotations.pop(x)) for x in ids_to_remove]
+        [(self.annotations[x].disconnect(self.annotations[x]), self.annotations.pop(x)) for x in ids_to_remove]
         self.updateShapes.emit(list(self.annotations.values()))
 
     def clear(self):
@@ -118,7 +132,7 @@ class AnnotationGroup(QGraphicsObject):
                 ann.setSelected(False)
         self.shapeSelected.emit(shape)
 
-    @pyqtSlot(int)
+    @Slot(int)
     def shape_mode_changed(self, mode: Union[int, Shape.ShapeMode]):
         shape = self.sender()  # type: Shape
         if mode == Shape.ShapeMode.FIXED:
@@ -146,13 +160,17 @@ class AnnotationGroup(QGraphicsObject):
         # if user entered no label, remove shape
         else:
             self.remove_shapes([self.temp_shape])
-            # self.scene().removeItem(self.temp_shape)
-
-        # in any case, remove temp shape reference
-        # self.temp_shape = None
+            self.set_drawing_to_false()
 
     def set_mode(self, mode: Union[AnnotationMode, int]):
         self.mode = mode
+
+    def set_type(self, type_of_shape: Union[Shape.ShapeType, str]):
+        """
+        Sets the type of the shape when an icon is clicked in the annotation toolbar
+        """
+        self.shapeType = type_of_shape
+        
 
     def update_annotations(self, current_labels: List[Shape]):
         self.clear()
@@ -164,7 +182,7 @@ class AnnotationGroup(QGraphicsObject):
 
 
 if __name__ == '__main__':
-    from PyQt6.QtGui import *
+    from PySide6.QtGui import *
     import numpy as np
     from PIL.ImageQt import ImageQt
     from PIL import Image

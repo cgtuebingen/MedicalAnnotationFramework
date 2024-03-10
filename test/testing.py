@@ -5,7 +5,7 @@ import sys
 from taplt.ui.main_window import LabelingMainWindow
 from taplt.ui.dialogs import *
 from taplt.ui.list_widgets import *
-from taplt.ui.image_display import CenterDisplayWidget
+from taplt.ui.file_display import CenterDisplayWidget
 from taplt.ui.annotation_tree import AnnotationTree
 from taplt.ui.shape import Shape
 from taplt.ui.toolbar import Toolbar

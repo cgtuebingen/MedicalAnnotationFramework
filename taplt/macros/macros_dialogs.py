@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QMessageBox, QTableWidget, QTableWidgetItem
-from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QFont
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QMessageBox, QTableWidget, QTableWidgetItem
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QFont
 
 from pathlib import Path
 from taplt.utils.stylesheets import BUTTON_STYLESHEET

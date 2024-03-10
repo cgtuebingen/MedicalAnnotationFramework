@@ -1,5 +1,5 @@
-from PyQt6.QtWidgets import *
-from PyQt6.QtCore import *
+from PySide6.QtWidgets import *
+from PySide6.QtCore import *
 
 from typing import *
 
@@ -8,10 +8,9 @@ from taplt.src.actions import Action
 
 class Toolbar(QToolBar):
 
-    sCreateNewProject = pyqtSignal(str, dict)
-    sOpenProject = pyqtSignal(str)
-    sRequestPatients = pyqtSignal()
-    sSetDrawingMode = pyqtSignal(int)
+    sCreateNewProject = Signal(str, dict)
+    sOpenProject = Signal(str)
+    sRequestPatients = Signal()
 
     def __init__(self, parent):
         super(Toolbar, self).__init__(parent)
@@ -31,6 +30,8 @@ class Toolbar(QToolBar):
         self.button_group = QButtonGroup()
         self.button_group.setExclusive(True)
         self.button_group.buttonToggled.connect(self.exclusive_optional)
+        self.modality_dict = {}
+        self.current_modality = ""
 
     def disable_drawing(self, disable: bool):
         [btn.setDisabled(disable) for btn in self.button_group.buttons()]
@@ -69,50 +70,10 @@ class Toolbar(QToolBar):
                 # TODO: raise own context menu with options for drawing a circle or a rectangle
                 pass
 
-    def init_actions(self, parent):
+    def init_actions(self, modality_name: str, actions: list[Action]):
         """Initialise all actions present which can be connected to buttons or menu items"""
-        # TODO: some shortcuts don't work
-        # TODO: Figure out a more modular way to set up these actions
-        action_select = Action(parent,
-                               "Select",
-                               lambda: self.sSetDrawingMode.emit(0),
-                               icon="mouse",
-                               tip="Select items in the image",
-                               checkable=True,
-                               checked=True)
-        action_draw_poly = Action(parent,
-                                  "Draw\nPolygon",
-                                  lambda: self.sSetDrawingMode.emit(1),
-                                  icon="polygon",
-                                  tip="Draw Polygon (right click to show options)",
-                                  checkable=True)
-        action_trace_outline = Action(parent,
-                                      "Draw\nTrace",
-                                      lambda: self.sSetDrawingMode.emit(1),
-                                      icon="outline",
-                                      tip="Trace Outline",
-                                      checkable=True)
-        action_draw_circle = Action(parent,
-                                    "Draw\nCircle",
-                                    lambda: self.sSetDrawingMode.emit(1),
-                                    icon="circle",
-                                    tip="Draw Circle",
-                                    checkable=True)
-        action_draw_rectangle = Action(parent,
-                                       "Draw\nRectangle",
-                                       lambda: self.sSetDrawingMode.emit(1),
-                                       icon="square",
-                                       tip="Draw Rectangle",
-                                       checkable=True)
+        self.modality_dict[modality_name] = actions
 
-        actions = ((action_select,
-                    action_draw_poly,
-                    action_trace_outline,
-                    action_draw_circle,
-                    action_draw_rectangle))
-
-        # Init Toolbar
-        self.addActions(actions)
 
     def get_action(self, action_str: str) -> Action:
         if action_str not in self.actionsDict:
@@ -135,3 +96,33 @@ class Toolbar(QToolBar):
         self.setContentsMargins(*m)
         self.layout().setSpacing(2)
         self.layout().setContentsMargins(*m)
+
+    def switch_modality(self, modality_name: str):
+        """
+        This method is called, when the modality of the viewing widget is changed. All current actions will be removed
+        from the toolbar and all actions that are stored in the ``modality_dict`` at the given ``modality_name`` are
+        initialized.
+
+        :param modality_name: Is a string that has the name of the modality that we want to switch to.
+
+        :returns: Nothing or an error, if the modality does not exist/was not initialized.
+        """
+        if self.current_modality != modality_name:
+            self.clear_actions()
+
+            if modality_name not in self.modality_dict:
+                RuntimeError("The modality does not exist/was not initialized yet.")
+
+            self.current_modality = modality_name
+            self.addActions(self.modality_dict[modality_name])
+
+    def clear_actions(self):
+        """
+        This method removes all actions that are currently active, from the toolbar.
+        """
+        while self.button_group.buttons():
+            button = self.button_group.buttons()[0]
+            self.button_group.removeButton(button)
+            button.deleteLater()
+
+        self.actionsDict.clear()

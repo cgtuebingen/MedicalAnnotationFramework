@@ -54,11 +54,31 @@ Click "Macros -> Preview Database" to preview the current version of the databas
 
 ## Installation
 
+Installation with conda see [here](#installation-with-conda). This installation is using python virtual-environments.
+
+This repository includes a submodule. Therefore, it can be either cloned using:
+
+Linux:
 ```bash
-clone https://github.com/cgtuebingen/MedicalAnnotationFramework.git
+git clone --recurse-submodules git@github.com:cgtuebingen/MedicalAnnotationFramework.git
 cd MedicalAnnotationFramework
+mkdir venv
+python -m venv ./venv --system-site-packages
+source venv/bin/activate
 pip install .  # add -e to use the cloned repository as the source for the package
+python download_openslide.py
 ```
+Windows:
+```bash
+git clone --recurse-submodules git@github.com:cgtuebingen/MedicalAnnotationFramework.git
+cd MedicalAnnotationFramework
+mkdir .venv
+python -m venv ./.venv --system-site-packages
+venv/Scripts/activate
+pip install .  # add -e to use the cloned repository as the source for the package
+python download_openslide.py
+```
+Further information about submodules can be found [here](https://gist.github.com/gitaarik/8735255).
 
 Launch the app with:
 ```bash
@@ -68,6 +88,17 @@ python -m taplt
 Build the executable with:
 ```bash
 pyinstaller taplt.spec  # creates and puts the executable in ./dist
+```
+
+## Installation with Conda
+
+```bash
+git clone --recurse-submodules git@github.com:cgtuebingen/MedicalAnnotationFramework.git
+cd MedicalAnnotationFramework
+conda create -n taplt python=3.10
+conda activate taplt
+pip install .  # add -e to use the cloned repository as the source for the package
+python download_openslide.py
 ```
 
 ## Acknowledgement

@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import *
-from PyQt6.QtGui import *
-from PyQt6.QtCore import *
+from PySide6.QtWidgets import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *
 from dataclasses import dataclass
 import math
 from copy import deepcopy
@@ -13,15 +13,15 @@ from taplt.utils.qt import closest_euclidean_distance
 
 class Shape(QGraphicsObject):
     # TODO: Maybe we should make these QGraphicsItems again to reduce overhead.
-    hover_enter = pyqtSignal()
-    hover_exit = pyqtSignal()
-    clicked = pyqtSignal(QGraphicsSceneMouseEvent)
-    selected = pyqtSignal()
-    deselected = pyqtSignal()
-    mode_changed = pyqtSignal(int)
-    deleted = pyqtSignal()
-    drawingDone = pyqtSignal()
-    sChange = pyqtSignal(int)
+    hover_enter = Signal()
+    hover_exit = Signal()
+    clicked = Signal(QGraphicsSceneMouseEvent)
+    selected = Signal()
+    deselected = Signal()
+    mode_changed = Signal(int)
+    deleted = Signal()
+    drawingDone = Signal()
+    sChange = Signal(int)
 
     @dataclass
     class ShapeMode:
@@ -33,6 +33,7 @@ class Shape(QGraphicsObject):
     class ShapeType:
         POLYGON: str = 'polygon'
         RECTANGLE: str = 'rectangle'
+        ELLIPSE: str = 'ellipse'
         CIRCLE: str = 'circle'
 
     def __init__(self,
@@ -110,7 +111,7 @@ class Shape(QGraphicsObject):
     def sceneEvent(self, event: QEvent) -> bool:
         return super(Shape, self).sceneEvent(event)
 
-    @pyqtSlot(QGraphicsSceneMouseEvent)
+    @Slot(QGraphicsSceneMouseEvent)
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
         if self.mode == Shape.ShapeMode.CREATE:
             if len(self.vertices.vertices) > 0:
@@ -118,8 +119,12 @@ class Shape(QGraphicsObject):
             else:
                 delta = event.scenePos()
             if math.sqrt(delta.x() ** 2 + delta.y() ** 2) > 3:
-                self.vertices.vertices.append(self.check_out_of_bounds(event.scenePos()))
+                if self.shape_type in ["polygon", "tempTrace","trace"] or len(self.vertices.vertices) <= 1:
+                    self.vertices.vertices.append(self.check_out_of_bounds(event.scenePos()))
+                else:
+                    self.vertices.vertices[1] = self.check_out_of_bounds(event.scenePos())
                 self.update()
+        
         super(Shape, self).mouseMoveEvent(event)
 
     def check_out_of_bounds(self, pos: QPointF):
@@ -140,15 +145,27 @@ class Shape(QGraphicsObject):
         self.selected.emit()
         menu.exec(pos)
 
-    @pyqtSlot(QGraphicsSceneMouseEvent)
+    @Slot(QGraphicsSceneMouseEvent)
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
-        if self.contains(event.pos()):
-            self.setSelected(True)
-            self.selected.emit()
-            self.clicked.emit(event)
-        else:
-            event.ignore()
-        super(Shape, self).mousePressEvent(event)
+        # TODO: Add a new tip that tells the user, that they can end the annotation by right clicking
+        if event.button() == Qt.MouseButton.LeftButton:
+            if self.mode == Shape.ShapeMode.CREATE:
+                pass
+            elif self.contains(event.pos()):
+                self.setSelected(True)
+                self.selected.emit()
+                self.clicked.emit(event)
+                super(Shape, self).mousePressEvent(event)
+            else:
+                event.ignore()
+            pass
+        elif self.mode == Shape.ShapeMode.CREATE and len(self.vertices) > 1:
+            self.ungrabMouse()
+            self.is_closed_path = True
+
+            self.drawingDone.emit()
+            super(Shape, self).mousePressEvent(event)
+
 
     def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent):
         if self.contains(event.pos()):
@@ -157,7 +174,7 @@ class Shape(QGraphicsObject):
             event.ignore()
         super(Shape, self).mouseDoubleClickEvent(event)
 
-    @pyqtSlot(QGraphicsSceneMouseEvent)
+    @Slot(QGraphicsSceneMouseEvent)
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         super(Shape, self).mousePressEvent(event)
         if self.mode == Shape.ShapeMode.EDIT:
@@ -165,21 +182,13 @@ class Shape(QGraphicsObject):
             self.setPos(0, 0)  # reset the anchor to line up with the original origin
             self.set_mode(Shape.ShapeMode.FIXED)
             self.sChange.emit(2)
-        elif self.mode == Shape.ShapeMode.CREATE:
-            self.ungrabMouse()
-            self.is_closed_path = True
 
-            # TODO: base these off the actual values
-            self.shape_type = 'polygon'
-
-            self.drawingDone.emit()
-
-    @pyqtSlot(QGraphicsSceneHoverEvent)
+    @Slot(QGraphicsSceneHoverEvent)
     def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent):
         event.ignore()
         super(Shape, self).hoverEnterEvent(event)
 
-    @pyqtSlot(QGraphicsSceneHoverEvent)
+    @Slot(QGraphicsSceneHoverEvent)
     def hoverMoveEvent(self, event: QGraphicsSceneHoverEvent):
         if self.mode == Shape.ShapeMode.CREATE:
             pass
@@ -197,7 +206,7 @@ class Shape(QGraphicsObject):
         event.ignore()
         super(Shape, self).hoverMoveEvent(event)
 
-    @pyqtSlot(QGraphicsSceneHoverEvent)
+    @Slot(QGraphicsSceneHoverEvent)
     def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent):
         if self.is_highlighted:
             self.is_highlighted = False
@@ -246,10 +255,13 @@ class Shape(QGraphicsObject):
         r"""Reimplementation as the initial method for a QGraphicsItem uses the shape,
         which results in the bounding rectangle. As both tempRectangle and tempTrace do not need
         a contain method due to being an unfinished shape, no method is here for them"""
-        if self.shape_type in ['rectangle', 'polygon']:
+        if self.shape_type in ['polygon']:
             return self.vertices.vertices.containsPoint(point, Qt.FillRule.OddEvenFill)
 
-        elif self.shape_type in ['circle']:
+        if self.shape_type in ['rectangle']:
+            return self.shape().contains(point)
+
+        elif self.shape_type in ['ellipse', 'circle']:
             # elliptic formula is (x²/a² + y²/b² = 1) so if the point fulfills the equation respectively
             # is smaller than 1, the points is inside
             rect = self.boundingRect()
@@ -276,10 +288,10 @@ class Shape(QGraphicsObject):
                 self._path.lineTo(_pnt)
 
     def init_shape(self):
-        if self.shape_type not in ['polygon', 'rectangle', 'circle', 'tempTrace', 'tempPolygon']:
-            raise AttributeError("Unsupported Shape")
+        if self.shape_type not in ['polygon', 'rectangle', 'ellipse', 'circle', 'trace', 'tempPolygon']:
+            raise AttributeError("Unsupported Shape: " + str(self.shape_type))
         # Add additional points
-        if self.shape_type in ['rectangle', 'circle'] and len(self.vertices.vertices) == 2:
+        if self.shape_type in ['rectangle', 'ellipse', 'circle'] and len(self.vertices.vertices) == 2:
             self.vertices.complete_poly()
 
         # Generate path for the temporary Shapes
@@ -307,7 +319,7 @@ class Shape(QGraphicsObject):
         """Handles the movement of one vertex"""
         if self.shape_type == 'polygon':
             self.vertices.vertices[v_num] = QPointF(new_pos.x(), new_pos.y())
-        elif self.shape_type in ['rectangle', 'circle']:
+        elif self.shape_type in ['rectangle', 'ellipse', 'circle']:
             if not self._anchorPoint:
                 # this point is the anchor a.k.a the point diagonally from the selected one
                 # however, as i am rebuilding the shape from there, i only need to select the anchor once and store it
@@ -315,7 +327,7 @@ class Shape(QGraphicsObject):
                 print("New Anchor Set")
             self.vertices.vertices = QPolygonF([self._anchorPoint, new_pos])
 
-        if self.shape_type in ['rectangle', 'circle'] and len(self.vertices.vertices) == 2:
+        if self.shape_type in ['rectangle', 'ellipse', 'circle'] and len(self.vertices.vertices) == 2:
             self.vertices.complete_poly()
 
         self.vertices.update_sel_and_high(np.asarray([new_pos.x(), new_pos.y()]))
@@ -335,7 +347,7 @@ class Shape(QGraphicsObject):
                 painter.setBrush(QBrush())
 
             # SHAPES DRAWING
-            if self.shape_type in ['polygon', 'rectangle']:
+            if self.shape_type == 'polygon':
                 painter.drawPolygon(self.vertices.vertices)
                 self.vertices.paint(painter)
 
@@ -343,9 +355,24 @@ class Shape(QGraphicsObject):
                 painter.drawPath(self._path)
                 self.vertices.paint(painter)
 
-            elif self.shape_type == "circle":
-                painter.drawEllipse(QRectF(self.vertices.vertices[0], self.vertices.vertices[2]))
-                if self.isSelected or self.is_highlighted or self.vertices.selected_vertex != -1:
+            elif len(self.vertices.vertices) > 1:
+                if self.shape_type == "ellipse":
+                    painter.drawEllipse(QRectF(self.vertices.vertices[0], self.vertices.vertices[len(self.vertices.vertices)//2]))
+                elif self.shape_type == "circle":
+                    center = self.vertices.vertices[0]
+                    if len(self.vertices.vertices) == 2:
+                        second_point = self.vertices.vertices[1]
+                    elif len(self.vertices.vertices) == 4:
+                        second_point = self.vertices.vertices[2]
+                    radius = math.sqrt(
+                        (center.x() - second_point.x()) ** 2 + 
+                        (center.y() - second_point.y()) ** 2
+                    )
+                    painter.drawEllipse(center, radius, radius)
+                elif self.shape_type == "rectangle":
+                    painter.drawRect(QRectF(self.vertices.vertices[0], self.vertices.vertices[len(self.vertices.vertices)//2]))
+
+                if any((self.isSelected, self.is_highlighted, self.vertices.selected_vertex != -1)):
                     self.vertices.paint(painter)
 
     def to_dict(self) -> Tuple[dict, str]:

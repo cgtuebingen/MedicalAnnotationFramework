@@ -15,7 +15,7 @@ class MainLogic:
     def connect_events(self):
 
         # main window -> database
-        self.main_window.image_display.hide_button.clicked.connect(self.main_window.hide_toolbar)
+        self.main_window.file_display.hide_button.clicked.connect(self.main_window.hide_toolbar)
         self.main_window.sCreateNewProject.connect(self.database.initialize)
         self.main_window.sOpenProject.connect(self.database.initialize)
         self.main_window.sSaveToDatabase.connect(self.database.save)

@@ -1,5 +1,5 @@
-from PyQt6.QtWidgets import *
-from PyQt6.QtCore import *
+from PySide6.QtWidgets import *
+from PySide6.QtCore import *
 
 from typing import List
 
@@ -7,14 +7,14 @@ from taplt.src.actions import Action
 
 
 class MenuBar(QMenuBar):
-    sNewProject = pyqtSignal()
-    sOpenProject = pyqtSignal()
-    sCloseProject = pyqtSignal()
-    sRequestImport = pyqtSignal()
-    sRequestSave = pyqtSignal()
-    sRequestSettings = pyqtSignal()
-    sExampleProject = pyqtSignal()
-    sPreviewDatabase = pyqtSignal(str)
+    sNewProject = Signal()
+    sOpenProject = Signal()
+    sCloseProject = Signal()
+    sRequestImport = Signal()
+    sRequestSave = Signal()
+    sRequestSettings = Signal()
+    sExampleProject = Signal()
+    sPreviewDatabase = Signal(str)
 
     def __init__(self, parent: QMainWindow):
         super(MenuBar, self).__init__()

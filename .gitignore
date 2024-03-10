@@ -125,3 +125,9 @@ dmypy.json
 
 .idea/
 .DS_Store
+
+# Openslide
+openslide/
+
+# example images
+taplt/macros/examples/*
