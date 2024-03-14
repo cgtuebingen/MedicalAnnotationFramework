@@ -2,13 +2,13 @@ from PySide6.QtWidgets import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 
-from taplt.ui.image_viewer import ImageViewer
+from taplt.media_viewing_widgets.widgets.video_viewer import VideoPlayer
+from taplt.media_viewing_widgets.widgets.image_viewer import ImageViewer
+from taplt.media_viewing_widgets.widgets.slide_viewer import SlideView
+
 from taplt.ui.annotation_group import AnnotationGroup
 from taplt.ui.shape import Shape
 from taplt.utils.qt import get_icon
-from taplt.media_viewing_widgets.widgets.video_viewer import VideoPlayer
-
-from taplt.media_viewing_widgets.widgets.slide_viewer import SlideView
 from taplt.utils.project_structure import modality, Modality
 
 
