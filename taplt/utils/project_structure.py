@@ -2,6 +2,7 @@ import os
 import shutil
 import enum
 
+SLIDE_EXTENSIONS = ['tif', 'svs', 'ndpi', '.vms', '.vmu', '.scn', '.mrxs', '.tiff', '.svslide', '.bif']
 
 class Modality(enum.IntEnum):
     video = 0
@@ -44,6 +45,6 @@ def modality(filepath: str) -> Modality:
         return Modality.video
     if filepath.endswith('jpg') or filepath.endswith('png'):
         return Modality.image
-    if filepath.endswith('tif'):
+    if any(filepath.endswith(ext) for ext in SLIDE_EXTENSIONS):
         return Modality.slide
     raise Exception("This filetype is not supported")
