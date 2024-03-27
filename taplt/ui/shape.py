@@ -162,7 +162,6 @@ class Shape(QGraphicsObject):
         elif self.mode == Shape.ShapeMode.CREATE and len(self.vertices) > 1:
             self.ungrabMouse()
             self.is_closed_path = True
-
             self.drawingDone.emit()
             super(Shape, self).mousePressEvent(event)
 
@@ -232,6 +231,21 @@ class Shape(QGraphicsObject):
                     width = r.width() if r.width() > width else width
                     height = r.height() if r.height() > height else height
             return QRectF(left_most, top_most, width, height)
+        if self.shape_type == 'circle':
+            center = self.vertices.vertices[0]
+            if len(self.vertices.vertices) == 2:
+                second_point = self.vertices.vertices[1]
+            elif len(self.vertices.vertices) == 4:
+                second_point = self.vertices.vertices[2]
+            radius = math.sqrt(
+                (center.x() - second_point.x()) ** 2 + 
+                (center.y() - second_point.y()) ** 2
+            )
+
+            # Calculate the bounding rectangle based on the center and radius
+            top_left = QPointF(center.x() - radius, center.y() - radius)
+            bottom_right = QPointF(center.x() + radius, center.y() + radius)
+            return QRectF(top_left, bottom_right)
         return self.vertices.bounding_rect()
 
     def setSelected(self, selected: bool):
