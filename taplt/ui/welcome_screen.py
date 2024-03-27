@@ -15,10 +15,10 @@ class WelcomeScreen(QWidget):
         self.label.setText("Welcome to the \n \n"
                            "All-Purpose Labeling Tool \n \n \n"
                            "Create or open a project to get started")
-        self.label.setFont(QFont("Helvetica", 20, QFont.Weight.Bold))
+        self.label.setFont(QFont("Helvetica", 15, QFont.Weight.Bold))
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon = os.path.join(source_directory, 'icons', 'welcome.jpg')
-        self.label.setStyleSheet(f"background-image: url({icon});"
+        icon = os.path.join(source_directory, 'icons', 'welcome.jpg').replace("\\", "/")
+        self.label.setStyleSheet(f"background-image: url('{icon}');"
                                  "background-repeat: no-repeat;"
                                  "background-position: center;")
 
