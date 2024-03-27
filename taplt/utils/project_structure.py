@@ -5,8 +5,8 @@ import enum
 SLIDE_EXTENSIONS = ['tif', 'svs', 'ndpi', '.vms', '.vmu', '.scn', '.mrxs', '.tiff', '.svslide', '.bif']
 
 class Modality(enum.IntEnum):
-    video = 0
-    image = 1
+    image = 0
+    video = 1
     slide = 2
 
 
