@@ -88,10 +88,11 @@ class CenterDisplayWidget(QWidget):
 
         if not file_type == Modality.slide:
             pixmap = QPixmap(filepath)
+            self.image_size = pixmap.size()
         else:
             pixmap = QPixmap()
+            self.image_size = self.slide_viewer.frameRect().size()
 
-        self.image_size = pixmap.size()
         self.pixmap.setPixmap(pixmap)
         
         labels = [Shape(image_size=self.image_size,
@@ -119,10 +120,13 @@ class CenterDisplayWidget(QWidget):
         self.video_label.show()
 
     @Slot(QGraphicsPixmapItem)
-    def set_pixmap_to_slide(self, pixmap_item):
-        self.scene.removeItem(self.annotations)
-        self.scene.addItem(pixmap_item)
-        self.scene.addItem(self.annotations)
+    def set_pixmap_to_slide(self, pixmap):
+        # pixmap_item.setPixmap(QPixmap.fromImage(image))
+        self.pixmap.setPixmap(pixmap)
+        #self.repaint()
+        # self.scene.removeItem(self.annotations)
+        # self.scene.addItem(pixmap_item)
+        # self.scene.addItem(self.annotations)
 
     def switch_to_modality(self, filepath: str):
         """
