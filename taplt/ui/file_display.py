@@ -135,8 +135,8 @@ class CenterDisplayWidget(QWidget):
         """
         rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
         file_type = modality(filepath)
-        if self.slide_viewer.pixmap_item and self.slide_viewer.pixmap_item in self.scene.items():
-            self.scene.removeItem(self.slide_viewer.pixmap_item)
+        # if self.slide_viewer.pixmap_item and self.slide_viewer.pixmap_item in self.scene.items():
+        #     self.scene.removeItem(self.slide_viewer.pixmap_item)
 
         if file_type == Modality.image:
             self.modalitySwitched.emit('image')
