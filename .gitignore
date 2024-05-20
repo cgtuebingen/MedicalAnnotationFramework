@@ -131,3 +131,6 @@ openslide/
 
 # example images
 taplt/macros/examples/*
+
+# ignore VsCode
+.vscode/
