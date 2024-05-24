@@ -372,7 +372,7 @@ class Shape(QGraphicsObject):
                 elif self.shape_type == "rectangle":
                     painter.drawRect(QRectF(self.vertices.vertices[0], self.vertices.vertices[len(self.vertices.vertices)//2]))
 
-                if any((self.isSelected, self.is_highlighted, self.vertices.selected_vertex != -1)):
+                if any((self.isSelected, self.is_highlighted, self.vertices.selected_vertex != -1)) and self.shape_type!="ellipse" and self.shape_type!="circle":
                     self.vertices.paint(painter)
 
     def to_dict(self) -> Tuple[dict, str]:
