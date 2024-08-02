@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from taplt.utils.qt import colormap_rgb
 from taplt.ui.shape import Shape
 from taplt.ui.dialogs import NewLabelDialog, DeleteShapeMessageBox
+from taplt.utils.project_structure import Modality
 
 
 class AnnotationGroup(QGraphicsObject):
@@ -35,6 +36,7 @@ class AnnotationGroup(QGraphicsObject):
         self.mode = AnnotationGroup.AnnotationMode.EDIT
         self.shapeType = Shape.ShapeType.POLYGON
         self.drawing = False
+        self.modality = None
 
     def boundingRect(self):
         return self.childrenBoundingRect()
@@ -55,7 +57,8 @@ class AnnotationGroup(QGraphicsObject):
             self.temp_shape = Shape(image_size=QSize(int(s.width()), int(s.height())),
                                     shape_type=self.shapeType,
                                     mode=Shape.ShapeMode.CREATE,
-                                    color=self.draw_new_color)
+                                    color=self.draw_new_color,
+                                    modality=self.modality)
             self.add_shapes(self.temp_shape)
             self.temp_shape.drawingDone.connect(self.set_drawing_to_false)
             self.sToolTip.emit("Press right click to end the annotation.")
@@ -87,6 +90,7 @@ class AnnotationGroup(QGraphicsObject):
             shape.mode_changed.connect(self.shape_mode_changed)
             shape.drawingDone.connect(self.set_label)
             shape.sChange.connect(self.sChange.emit)
+
             self.update()
 
     def deselect_all(self):
@@ -170,7 +174,15 @@ class AnnotationGroup(QGraphicsObject):
         Sets the type of the shape when an icon is clicked in the annotation toolbar
         """
         self.shapeType = type_of_shape
-        
+
+    def set_modality(self, modality: Modality):
+        """
+        Sets the modality for the annotation group.
+
+        :param modality: The modality to be set for the annotation group.
+        :type modality: Modality
+        """
+        self.modality = modality
 
     def update_annotations(self, current_labels: List[Shape]):
         self.clear()
@@ -179,6 +191,12 @@ class AnnotationGroup(QGraphicsObject):
         for lbl in current_labels:
             self.add_shapes(lbl)
         self.updateShapes.emit(current_labels)
+
+    @Slot(QPointF)
+    def pixmap_compensation(self, compensation: QPointF):
+        for shape in self.annotations.values():
+            if shape.modality == Modality.slide:
+                shape.moveBy(-compensation.x(), -compensation.y())
 
 
 if __name__ == '__main__':

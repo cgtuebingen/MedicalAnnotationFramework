@@ -9,6 +9,7 @@ import numpy as np
 from taplt.config import VERTEX_SIZE, SCALING_INITIAL
 
 from taplt.utils.qt import closest_euclidean_distance
+from taplt.utils.project_structure import Modality
 
 
 class Shape(QGraphicsObject):
@@ -45,7 +46,8 @@ class Shape(QGraphicsObject):
                  flags=None,
                  group_id=None,
                  label_dict: Optional[dict] = None,
-                 mode: ShapeMode = ShapeMode.FIXED):
+                 mode: ShapeMode = ShapeMode.FIXED,
+                 modality = None):
         super(Shape, self).__init__()
 
         _points = points if points else []
@@ -55,6 +57,7 @@ class Shape(QGraphicsObject):
         self.mode = mode
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setAcceptHoverEvents(True)
+        self.modality = modality
 
         # prioritize label dict
         if label_dict:
@@ -83,6 +86,7 @@ class Shape(QGraphicsObject):
         self.init_color(color)
         self.selected_color = Qt.GlobalColor.white
         self.vertices = VertexCollection(_points, self.line_color, self.brush_color, self.vertex_size)
+        self.true_vertices = None
 
         # distinction between highlighted (hovering over it) and selecting it (click)
         self._isHighlighted = False
@@ -114,6 +118,7 @@ class Shape(QGraphicsObject):
     @Slot(QGraphicsSceneMouseEvent)
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
         if self.mode == Shape.ShapeMode.CREATE:
+
             if len(self.vertices.vertices) > 0:
                 delta = self.vertices.vertices[-1] - event.scenePos()
             else:
