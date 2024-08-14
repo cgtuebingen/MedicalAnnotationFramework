@@ -1,13 +1,13 @@
-from PySide6.QtWidgets import *
-from PySide6.QtCore import *
-from typing import *
+from PySide6.QtWidgets import QGraphicsObject, QGraphicsScene, QGraphicsPixmapItem, QApplication, QGraphicsView, \
+    QMessageBox
+from PySide6.QtCore import Signal, Slot, QPointF, QSize, Qt
+from typing import Dict, List, Union
 from dataclasses import dataclass
 
 from taplt.utils.qt import colormap_rgb
 from taplt.ui.shape import Shape
 from taplt.ui.dialogs import NewLabelDialog, DeleteShapeMessageBox
 from taplt.utils.project_structure import Modality
-
 
 class AnnotationGroup(QGraphicsObject):
     """ A group for managing annotation objects and their signals with a scene """
@@ -25,23 +25,26 @@ class AnnotationGroup(QGraphicsObject):
         DRAW: int = 1
 
     def __init__(self):
-        QGraphicsObject.__init__(self)
-        self.annotations = {}  # type: Dict[int, Shape]
-        self.classes = list()
+        super().__init__()
+        self.annotations: Dict[int, Shape] = {}
+        self.classes: List[str] = []
         self.setAcceptHoverEvents(True)
         self.temp_shape: Shape = None
-        self._num_colors = 10  # TODO: This needs to be updated based on what's in the image.
-        self.color_map, new_color = colormap_rgb(n=self._num_colors)  # have a buffer for new classes
+        self._num_colors = 10
+        self.color_map, new_color = colormap_rgb(n=self._num_colors)
         self.draw_new_color = new_color
         self.mode = AnnotationGroup.AnnotationMode.EDIT
         self.shapeType = Shape.ShapeType.POLYGON
         self.drawing = False
         self.modality = None
 
+        self._scene_offset = QPointF(0, 0)  # To keep track of scene offset
+
     def boundingRect(self):
         return self.childrenBoundingRect()
 
     def paint(self, *args):
+        # Empty because this group does not need to paint itself
         pass
 
     @Slot()
@@ -67,7 +70,7 @@ class AnnotationGroup(QGraphicsObject):
             pass
 
     def get_color_for_label(self, label_name: str):
-        r"""Get a Color based on a label_name"""
+        """Get a Color based on a label_name"""
         if label_name not in self.classes:
             return None
         label_index = self.classes.index(label_name)
@@ -83,6 +86,7 @@ class AnnotationGroup(QGraphicsObject):
             new_shapes = [new_shapes]
         for shape in new_shapes:
             shape.setParentItem(self)
+            shape.setFlag(QGraphicsObject.ItemIgnoresTransformations)  # Ignore scene transformations
             new_id = 0 if not self.annotations else max(self.annotations.keys()) + 1
             self.annotations[new_id] = shape
             shape.selected.connect(self.shape_selected)
@@ -90,11 +94,10 @@ class AnnotationGroup(QGraphicsObject):
             shape.mode_changed.connect(self.shape_mode_changed)
             shape.drawingDone.connect(self.set_label)
             shape.sChange.connect(self.sChange.emit)
-
             self.update()
 
     def deselect_all(self):
-        """deselects all shapes"""
+        """Deselects all shapes"""
         for shape in self.annotations.values():
             shape.setSelected(False)
 
@@ -118,18 +121,16 @@ class AnnotationGroup(QGraphicsObject):
             if self.annotations[shape_id] in shapes:
                 ids_to_remove.append(shape_id)
                 self.annotations[shape_id].deleteLater()
-        [(self.annotations[x].disconnect(self.annotations[x]), self.annotations.pop(x)) for x in ids_to_remove]
+        for shape_id in ids_to_remove:
+            self.annotations.pop(shape_id).disconnect()
         self.updateShapes.emit(list(self.annotations.values()))
 
     def clear(self):
-        """
-        Clears the group and scene of shapes
-        :return:
-        """
+        """Clears the group and scene of shapes"""
         self.remove_shapes(list(self.annotations.values()))
 
     def shape_selected(self):
-        """gets the index of the selected shape and emits it"""
+        """Gets the index of the selected shape and emits it"""
         shape = self.sender()
         for ann_id, ann in self.annotations.items():
             if ann != shape:
@@ -143,15 +144,12 @@ class AnnotationGroup(QGraphicsObject):
             shape.update_color(self.color_map[shape.group_id])
 
     def set_label(self):
-        """
-        opens a dialog to let user enter a label
-        :return: None
-        """
+        """Opens a dialog to let user enter a label"""
         dlg = NewLabelDialog(self.classes, self.color_map)
         dlg.exec()
         label = dlg.result
 
-        # set the label, add to classes if necessary
+        # Set the label, add to classes if necessary
         if label:
             if label not in self.classes:
                 self.classes.append(label)
@@ -160,8 +158,6 @@ class AnnotationGroup(QGraphicsObject):
             self.temp_shape.set_mode(Shape.ShapeMode.FIXED)
             self.updateShapes.emit(list(self.annotations.values()))
             self.sChange.emit(0)
-
-        # if user entered no label, remove shape
         else:
             self.remove_shapes([self.temp_shape])
             self.set_drawing_to_false()
@@ -170,24 +166,15 @@ class AnnotationGroup(QGraphicsObject):
         self.mode = mode
 
     def set_type(self, type_of_shape: Union[Shape.ShapeType, str]):
-        """
-        Sets the type of the shape when an icon is clicked in the annotation toolbar
-        """
+        """Sets the type of the shape when an icon is clicked in the annotation toolbar"""
         self.shapeType = type_of_shape
 
     def set_modality(self, modality: Modality):
-        """
-        Sets the modality for the annotation group.
-
-        :param modality: The modality to be set for the annotation group.
-        :type modality: Modality
-        """
+        """Sets the modality for the annotation group."""
         self.modality = modality
 
     def update_annotations(self, current_labels: List[Shape]):
         self.clear()
-
-        # for some reason, bugs emerge when you pass the labels as a list
         for lbl in current_labels:
             self.add_shapes(lbl)
         self.updateShapes.emit(current_labels)
@@ -198,9 +185,15 @@ class AnnotationGroup(QGraphicsObject):
             if shape.modality == Modality.slide:
                 shape.moveBy(-compensation.x(), -compensation.y())
 
+    def updatePosition(self, sceneOffset: QPointF):
+        """Adjust the positions of all annotations based on the scene offset"""
+        self._scene_offset = sceneOffset
+        for shape in self.annotations.values():
+            # Adjust the shape position based on the scene offset
+            shape.setPos(shape.pos() + sceneOffset)
 
 if __name__ == '__main__':
-    from PySide6.QtGui import *
+    from PySide6.QtGui import QPixmap
     import numpy as np
     from PIL.ImageQt import ImageQt
     from PIL import Image
@@ -218,6 +211,14 @@ if __name__ == '__main__':
         if event.button() == Qt.LeftButton:
             anno_group.create_shape()
     scene.mousePressEvent = mousePressEvent
+
+    def onSceneMoved():
+        """Slot to handle scene movement and adjust annotations"""
+        sceneOffset = viewer.mapToScene(viewer.viewport().rect().topLeft()) - viewer.mapToScene(viewer.viewport().rect().topLeft())
+        anno_group.updatePosition(sceneOffset)
+
+    # Connect scene's signal to handle panning and zooming adjustments
+    scene.sceneRectChanged.connect(onSceneMoved)
 
     viewer.show()
     app.exec()
