@@ -44,7 +44,7 @@ class CenterDisplayWidget(QWidget):
         self.scene.addItem(self.annotations)
         self.annotations.sToolTip.connect(self.sDrawingTooltip.emit)
 
-        self.slide_viewer.pix_move_compensated.connect(self.annotations.pixmap_compensation)
+       # self.slide_viewer.pix_move_compensated.connect(self.annotations.pixmap_compensation)
 
         # QLabel displaying the patient's id/name/alias
         self.patient_label = QLabel()
@@ -62,6 +62,8 @@ class CenterDisplayWidget(QWidget):
 
         # self.layout.addWidget(self.slide_wrapper)
         self.layout.addWidget(self.patient_label)
+
+        self.slide_viewer.setAnnotations(self.annotations)
 
         # Modality of the current Display
         self.file_type = None

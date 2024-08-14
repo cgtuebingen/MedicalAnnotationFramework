@@ -398,6 +398,9 @@ class Shape(QGraphicsObject):
             self.brush_color.setAlphaF(0.5)
             self.vertices.update_color(self.line_color, self.brush_color)
 
+    def rescale(self, factor: float):
+        self.vertices.rescale(factor)
+
     def __eq__(self, other):
         """overridden equality comparison since Shapes are now QGraphicsObjects
         which will always return False when compared using equality operator"""
@@ -497,3 +500,7 @@ class VertexCollection(object):
     @vertices.setter
     def vertices(self, value):
         self._points = value
+
+    def rescale(self, factor: float):
+        center = self.bounding_rect().center()
+        self._points = QPolygonF([center + (point - center) * factor for point in self._points])
