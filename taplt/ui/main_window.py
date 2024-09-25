@@ -41,8 +41,9 @@ class LabelingMainWindow(QMainWindow):
         ANNOTATION_SHIFTED: int = 2
         COMMENT: int = 3
 
-    def __init__(self):
+    def __init__(self, dev_mode=False):
         super(LabelingMainWindow, self).__init__()
+        self.dev_mode = dev_mode
         self.setWindowTitle("The All-Purpose Labeling Tool")
         self.resize(1276, 968)
         self.setTabShape(QTabWidget.TabShape.Rounded)
@@ -155,6 +156,16 @@ class LabelingMainWindow(QMainWindow):
         self.menubar.sOpenProject.connect(self.open_project)
         self.menubar.sCloseProject.connect(self.close_project)
         self.menubar.sExampleProject.connect(self.macros.example_project)
+
+        if self.dev_mode:
+            self.open_example_project_on_startup()
+
+    def open_example_project_on_startup(self):
+        """Automatically opens the example project when the application starts."""
+        # Call the method that opens the example project
+        self.macros.example_project(True)
+        self.set_welcome_screen(False)
+        self.menubar.enable_tools()
 
     def set_tool_tip(self, tip: str):
         # TODO: This is kind of working, but not really. You have to hover out of the display widget.

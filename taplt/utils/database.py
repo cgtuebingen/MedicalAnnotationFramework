@@ -129,7 +129,7 @@ class SQLiteDatabase(QObject):
         with self.connection:
             self.cursor.execute(ADD_ANNOTATION, (modality, file, patient, shape, label))
 
-    def add_file(self, filepath: str, patient: str):
+    def add_file(self, filepath: str, patient: int):
         """
         adds a file to the database
         :param filepath: the name of the file to be added
@@ -138,7 +138,7 @@ class SQLiteDatabase(QObject):
         with self.connection:
 
             # check if patient already exists, add if necessary
-            p = self.cursor.execute("""SELECT uid FROM patients WHERE some_id = ?""", (patient,)).fetchone()
+            p = self.cursor.execute("""SELECT uid FROM patients WHERE uid = ?""", (patient,)).fetchone()
             patient = p[0] if p else self.add_patient(patient)
             mod = modality(filepath)
 
@@ -161,15 +161,15 @@ class SQLiteDatabase(QObject):
                 return
             self.cursor.execute(ADD_LABEL, (label_class,))
 
-    def add_patient(self, some_id: str, another_id: str = "2"):
+    def add_patient(self, uid: int):
         """ add a new patient to database
         returns the uid of the new patient"""
         with self.connection:
             # make sure patient does not already exist
-            if self.cursor.execute("SELECT uid FROM patients WHERE some_id = ?", (some_id,)).fetchone():
+            if self.cursor.execute("SELECT uid FROM patients WHERE uid = ?", (uid,)).fetchone():
                 return
-            self.cursor.execute(ADD_PATIENT, (some_id, another_id))
-            result = self.cursor.execute("SELECT uid FROM patients WHERE some_id = ?", (some_id,)).fetchone()
+            self.cursor.execute(ADD_PATIENT, (int(uid),))
+            result = self.cursor.execute("SELECT uid FROM patients WHERE uid = ?", (uid,)).fetchone()
         return result[0]
 
     def create_annotation_entry(self, filename: str, label_dict: dict, label_class: str):
