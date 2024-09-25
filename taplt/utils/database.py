@@ -14,36 +14,29 @@ from PySide6.QtCore import Signal, QObject, QSettings
 # TODO: 'file' value references the uid in either 'videos', 'images', or 'whole slide images'
 #  (depends on 'modality' value),
 #  therefore no foreign key constraint here; need to implement it somewhere else (?)
-CREATE_ANNOTATIONS_TABLE = """
-    CREATE TABLE IF NOT EXISTS annotations (
-    uid INTEGER PRIMARY KEY,
-    modality INTEGER NOT NULL,
-    file INTEGER NOT NULL,
-    patient INTEGER NOT NULL,
-    shape BLOB,
-    label INTEGER NOT NULL,
-    FOREIGN KEY (patient) REFERENCES patients(uid),
-    FOREIGN KEY (label) REFERENCES labels(uid));"""
+
+CREATE_PATIENTS_TABLE = """
+    CREATE TABLE IF NOT EXISTS patients (
+    uid INTEGER PRIMARY KEY);"""
 
 CREATE_VIDEOS_TABLE = """
     CREATE TABLE IF NOT EXISTS videos (
-    uid INTEGER PRIMARY KEY,
-    filename TEXT NOT NULL UNIQUE,
-    patient INTEGER,
-    FOREIGN KEY (patient) REFERENCES patients(uid));"""
+    uid INTEGER,
+    filename TEXT NOT NULL,
+    PRIMARY KEY (uid, filename),
+    FOREIGN KEY (uid) REFERENCES patients(uid));"""
 
 CREATE_IMAGES_TABLE = """
     CREATE TABLE IF NOT EXISTS images (
-    uid INTEGER PRIMARY KEY,
-    filename TEXT NOT NULL UNIQUE,
-    patient INTEGER,
-    FOREIGN KEY (patient) REFERENCES patients(uid));"""
+    uid INTEGER,
+    filename TEXT NOT NULL,
+    PRIMARY KEY (uid, filename),
+    FOREIGN KEY (uid) REFERENCES patients(uid));"""
 
 CREATE_WSI_TABLE = """
     CREATE TABLE IF NOT EXISTS 'slides' (
-    uid INTEGER PRIMARY KEY,
-    filename TEXT NOT NULL UNIQUE,
-    patient INTEGER,
+    uid INTEGER,
+    filename TEXT NOT NULL,
     biopsy_id INTEGER,
     year INTEGER,
     staining TEXT,
@@ -51,26 +44,63 @@ CREATE_WSI_TABLE = """
     height INTEGER,
     manufacturer TEXT,
     institution TEXT,
-    FOREIGN KEY (patient) REFERENCES patients(uid));"""
+    PRIMARY KEY (uid, filename),
+    FOREIGN KEY (uid) REFERENCES patients(uid));"""
+
+CREATE_ANNOTATIONS_TABLE = """
+    CREATE TABLE IF NOT EXISTS annotations (
+    annotation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    frame_number INTEGER,
+    uid INTEGER,
+    file TEXT NOT NULL,
+    shape_type TEXT NOT NULL,
+    label INTEGER NOT NULL,
+    FOREIGN KEY (uid, file) REFERENCES videos(uid, filename)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (uid, file) REFERENCES images(uid, filename)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (uid, file) REFERENCES slides(uid, filename)
+        ON DELETE CASCADE ON UPDATE CASCADE
+    CHECK (shape_type IN ('circle', 'polygon', 'rectangle', 'ellipse', 'trace'))
+    );"""
+
+CREATE_VERTICES_TABLE = """
+    CREATE TABLE IF NOT EXISTS vertices (
+    annotation_id INTEGER,
+    vertex_id INTEGER,
+    x FLOAT,
+    y FLOAT,
+    PRIMARY KEY (annotation_id, vertex_id),
+    FOREIGN KEY (annotation_id) REFERENCES annotations(annotation_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+    );"""
+
+Create_ELIPSES_TABLE = """
+    CREATE TABLE IF NOT EXISTS elipses (
+    annotation_id INTEGER,
+    x FLOAT,
+    y FLOAT,
+    radius FLOAT,
+    PRIMARY KEY (annotation_id, x, y, radius),
+    FOREIGN KEY (annotation_id) REFERENCES annotations(annotation_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+    );"""
 
 FILE_TABLES = ['images', 'videos', 'slides']
-
-CREATE_PATIENTS_TABLE = """
-    CREATE TABLE IF NOT EXISTS patients (
-    uid INTEGER PRIMARY KEY,
-    some_id INTEGER UNIQUE,
-    another_id INTEGER);"""
 
 CREATE_LABELS_TABLE = """
     CREATE TABLE IF NOT EXISTS labels (
     uid INTEGER PRIMARY KEY,
     label_class TEXT NOT NULL UNIQUE);"""
 
-ADD_ANNOTATION = "INSERT INTO annotations (modality, file, patient, shape, label) VALUES (?, ?, ?, ?, ?);"
-ADD_VIDEO = "INSERT INTO videos (filename, patient) VALUES (?, ?);"
-ADD_IMAGE = "INSERT INTO images (filename, patient) VALUES (?, ?);"
-ADD_WSI = "INSERT INTO 'slides' (filename, patient) VALUES (?, ?);"
-ADD_PATIENT = "INSERT INTO patients (some_id, another_id) VALUES (?, ?);"
+ADD_PATIENT = "INSERT INTO patients (uid) VALUES (?);"
+ADD_VIDEO = "INSERT INTO videos (uid, filename) VALUES (?, ?);"
+ADD_IMAGE = "INSERT INTO images (uid, filename) VALUES (?, ?);"
+ADD_WSI = "INSERT INTO 'slides' (uid, filename) VALUES (?, ?);"
+ADD_ANNOTATION = "INSERT INTO annotations (file, uid, shape, label) VALUES (?, ?, ?, ?);"
+ADD_VERTICES = "INSERT INTO vertices (annotation_id, vertex_id, x, y) VALUES (?, ?, ?, ?);"
+ADD_ELIPSES = "INSERT INTO elipses (annotation_id, x, y, radius) VALUES (?, ?, ?, ?);"
+
 ADD_LABEL = "INSERT INTO labels (label_class) VALUES (?);"
 
 DELETE_FILE_ANNOTATIONS = "DELETE FROM annotations WHERE modality = ? AND file = ?"
