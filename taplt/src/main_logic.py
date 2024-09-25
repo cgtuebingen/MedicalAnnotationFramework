@@ -10,6 +10,8 @@ class MainLogic:
         self.main_window = LabelingMainWindow(dev_mode)
         self.database = SQLiteDatabase()
         self.connect_events()
+        if self.dev_mode:
+            self.main_window.open_example_project_on_startup()
 
         self.main_window.show()
 

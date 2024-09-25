@@ -157,9 +157,6 @@ class LabelingMainWindow(QMainWindow):
         self.menubar.sCloseProject.connect(self.close_project)
         self.menubar.sExampleProject.connect(self.macros.example_project)
 
-        if self.dev_mode:
-            self.open_example_project_on_startup()
-
     def open_example_project_on_startup(self):
         """Automatically opens the example project when the application starts."""
         # Call the method that opens the example project

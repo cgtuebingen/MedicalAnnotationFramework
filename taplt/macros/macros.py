@@ -19,6 +19,8 @@ class Macros(QObject):
         dlg = ExampleProjectDialog()
         if not dev_mode:
             dlg.exec()
+        else:
+            dlg.accept()
         if dlg.accepted or dev_mode:
             database_path = str(Path.home()) + "/ExampleProject/database.db"
 
