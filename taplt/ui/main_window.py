@@ -324,6 +324,7 @@ class LabelingMainWindow(QMainWindow):
         """stores the current state of the image to the database"""
         annotations = list(self.file_display.annotations.annotations.values())
         self.changes.clear()
+        print(self.file_display.patient_label.text())
         self.sSaveToDatabase.emit(annotations, self.img_idx)
 
     def set_no_files_screen(self, b: bool):
