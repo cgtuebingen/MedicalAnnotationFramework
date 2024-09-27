@@ -12,6 +12,8 @@ from taplt.utils.qt import get_icon
 from taplt.utils.project_structure import modality, Modality
 
 
+# TODO: We need to store the current top_left corner when we switch modality in the database that way we can guarantee that the annotations are loaded correctly
+
 class CenterDisplayWidget(QWidget):
     """ widget to manage the central display in the GUI
     controls a QGraphicsView and a QGraphicsScene for drawing on top of a pixmap """
@@ -44,7 +46,7 @@ class CenterDisplayWidget(QWidget):
         self.scene.addItem(self.annotations)
         self.annotations.sToolTip.connect(self.sDrawingTooltip.emit)
 
-       # self.slide_viewer.pix_move_compensated.connect(self.annotations.pixmap_compensation)
+        # self.slide_viewer.pix_move_compensated.connect(self.annotations.pixmap_compensation)
 
         # QLabel displaying the patient's id/name/alias
         self.patient_label = QLabel()
@@ -104,8 +106,9 @@ class CenterDisplayWidget(QWidget):
             pixmap = QPixmap()
             self.image_size = self.slide_viewer.frameRect().size()
 
-        self.pixmap.setPixmap(pixmap)
         self.switch_to_modality(filepath)
+
+        self.pixmap.setPixmap(pixmap)
 
         if self.file_type == Modality.slide:
             annotations = [Shape(image_size=self.image_size,
@@ -156,7 +159,7 @@ class CenterDisplayWidget(QWidget):
         self.annotations.set_modality(self.file_type)
 
         if self.file_type == Modality.image:
-            self.modalitySwitched.emit('image')
+            self.slide_viewer.allow_resize = False
             self.image_viewer.setHidden(False)
             self.video_player.setHidden(True)
             self.slide_viewer.setHidden(True)
@@ -166,6 +169,7 @@ class CenterDisplayWidget(QWidget):
             self.image_viewer.fitInView(rect)
 
         elif self.file_type == Modality.video:
+            self.slide_viewer.allow_resize = False
             self.modalitySwitched.emit('video')
 
             self.image_viewer.setHidden(True)
@@ -178,7 +182,7 @@ class CenterDisplayWidget(QWidget):
             self.video_player.play()
 
         elif self.file_type == Modality.slide:
-
+            self.slide_viewer.allow_resize = True
             self.modalitySwitched.emit('slide')
 
             self.image_viewer.setHidden(True)
