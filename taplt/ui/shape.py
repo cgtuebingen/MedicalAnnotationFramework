@@ -65,7 +65,7 @@ class Shape(QGraphicsObject):
             if 'label' in annotation_dict:
                 self.label = annotation_dict['label']
             if 'points' in annotation_dict:
-                _points = [QPointF(_pt[0], _pt[1]) for _pt in annotation_dict['points']]
+                _points = [QPointF(_pt[1], _pt[2]) for _pt in annotation_dict['points']]
             if 'shape_type' in annotation_dict:
                 self.shape_type = annotation_dict['shape_type']
             if 'flags' in annotation_dict:

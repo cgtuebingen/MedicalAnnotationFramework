@@ -74,6 +74,7 @@ CREATE_LABELS_TABLE = """
 CREATE_POINTS_TABLE = """
     CREATE TABLE IF NOT EXISTS points (
         annotation_id TEXT,
+        vertex_id INTEGER,
         x FLOAT,
         y FLOAT,
         PRIMARY KEY (annotation_id, x, y),
@@ -90,7 +91,7 @@ ADD_ANNOTATION = ("INSERT INTO annotations "
                   "(annotation_id, frame_number, uid, filename, shape_type, flags, group_id, comment, label) "
                   "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);")
 ADD_LABEL = "INSERT INTO labels (uid, label, filename) VALUES (?, ?, ?);"
-ADD_POINTS = "INSERT INTO points (annotation_id, x, y) VALUES (?, ?, ?);"
+ADD_POINTS = "INSERT INTO points (annotation_id, vertex_id, x, y) VALUES (?, ?, ?, ?);"
 
 DELETE_FILE_ANNOTATIONS = "DELETE FROM annotations WHERE annotation_id = ?;"
 
@@ -442,8 +443,8 @@ class SQLiteDatabase(QObject):
                                                          entry['filename'], entry['shape_type'],
                                                          entry['flags'], entry['group_id'], entry['comment'],
                                                          entry['label']))
-                    [self.cursor.execute(ADD_POINTS, (entry['annotation_id'], point[0], point[1])) for point
-                     in entry['points'] if not
+                    [self.cursor.execute(ADD_POINTS, (entry['annotation_id'], i, point[0], point[1])) for i, point
+                     in enumerate(entry['points']) if not
                      self.cursor.execute("""SELECT x, y FROM points WHERE annotation_id = ? AND x = ? AND y = ?""",
                                          (entry['annotation_id'], point[0], point[1])).fetchone()]
 
@@ -483,9 +484,9 @@ class SQLiteDatabase(QObject):
             }
 
             for annotation_id in annotation_ids:
-                points = self.cursor.execute("SELECT x, y FROM points WHERE annotation_id = ?",
+                points = self.cursor.execute("SELECT vertex_id, x, y FROM points WHERE annotation_id = ?",
                                              (annotation_id,)).fetchall()
-                annotations_dict[annotation_id]['points'] = points
+                annotations_dict[annotation_id]['points'] = sorted(points)
 
             patient = file[0]
         else:
