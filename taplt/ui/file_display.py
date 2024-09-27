@@ -44,6 +44,8 @@ class CenterDisplayWidget(QWidget):
         self.scene.addItem(self.annotations)
         self.annotations.sToolTip.connect(self.sDrawingTooltip.emit)
 
+       # self.slide_viewer.pix_move_compensated.connect(self.annotations.pixmap_compensation)
+
         # QLabel displaying the patient's id/name/alias
         self.patient_label = QLabel()
         self.patient_label.setContentsMargins(10, 0, 10, 0)
@@ -60,6 +62,11 @@ class CenterDisplayWidget(QWidget):
 
         # self.layout.addWidget(self.slide_wrapper)
         self.layout.addWidget(self.patient_label)
+
+        self.slide_viewer.setAnnotations(self.annotations)
+
+        # Modality of the current Display
+        self.file_type = None
 
     def mousePressEvent(self, event: QMouseEvent):
         if self.annotations.mode == AnnotationGroup.AnnotationMode.DRAW:
@@ -84,14 +91,15 @@ class CenterDisplayWidget(QWidget):
         self.set_initialized()
         self.annotations.classes = classes
 
-        file_type = modality(filepath)
+        self.file_type = modality(filepath)
 
-        if not file_type == Modality.slide:
+        if not self.file_type == Modality.slide:
             pixmap = QPixmap(filepath)
+            self.image_size = pixmap.size()
         else:
             pixmap = QPixmap()
+            self.image_size = self.slide_viewer.frameRect().size()
 
-        self.image_size = pixmap.size()
         self.pixmap.setPixmap(pixmap)
         
         labels = [Shape(image_size=self.image_size,
@@ -119,10 +127,8 @@ class CenterDisplayWidget(QWidget):
         self.video_label.show()
 
     @Slot(QGraphicsPixmapItem)
-    def set_pixmap_to_slide(self, pixmap_item):
-        self.scene.removeItem(self.annotations)
-        self.scene.addItem(pixmap_item)
-        self.scene.addItem(self.annotations)
+    def set_pixmap_to_slide(self, pixmap):
+        self.pixmap.setPixmap(pixmap)
 
     def switch_to_modality(self, filepath: str):
         """
@@ -130,11 +136,10 @@ class CenterDisplayWidget(QWidget):
         :param filepath: The path to the file that we want to switch to
         """
         rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
-        file_type = modality(filepath)
-        if self.slide_viewer.pixmap_item and self.slide_viewer.pixmap_item in self.scene.items():
-            self.scene.removeItem(self.slide_viewer.pixmap_item)
+        self.file_type = modality(filepath)
+        self.annotations.set_modality(self.file_type)
 
-        if file_type == Modality.image:
+        if self.file_type == Modality.image:
             self.modalitySwitched.emit('image')
             self.image_viewer.setHidden(False)
             self.video_player.setHidden(True)
@@ -144,7 +149,7 @@ class CenterDisplayWidget(QWidget):
 
             self.image_viewer.fitInView(rect)
 
-        elif file_type == Modality.video:
+        elif self.file_type == Modality.video:
             self.modalitySwitched.emit('video')
 
             self.image_viewer.setHidden(True)
@@ -156,7 +161,7 @@ class CenterDisplayWidget(QWidget):
             self.video_player.show()
             self.video_player.play()
 
-        elif file_type == Modality.slide:
+        elif self.file_type == Modality.slide:
 
             self.modalitySwitched.emit('slide')
 
@@ -170,4 +175,4 @@ class CenterDisplayWidget(QWidget):
             self.slide_viewer.show()
 
         else:
-            RuntimeError('The file type ' + file_type + ' is not supported.')
+            RuntimeError('The file type ' + self.file_type + ' is not supported.')

@@ -9,6 +9,7 @@ import numpy as np
 from taplt.config import VERTEX_SIZE, SCALING_INITIAL
 
 from taplt.utils.qt import closest_euclidean_distance
+from taplt.utils.project_structure import Modality
 
 
 class Shape(QGraphicsObject):
@@ -45,7 +46,8 @@ class Shape(QGraphicsObject):
                  flags=None,
                  group_id=None,
                  label_dict: Optional[dict] = None,
-                 mode: ShapeMode = ShapeMode.FIXED):
+                 mode: ShapeMode = ShapeMode.FIXED,
+                 modality = None):
         super(Shape, self).__init__()
 
         _points = points if points else []
@@ -55,6 +57,7 @@ class Shape(QGraphicsObject):
         self.mode = mode
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setAcceptHoverEvents(True)
+        self.modality = modality
 
         # prioritize label dict
         if label_dict:
@@ -83,6 +86,7 @@ class Shape(QGraphicsObject):
         self.init_color(color)
         self.selected_color = Qt.GlobalColor.white
         self.vertices = VertexCollection(_points, self.line_color, self.brush_color, self.vertex_size)
+        self.true_vertices = None
 
         # distinction between highlighted (hovering over it) and selecting it (click)
         self._isHighlighted = False
@@ -114,6 +118,7 @@ class Shape(QGraphicsObject):
     @Slot(QGraphicsSceneMouseEvent)
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent):
         if self.mode == Shape.ShapeMode.CREATE:
+
             if len(self.vertices.vertices) > 0:
                 delta = self.vertices.vertices[-1] - event.scenePos()
             else:
@@ -372,7 +377,7 @@ class Shape(QGraphicsObject):
                 elif self.shape_type == "rectangle":
                     painter.drawRect(QRectF(self.vertices.vertices[0], self.vertices.vertices[len(self.vertices.vertices)//2]))
 
-                if any((self.isSelected, self.is_highlighted, self.vertices.selected_vertex != -1)):
+                if any((self.isSelected, self.is_highlighted, self.vertices.selected_vertex != -1)) and self.shape_type!="ellipse" and self.shape_type!="circle":
                     self.vertices.paint(painter)
 
     def to_dict(self) -> Tuple[dict, str]:
@@ -392,6 +397,9 @@ class Shape(QGraphicsObject):
             self.line_color, self.brush_color = color, deepcopy(color)
             self.brush_color.setAlphaF(0.5)
             self.vertices.update_color(self.line_color, self.brush_color)
+
+    def rescale(self, factor: float):
+        self.vertices.rescale(factor)
 
     def __eq__(self, other):
         """overridden equality comparison since Shapes are now QGraphicsObjects
@@ -492,3 +500,7 @@ class VertexCollection(object):
     @vertices.setter
     def vertices(self, value):
         self._points = value
+
+    def rescale(self, factor: float):
+        center = self.bounding_rect().center()
+        self._points = QPolygonF([center + (point - center) * factor for point in self._points])
