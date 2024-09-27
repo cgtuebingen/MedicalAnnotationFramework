@@ -71,7 +71,11 @@ class CenterDisplayWidget(QWidget):
     def mousePressEvent(self, event: QMouseEvent):
         if self.annotations.mode == AnnotationGroup.AnnotationMode.DRAW:
             if event.button() == Qt.MouseButton.LeftButton:
-                self.annotations.create_shape()
+                if self.file_type == Modality.slide:
+                    self.annotations.create_shape_for_slide(self.slide_viewer.get_top_left_coords(),
+                                                            self.slide_viewer.cur_downsample)
+                else:
+                    self.annotations.create_shape()
         event.accept()
 
     def clear(self):
@@ -101,17 +105,28 @@ class CenterDisplayWidget(QWidget):
             self.image_size = self.slide_viewer.frameRect().size()
 
         self.pixmap.setPixmap(pixmap)
-        
-        annotations = [Shape(image_size=self.image_size,
-                             annotation_dict=annotation_dict[annotation_id],
-                             annotation_id = annotation_id,
-                        color=self.annotations.get_color_for_label(annotation_dict[annotation_id]['label']))
-                  for annotation_id in annotation_ids]
+        self.switch_to_modality(filepath)
+
+        if self.file_type == Modality.slide:
+            annotations = [Shape(image_size=self.image_size,
+                                 annotation_dict=annotation_dict[annotation_id],
+                                 annotation_id=annotation_id,
+                                 color=self.annotations.get_color_for_label(annotation_dict[annotation_id]['label']),
+                                 modality=self.file_type,
+                                 top_left=self.slide_viewer.get_top_left_coords(),
+                                 zoom=self.slide_viewer.cur_downsample)
+                           for annotation_id in annotation_ids]
+        else:
+            annotations = [Shape(image_size=self.image_size,
+                                 annotation_dict=annotation_dict[annotation_id],
+                                 annotation_id=annotation_id,
+                                 color=self.annotations.get_color_for_label(annotation_dict[annotation_id]['label']),
+                                 modality=self.file_type)
+                           for annotation_id in annotation_ids]
 
         self.annotations.update_annotations(annotations)
         self.hide_button.raise_()
 
-        self.switch_to_modality(filepath)
         self.patient_label.setText(patient)
         return annotations
 

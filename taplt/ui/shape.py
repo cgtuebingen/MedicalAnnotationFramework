@@ -48,7 +48,9 @@ class Shape(QGraphicsObject):
                  annotation_dict: Optional[dict] = None,
                  annotation_id: str = None,
                  mode: ShapeMode = ShapeMode.FIXED,
-                 modality = None):
+                 modality = None,
+                 top_left: QPointF = QPoint(0, 0),
+                 zoom: float = 1.0):
         super(Shape, self).__init__()
 
         _points = points if points else []
@@ -59,13 +61,21 @@ class Shape(QGraphicsObject):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setAcceptHoverEvents(True)
         self.modality = modality
+        self.top_left = top_left
+        self.zoom = zoom
 
         # prioritize label dict
         if annotation_dict:
             if 'label' in annotation_dict:
                 self.label = annotation_dict['label']
             if 'points' in annotation_dict:
-                _points = [QPointF(_pt[1], _pt[2]) for _pt in annotation_dict['points']]
+                if self.modality == Modality.slide:
+                    self.true_vertices = [QPointF(_pt[1], _pt[2]) for _pt in annotation_dict['points']]
+                    _points = [QPointF((_pt.x() - self.top_left.x())/self.zoom,
+                                       (_pt.y() - self.top_left.y())/self.zoom)
+                               for _pt in self.true_vertices]
+                else:
+                    _points = [QPointF(_pt[1], _pt[2]) for _pt in annotation_dict['points']]
             if 'shape_type' in annotation_dict:
                 self.shape_type = annotation_dict['shape_type']
             if 'flags' in annotation_dict:
@@ -90,7 +100,7 @@ class Shape(QGraphicsObject):
         self.init_color(color)
         self.selected_color = Qt.GlobalColor.white
         self.vertices = VertexCollection(_points, self.line_color, self.brush_color, self.vertex_size)
-        self.true_vertices = None
+        self.true_vertices = []
 
         # distinction between highlighted (hovering over it) and selecting it (click)
         self._isHighlighted = False
@@ -128,8 +138,17 @@ class Shape(QGraphicsObject):
             else:
                 delta = event.scenePos()
             if math.sqrt(delta.x() ** 2 + delta.y() ** 2) > 3:
-                if self.shape_type in ["polygon", "tempTrace","trace"] or len(self.vertices.vertices) <= 1:
-                    self.vertices.vertices.append(self.check_out_of_bounds(event.scenePos()))
+                if self.shape_type in ["polygon", "tempTrace", "trace"] or len(self.vertices.vertices) <= 1:
+                    if self.modality == Modality.slide:
+                        # TODO: Save positions relative to slide level 0
+                        # TODO: Find a way to get the slide level and vertex positions on level 0
+                        scene_pos = self.check_out_of_bounds(event.scenePos())
+                        vertex = QPointF(scene_pos.x() * self.zoom + self.top_left.x(),
+                                         scene_pos.y() * self.zoom + self.top_left.y())
+                        self.vertices.vertices.append(scene_pos)
+                        self.true_vertices.append(vertex)
+                    else:
+                        self.vertices.vertices.append(self.check_out_of_bounds(event.scenePos()))
                 else:
                     self.vertices.vertices[1] = self.check_out_of_bounds(event.scenePos())
                 self.update()
@@ -387,13 +406,21 @@ class Shape(QGraphicsObject):
     def to_dict(self) -> Tuple[dict, str]:
         r"""Returns a dict and a string from a shape item as those can be easier serialized
         with pickle compared to own classes"""
-        # TODO: maybe json serialization? Or look into how one can pickle own classes and de-pickle them
-        dictionary = {'label': self.label,
-                      'points': [[_pt.x(), _pt.y()] for _pt in self.vertices.vertices],
-                      'shape_type': self.shape_type,
-                      'flags': self.flags,
-                      'group_id': self.group_id,
-                      'comment': self.comment}
+        if self.modality == Modality.slide:
+            dictionary = {'label': self.label,
+                          'points': [[_pt.x(), _pt.y()] for _pt in self.true_vertices],
+                          'shape_type': self.shape_type,
+                          'flags': self.flags,
+                          'group_id': self.group_id,
+                          'comment': self.comment}
+        else:
+            dictionary = {'label': self.label,
+                          'points': [[_pt.x(), _pt.y()] for _pt in self.vertices.vertices],
+                          'shape_type': self.shape_type,
+                          'flags': self.flags,
+                          'group_id': self.group_id,
+                          'comment': self.comment}
+
         return dictionary, self.label
 
     def update_color(self, color: QColor):
