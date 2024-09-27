@@ -184,13 +184,13 @@ class AnnotationGroup(QGraphicsObject):
         """
         self.modality = modality
 
-    def update_annotations(self, current_labels: List[Shape]):
+    def update_annotations(self, current_annotations: List[Shape]):
         self.clear()
 
         # for some reason, bugs emerge when you pass the labels as a list
-        for lbl in current_labels:
-            self.add_shapes(lbl)
-        self.updateShapes.emit(current_labels)
+        for annotation in current_annotations:
+            self.add_shapes(annotation)
+        self.updateShapes.emit(current_annotations)
 
     @Slot(QPointF)
     def pixmap_compensation(self, compensation: QPointF):

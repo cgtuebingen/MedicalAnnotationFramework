@@ -45,7 +45,8 @@ class Shape(QGraphicsObject):
                  shape_type: str = None,
                  flags=None,
                  group_id=None,
-                 label_dict: Optional[dict] = None,
+                 annotation_dict: Optional[dict] = None,
+                 annotation_id: str = None,
                  mode: ShapeMode = ShapeMode.FIXED,
                  modality = None):
         super(Shape, self).__init__()
@@ -60,25 +61,28 @@ class Shape(QGraphicsObject):
         self.modality = modality
 
         # prioritize label dict
-        if label_dict:
-            if 'label' in label_dict:
-                self.label = label_dict['label']
-            if 'points' in label_dict:
-                _points = [QPointF(_pt[0], _pt[1]) for _pt in label_dict['points']]
-            if 'shape_type' in label_dict:
-                self.shape_type = label_dict['shape_type']
-            if 'flags' in label_dict:
-                self.flags = label_dict['flags']
-            if 'group_id' in label_dict:
-                self.group_id = label_dict['group_id']
-            if 'comment' in label_dict:
-                self.comment = label_dict['comment']
+        if annotation_dict:
+            if 'label' in annotation_dict:
+                self.label = annotation_dict['label']
+            if 'points' in annotation_dict:
+                _points = [QPointF(_pt[0], _pt[1]) for _pt in annotation_dict['points']]
+            if 'shape_type' in annotation_dict:
+                self.shape_type = annotation_dict['shape_type']
+            if 'flags' in annotation_dict:
+                self.flags = annotation_dict['flags']
+            if 'group_id' in annotation_dict:
+                self.group_id = annotation_dict['group_id']
+            if 'comment' in annotation_dict:
+                self.comment = annotation_dict['comment']
+            if annotation_id:
+                self.annotation_id = annotation_id
         else:
             self.label = label
             self.shape_type = shape_type
             self.flags = flags
             self.group_id = group_id
             self.comment = ""
+            self.annotation_id = ""
 
         self._path = None  # only necessary for the temporary Polygon and trace
         self._anchorPoint = None

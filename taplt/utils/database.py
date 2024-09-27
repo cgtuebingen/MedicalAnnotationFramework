@@ -16,63 +16,68 @@ from PySide6.QtCore import Signal, QObject, QSettings
 
 CREATE_PATIENTS_TABLE = """
     CREATE TABLE IF NOT EXISTS patients (
-    uid TEXT PRIMARY KEY);"""
+        uid TEXT PRIMARY KEY);"""
 
 CREATE_VIDEOS_TABLE = """
     CREATE TABLE IF NOT EXISTS videos (
-    uid TEXT,
-    filename TEXT NOT NULL,
-    PRIMARY KEY (uid, filename),
-    FOREIGN KEY (uid) REFERENCES patients(uid)
-        ON DELETE CASCADE ON UPDATE CASCADE);"""
+        uid TEXT,
+        filename TEXT NOT NULL,
+        PRIMARY KEY (uid, filename),
+        FOREIGN KEY (uid) REFERENCES patients(uid)
+            ON DELETE CASCADE ON UPDATE CASCADE);"""
 
 CREATE_IMAGES_TABLE = """
     CREATE TABLE IF NOT EXISTS images (
-    uid TEXT,
-    filename TEXT NOT NULL,
-    PRIMARY KEY (uid, filename),
-    FOREIGN KEY (uid) REFERENCES patients(uid)
-        ON DELETE CASCADE ON UPDATE CASCADE);"""
+        uid TEXT,
+        filename TEXT NOT NULL,
+        PRIMARY KEY (uid, filename),
+        FOREIGN KEY (uid) REFERENCES patients(uid)
+            ON DELETE CASCADE ON UPDATE CASCADE);"""
 
 CREATE_WSI_TABLE = """
     CREATE TABLE IF NOT EXISTS slides (
-    uid TEXT,
-    filename TEXT NOT NULL,
-    biopsy_id INTEGER,
-    year INTEGER,
-    staining TEXT,
-    width INTEGER,
-    height INTEGER,
-    manufacturer TEXT,
-    institution TEXT,
-    PRIMARY KEY (uid, filename),
-    FOREIGN KEY (uid) REFERENCES patients(uid)
-        ON DELETE CASCADE ON UPDATE CASCADE);"""
+        uid TEXT,
+        filename TEXT NOT NULL,
+        biopsy_id INTEGER,
+        year INTEGER,
+        staining TEXT,
+        width INTEGER,
+        height INTEGER,
+        manufacturer TEXT,
+        institution TEXT,
+        PRIMARY KEY (uid, filename),
+        FOREIGN KEY (uid) REFERENCES patients(uid)
+            ON DELETE CASCADE ON UPDATE CASCADE);"""
 
+# TODO: Add foreign key constraints for uid and filename so that it references only one table
 CREATE_ANNOTATIONS_TABLE = """
     CREATE TABLE IF NOT EXISTS annotations (
-    annotation_id TEXT PRIMARY KEY,
-    frame_number INTEGER,
-    uid TEXT,
-    filename TEXT NOT NULL,
-    shape BLOB,
-    label TEXT NOT NULL,
-    FOREIGN KEY (uid, filename) REFERENCES videos(uid, filename)
-        ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (uid, filename) REFERENCES images(uid, filename)
-        ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (uid, filename) REFERENCES slides(uid, filename)
-        ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (uid, label, filename) REFERENCES labels(uid, label, filename) 
-        ON DELETE CASCADE ON UPDATE CASCADE);"""
+        annotation_id TEXT PRIMARY KEY,
+        frame_number INTEGER,
+        uid TEXT,
+        filename TEXT NOT NULL,
+        shape_type TEXT NOT NULL,
+        flags BLOB,
+        group_id TEXT,
+        comment TEXT,
+        label TEXT NOT NULL);"""
 
 CREATE_LABELS_TABLE = """
     CREATE TABLE IF NOT EXISTS labels (
         uid TEXT,
         label TEXT NOT NULL,
         filename TEXT,
-        PRIMARY KEY (uid, label, filename),
+        PRIMARY KEY (uid, label, filename)
         FOREIGN KEY (uid) REFERENCES patients(uid)
+            ON DELETE CASCADE ON UPDATE CASCADE);"""
+
+CREATE_POINTS_TABLE = """
+    CREATE TABLE IF NOT EXISTS points (
+        annotation_id TEXT,
+        x FLOAT,
+        y FLOAT,
+        PRIMARY KEY (annotation_id, x, y),
+        FOREIGN KEY (annotation_id) REFERENCES annotations(annotation_id)
             ON DELETE CASCADE ON UPDATE CASCADE);"""
 
 FILE_TABLES = ['images', 'videos', 'slides']
@@ -81,15 +86,18 @@ ADD_PATIENT = "INSERT INTO patients (uid) VALUES (?);"
 ADD_VIDEO = "INSERT INTO videos (uid, filename) VALUES (?, ?);"
 ADD_IMAGE = "INSERT INTO images (uid, filename) VALUES (?, ?);"
 ADD_WSI = "INSERT INTO slides (uid, filename) VALUES (?, ?);"
-ADD_ANNOTATION = "INSERT INTO annotations (annotation_id, frame_number, uid, filename, shape, label) VALUES (?, ?, ?, ?, ?, ?);"
+ADD_ANNOTATION = ("INSERT INTO annotations "
+                  "(annotation_id, frame_number, uid, filename, shape_type, flags, group_id, comment, label) "
+                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);")
 ADD_LABEL = "INSERT INTO labels (uid, label, filename) VALUES (?, ?, ?);"
+ADD_POINTS = "INSERT INTO points (annotation_id, x, y) VALUES (?, ?, ?);"
 
 DELETE_FILE_ANNOTATIONS = "DELETE FROM annotations WHERE annotation_id = ?;"
 
 
 class SQLiteDatabase(QObject):
     """class to control an SQL database. inherits a QObject to enable pyqt-signal transfer"""
-    sUpdate = Signal(list, int, str, list, list)
+    sUpdate = Signal(list, int, str, list, list, dict)
     sImportFile = Signal(list)
     sOpenSettings = Signal(list)
     sApplySettings = Signal(list)
@@ -155,7 +163,7 @@ class SQLiteDatabase(QObject):
             result = self.cursor.execute("SELECT uid FROM patients WHERE uid = ?", (uid,)).fetchone()
         return result[0]
 
-    def create_annotation_entry(self, filename: str, label_dict: dict, label: str, uid: str, frame_number: int = -1):
+    def create_annotation_entry(self, filename: str, label_dict: dict, uid: str, frame_number: int = -1):
         """
         Creates an annotation entry dictionary.
 
@@ -163,8 +171,6 @@ class SQLiteDatabase(QObject):
         :type filename: str
         :param label_dict: The dictionary containing label information.
         :type label_dict: dict
-        :param label: The label for the annotation.
-        :type label: str
         :param uid: The unique identifier for the patient.
         :type uid: str
         :param frame_number: The frame number associated with the annotation, defaults to -1.
@@ -174,11 +180,16 @@ class SQLiteDatabase(QObject):
         """
         annotation_id = str(uuid.uuid4())
         annotation_entry = {'annotation_id': annotation_id,
-                            'filename': filename,
+                            'frame_number': frame_number,
                             'uid': uid,
-                            'shape': pickle.dumps(label_dict),
-                            'label': label,
-                            'frame_number': frame_number}
+                            'filename': filename,
+                            'points': label_dict['points'],
+                            'shape_type': label_dict['shape_type'],
+                            'flags': label_dict['flags'],
+                            'group_id': label_dict['group_id'],
+                            'comment': label_dict['comment'],
+                            'label': label_dict['label']
+                            }
 
         return annotation_entry
 
@@ -194,6 +205,7 @@ class SQLiteDatabase(QObject):
             self.cursor.execute(CREATE_PATIENTS_TABLE)
             self.cursor.execute(CREATE_LABELS_TABLE)
             self.cursor.execute(CREATE_ANNOTATIONS_TABLE)
+            self.cursor.execute(CREATE_POINTS_TABLE)
 
     def delete_file(self, filename: str, cur_img_idx: int):
         """ this method deletes a file from the database and removes all corresponding annotations
@@ -252,7 +264,7 @@ class SQLiteDatabase(QObject):
             label_classes = self.cursor.execute("SELECT label FROM labels").fetchall()
         return [label_class[0] for label_class in label_classes]
 
-    def get_label_from_uid(self, uid, file):
+    def get_labels_for_file(self, uid, file):
         """
         :param image: the image name to be searched in
         :return: a list of all label shapes related to the specified image
@@ -377,7 +389,7 @@ class SQLiteDatabase(QObject):
         in a tuple together with a boolean indicating whether there is at least 1 annotation in the image"""
         result = list()
         for file_uid in files_uid:
-            labels = self.get_label_from_uid(file_uid[0], file_uid[1])
+            labels = self.get_labels_for_file(file_uid[0], file_uid[1])
             populated = True if labels else False
             if moda[file_uid[1]] == Modality.image:
                 file = self.location + Structure.IMAGES_DIR + file_uid[1]
@@ -406,7 +418,7 @@ class SQLiteDatabase(QObject):
             for lbl in current_labels:
                 label_dict, label = lbl.to_dict()
                 self.add_label(file[0], label, file[1])
-                entries.append(self.create_annotation_entry(file[1], label_dict, label, file[0]))
+                entries.append(self.create_annotation_entry(file[1], label_dict, file[0]))
             self.update_image_annotations(entries=entries)
         self.update_gui(img_idx)
 
@@ -426,7 +438,14 @@ class SQLiteDatabase(QObject):
             for entry in entries:
                 if not self.cursor.execute("""SELECT annotation_id FROM annotations WHERE annotation_id = ?""",
                                            (entry['annotation_id'],)).fetchone():
-                    self.cursor.execute(ADD_ANNOTATION, (entry['annotation_id'], entry['frame_number'], entry['uid'], entry['filename'], entry['shape'], entry['label']))
+                    self.cursor.execute(ADD_ANNOTATION, (entry['annotation_id'], entry['frame_number'], entry['uid'],
+                                                         entry['filename'], entry['shape_type'],
+                                                         entry['flags'], entry['group_id'], entry['comment'],
+                                                         entry['label']))
+                    [self.cursor.execute(ADD_POINTS, (entry['annotation_id'], point[0], point[1])) for point
+                     in entry['points'] if not
+                     self.cursor.execute("""SELECT x, y FROM points WHERE annotation_id = ? AND x = ? AND y = ?""",
+                                         (entry['annotation_id'], point[0], point[1])).fetchone()]
 
     def update_gui(self, img_idx: int = 0):
         """gathers all information about the project and updates the database"""
@@ -444,13 +463,37 @@ class SQLiteDatabase(QObject):
 
         if files_uid:
             file = files_uid[img_idx]
-            labels = self.get_label_from_uid(file[0], file[1])
+            labels = self.get_labels_for_file(file[0], file[1])
+            # TODO: Make this work for videos
+            annotations = self.cursor.execute("SELECT annotation_id, shape_type, flags, group_id, comment, label FROM "
+                                              "annotations WHERE uid = ? AND filename = ?",
+                                              (file[0], file[1])).fetchall()
+
+            annotation_ids = [annotation[0] for annotation in annotations]
+
+            annotations_dict = {
+                annotation[0]: {
+                    'shape_type': annotation[1],
+                    'flags': annotation[2],
+                    'group_id': annotation[3],
+                    'comment': annotation[4],
+                    'label': annotation[5]
+                }
+                for annotation in annotations
+            }
+
+            for annotation_id in annotation_ids:
+                points = self.cursor.execute("SELECT x, y FROM points WHERE annotation_id = ?",
+                                             (annotation_id,)).fetchall()
+                annotations_dict[annotation_id]['points'] = points
+
             patient = file[0]
         else:
-            labels, patient = [], ""
+            labels, patient, annotation_ids, annotations_dict = [], "", [], {}
+
         files = self.prepare_files(files_uid, moda)
         classes = self.get_all_labels()
-        self.sUpdate.emit(files, img_idx, patient, classes, labels)
+        self.sUpdate.emit(files, img_idx, patient, classes, annotation_ids, annotations_dict)
 
     def update_labels(self, classes: list):
         """

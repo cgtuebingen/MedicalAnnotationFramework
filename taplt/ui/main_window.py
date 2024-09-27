@@ -324,7 +324,6 @@ class LabelingMainWindow(QMainWindow):
         """stores the current state of the image to the database"""
         annotations = list(self.file_display.annotations.annotations.values())
         self.changes.clear()
-        print(self.file_display.patient_label.text())
         self.sSaveToDatabase.emit(annotations, self.img_idx)
 
     def set_no_files_screen(self, b: bool):
@@ -340,7 +339,7 @@ class LabelingMainWindow(QMainWindow):
         self.right_menu_widget.setHidden(b)
         self.welcome_screen.setHidden(not b)
 
-    def update_window(self, files: list, img_idx, patient: str, classes: list, labels: list):
+    def update_window(self, files: list, img_idx, patient: str, classes: list, annotation_ids: list, annotation_dict: dict):
         """main updating function: all necessary information is passed to the main window"""
         self.img_idx = img_idx
         color_map, new_color = colormap_rgb(n=NUM_COLORS)
@@ -348,7 +347,7 @@ class LabelingMainWindow(QMainWindow):
         self.file_list.update_list(files, self.img_idx)
         if files:
             self.set_no_files_screen(False)
-            current_labels = self.file_display.init_image(files[self.img_idx][0], patient, labels, classes)
+            current_labels = self.file_display.init_image(files[self.img_idx][0], patient, annotation_ids, classes, annotation_dict)
             self.polygons.update_polygons(current_labels)
         else:
             self.set_no_files_screen(True)

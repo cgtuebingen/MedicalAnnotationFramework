@@ -85,7 +85,7 @@ class CenterDisplayWidget(QWidget):
     def get_pixmap_dimensions(self):
         return [self.pixmap.pixmap().width(), self.pixmap.pixmap().height()]
 
-    def init_image(self, filepath: str, patient: str, labels: list, classes: list):
+    def init_image(self, filepath: str, patient: str, annotation_ids: list, classes: list, annotation_dict: dict):
         """initializes the pixmap to display the image in the center widget
         return the current labels as shape objects"""
         self.set_initialized()
@@ -102,17 +102,18 @@ class CenterDisplayWidget(QWidget):
 
         self.pixmap.setPixmap(pixmap)
         
-        labels = [Shape(image_size=self.image_size,
-                        label_dict=_label,
-                        color=self.annotations.get_color_for_label(_label['label']))
-                  for _label in labels]
+        annotations = [Shape(image_size=self.image_size,
+                             annotation_dict=annotation_dict[annotation_id],
+                             annotation_id = annotation_id,
+                        color=self.annotations.get_color_for_label(annotation_dict[annotation_id]['label']))
+                  for annotation_id in annotation_ids]
 
-        self.annotations.update_annotations(labels)
+        self.annotations.update_annotations(annotations)
         self.hide_button.raise_()
 
         self.switch_to_modality(filepath)
         self.patient_label.setText(patient)
-        return labels
+        return annotations
 
     def is_empty(self):
         return self.image_viewer.b_isEmpty
