@@ -421,7 +421,6 @@ class SQLiteDatabase(QObject):
                 self.add_label(file[0], label, file[1])
                 entries.append(self.create_annotation_entry(file[1], label_dict, file[0]))
             self.update_image_annotations(entries=entries)
-        self.update_gui(img_idx)
 
     def send_import_info(self):
         existing_patients = self.get_patients()

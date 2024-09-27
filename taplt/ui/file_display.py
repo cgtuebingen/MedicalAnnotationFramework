@@ -94,6 +94,7 @@ class CenterDisplayWidget(QWidget):
     def init_image(self, filepath: str, patient: str, annotation_ids: list, classes: list, annotation_dict: dict):
         """initializes the pixmap to display the image in the center widget
         return the current labels as shape objects"""
+        # TODO: For some reason this is triggered when saving the annotations to the database and then triggered again when loading the next file
         self.set_initialized()
         self.annotations.classes = classes
 
@@ -116,7 +117,7 @@ class CenterDisplayWidget(QWidget):
                                  annotation_id=annotation_id,
                                  color=self.annotations.get_color_for_label(annotation_dict[annotation_id]['label']),
                                  modality=self.file_type,
-                                 top_left=self.slide_viewer.get_top_left_coords(),
+                                 top_left=QPointF(0, 0),
                                  zoom=self.slide_viewer.cur_downsample)
                            for annotation_id in annotation_ids]
         else:
@@ -157,6 +158,10 @@ class CenterDisplayWidget(QWidget):
         rect = QRectF(QPointF(0, 0), QSizeF(self.image_size))
         self.file_type = modality(filepath)
         self.annotations.set_modality(self.file_type)
+
+        self.image_viewer.resetTransform()
+        self.video_player.resetTransform()
+        self.slide_viewer.resetTransform()
 
         if self.file_type == Modality.image:
             self.slide_viewer.allow_resize = False
