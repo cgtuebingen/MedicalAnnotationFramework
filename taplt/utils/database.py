@@ -282,27 +282,6 @@ class SQLiteDatabase(QObject):
             result = self.cursor.execute("SELECT uid FROM patients").fetchall()
         return [res[0] for res in result]
 
-    # def get_patient_by_filename(self, filename: str, moda: int):
-    #     """returns the corresponding patient uid of an image"""
-    #     if moda == Modality.image:
-    #         with self.connection:
-    #             self.cursor.execute("SELECT uid FROM images WHERE filename = ?", (filename,))
-    #             return self.cursor.fetchone()[0]
-    #     elif moda == Modality.video:
-    #         with self.connection:
-    #             self.cursor.execute("SELECT uid FROM videos WHERE filename = ?", (filename,))
-    #             return self.cursor.fetchone()[0]
-    #     elif moda == Modality.slide:
-    #         with self.connection:
-    #             self.cursor.execute("SELECT uid FROM slides WHERE filename = ?", (filename,))
-    #             return self.cursor.fetchone()[0]
-
-    # TODO: This is deprecated
-    # def get_patient_by_uid(self, patient_uid: int):
-    #     """returns the id/patient info from the patients table by the corresponding uid"""
-    #     self.cursor.execute("SELECT some_id FROM patients WHERE uid = ?", (patient_uid,))
-    #     return self.cursor.fetchone()[0]
-
     def get_settings(self):
         """retrieves the values stored in the settings file"""
         settings = list()
@@ -311,41 +290,6 @@ class SQLiteDatabase(QObject):
             tooltip = get_tooltip(key)
             settings.append((key, value, tooltip))
         return settings
-
-    # def get_uid_from_filename(self, table_name: str, filename: str) -> int:
-    #     """
-    #     :param table_name: videos, images, or whole slide images
-    #     :param filename: name of the file
-    #     :return: the uid which is related to the specified file
-    #     """
-    #     with self.connection:
-    #         query = f"SELECT uid FROM {table_name} WHERE filename = ?"
-    #         self.cursor.execute(query, (filename,))
-    #         result = self.cursor.fetchone()
-    #     return result[0] if result is not None else None
-
-    # def get_uids_from_filename(self, filename: str) -> tuple:
-    #     """
-    #     :param filename: name of the file
-    #     :return: a tuple holding: modality uid (video/image/whole slide image) and file uid
-    #     """
-    #     modality, file = None, None
-    #     for i, table_name in enumerate(self.file_tables):
-    #         file = self.get_uid_from_filename(table_name, filename)
-    #         if file is not None:
-    #             modality = i
-    #             break
-    #     return modality, file
-
-    # def get_uid_from_label(self, label: str) -> int:
-    #     """
-    #     :param label: the label class to get the uid from
-    #     :return: the uid of the label class if existing
-    #     """
-    #     with self.connection:
-    #         self.cursor.execute("""SELECT uid FROM labels WHERE label_class = ?""", (label,))
-    #         result = self.cursor.fetchone()
-    #     return result[0] if result is not None else None
 
     def initialize(self, database_path: str, files: dict = None):
         """

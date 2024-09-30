@@ -74,8 +74,9 @@ class CenterDisplayWidget(QWidget):
         if self.annotations.mode == AnnotationGroup.AnnotationMode.DRAW:
             if event.button() == Qt.MouseButton.LeftButton:
                 if self.file_type == Modality.slide:
-                    self.annotations.create_shape_for_slide(self.slide_viewer.get_top_left_coords(),
-                                                            self.slide_viewer.cur_downsample)
+                    self.annotations.create_shape_for_slide(self.slide_viewer.anchor_point,
+                                                            self.slide_viewer.cur_downsample,
+                                                            QPointF(self.slide_viewer.width, self.slide_viewer.height))
                 else:
                     self.annotations.create_shape()
         event.accept()
@@ -112,13 +113,15 @@ class CenterDisplayWidget(QWidget):
         self.pixmap.setPixmap(pixmap)
 
         if self.file_type == Modality.slide:
+            # print(self.slide_viewer.cur_downsample)
             annotations = [Shape(image_size=self.image_size,
                                  annotation_dict=annotation_dict[annotation_id],
                                  annotation_id=annotation_id,
                                  color=self.annotations.get_color_for_label(annotation_dict[annotation_id]['label']),
                                  modality=self.file_type,
-                                 top_left=QPointF(0, 0),
-                                 zoom=self.slide_viewer.cur_downsample)
+                                 anchor_dist=QPointF(0, 0),
+                                 zoom=self.slide_viewer.cur_downsample,
+                                 offset=QPointF(self.slide_viewer.width, self.slide_viewer.height))
                            for annotation_id in annotation_ids]
         else:
             annotations = [Shape(image_size=self.image_size,
@@ -171,6 +174,7 @@ class CenterDisplayWidget(QWidget):
 
             self.video_player.pause()
 
+            self.image_viewer.image_size = self.image_size
             self.image_viewer.fitInView(rect)
 
         elif self.file_type == Modality.video:

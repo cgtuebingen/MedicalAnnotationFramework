@@ -66,7 +66,7 @@ class AnnotationGroup(QGraphicsObject):
         else:
             pass
 
-    def create_shape_for_slide(self, top_left: QPoint, zoom: float):
+    def create_shape_for_slide(self, top_left: QPoint, zoom: float, offset: QPointF):
         if not self.drawing:
             self.drawing = True
             s = self.scene()  # type: QGraphicsScene
@@ -75,8 +75,9 @@ class AnnotationGroup(QGraphicsObject):
                                     mode=Shape.ShapeMode.CREATE,
                                     color=self.draw_new_color,
                                     modality=self.modality,
-                                    top_left=top_left,
-                                    zoom=zoom)
+                                    anchor_dist=top_left,
+                                    zoom=zoom,
+                                    offset=offset)
             self.add_shapes(self.temp_shape)
             self.temp_shape.drawingDone.connect(self.set_drawing_to_false)
             self.sToolTip.emit("Press right click to end the annotation.")

@@ -49,8 +49,9 @@ class Shape(QGraphicsObject):
                  annotation_id: str = None,
                  mode: ShapeMode = ShapeMode.FIXED,
                  modality = None,
-                 top_left: QPointF = QPoint(0, 0),
-                 zoom: float = 1.0):
+                 anchor_dist: QPointF = QPoint(0, 0),
+                 zoom: float = 1.0,
+                 offset: QPointF = QPointF(0, 0)):
         super(Shape, self).__init__()
 
         _points = points if points else []
@@ -61,8 +62,9 @@ class Shape(QGraphicsObject):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setAcceptHoverEvents(True)
         self.modality = modality
-        self.top_left = top_left
+        self.anchor_dist = anchor_dist
         self.zoom = zoom
+        self.offset = offset
 
         # prioritize label dict
         if annotation_dict:
@@ -71,8 +73,8 @@ class Shape(QGraphicsObject):
             if 'points' in annotation_dict:
                 if self.modality == Modality.slide:
                     self.true_vertices = [QPointF(_pt[1], _pt[2]) for _pt in annotation_dict['points']]
-                    _points = [QPointF((_pt.x() - self.top_left.x())/self.zoom,
-                                       (_pt.y() - self.top_left.y())/self.zoom)
+                    _points = [QPointF((_pt.x() - self.anchor_dist.x()) / self.zoom + self.offset.x(),
+                                       (_pt.y() - self.anchor_dist.y()) / self.zoom + self.offset.y())
                                for _pt in self.true_vertices]
                 else:
                     _points = [QPointF(_pt[1], _pt[2]) for _pt in annotation_dict['points']]
@@ -140,12 +142,11 @@ class Shape(QGraphicsObject):
             if math.sqrt(delta.x() ** 2 + delta.y() ** 2) > 3:
                 if self.shape_type in ["polygon", "tempTrace", "trace"] or len(self.vertices.vertices) <= 1:
                     if self.modality == Modality.slide:
-                        # TODO: Save positions relative to slide level 0
-                        # TODO: Find a way to get the slide level and vertex positions on level 0
                         scene_pos = self.check_out_of_bounds(event.scenePos())
-                        vertex = QPointF(scene_pos.x() * self.zoom + self.top_left.x(),
-                                         scene_pos.y() * self.zoom + self.top_left.y())
                         self.vertices.vertices.append(scene_pos)
+                        vertex = QPointF((scene_pos.x() - self.offset.x()) * self.zoom + self.anchor_dist.x(),
+                                         (scene_pos.y() - self.offset.y()) * self.zoom + self.anchor_dist.y())
+                       # print(f"vertex: {vertex}, scene pos {scene_pos}, top_left {self.anchor_dist}, zoom {self.zoom}")
                         self.true_vertices.append(vertex)
                     else:
                         self.vertices.vertices.append(self.check_out_of_bounds(event.scenePos()))
