@@ -12,6 +12,8 @@ from taplt.utils.qt import get_icon
 from taplt.utils.project_structure import modality, Modality
 
 
+# TODO: We need to store the current top_left corner when we switch modality in the database that way we can guarantee that the annotations are loaded correctly
+
 class CenterDisplayWidget(QWidget):
     """ widget to manage the central display in the GUI
     controls a QGraphicsView and a QGraphicsScene for drawing on top of a pixmap """
@@ -44,7 +46,7 @@ class CenterDisplayWidget(QWidget):
         self.scene.addItem(self.annotations)
         self.annotations.sToolTip.connect(self.sDrawingTooltip.emit)
 
-       # self.slide_viewer.pix_move_compensated.connect(self.annotations.pixmap_compensation)
+        # self.slide_viewer.pix_move_compensated.connect(self.annotations.pixmap_compensation)
 
         # QLabel displaying the patient's id/name/alias
         self.patient_label = QLabel()
@@ -71,7 +73,12 @@ class CenterDisplayWidget(QWidget):
     def mousePressEvent(self, event: QMouseEvent):
         if self.annotations.mode == AnnotationGroup.AnnotationMode.DRAW:
             if event.button() == Qt.MouseButton.LeftButton:
-                self.annotations.create_shape()
+                if self.file_type == Modality.slide:
+                    self.annotations.create_shape_for_slide(self.slide_viewer.anchor_point,
+                                                            self.slide_viewer.cur_downsample,
+                                                            QPointF(self.slide_viewer.width, self.slide_viewer.height))
+                else:
+                    self.annotations.create_shape()
         event.accept()
 
     def clear(self):
@@ -85,9 +92,10 @@ class CenterDisplayWidget(QWidget):
     def get_pixmap_dimensions(self):
         return [self.pixmap.pixmap().width(), self.pixmap.pixmap().height()]
 
-    def init_image(self, filepath: str, patient: str, labels: list, classes: list):
+    def init_image(self, filepath: str, patient: str, annotation_ids: list, classes: list, annotation_dict: dict):
         """initializes the pixmap to display the image in the center widget
         return the current labels as shape objects"""
+        # TODO: For some reason this is triggered when saving the annotations to the database and then triggered again when loading the next file
         self.set_initialized()
         self.annotations.classes = classes
 
@@ -100,19 +108,34 @@ class CenterDisplayWidget(QWidget):
             pixmap = QPixmap()
             self.image_size = self.slide_viewer.frameRect().size()
 
-        self.pixmap.setPixmap(pixmap)
-        
-        labels = [Shape(image_size=self.image_size,
-                        label_dict=_label,
-                        color=self.annotations.get_color_for_label(_label['label']))
-                  for _label in labels]
+        self.switch_to_modality(filepath)
 
-        self.annotations.update_annotations(labels)
+        self.pixmap.setPixmap(pixmap)
+
+        if self.file_type == Modality.slide:
+            # print(self.slide_viewer.cur_downsample)
+            annotations = [Shape(image_size=self.image_size,
+                                 annotation_dict=annotation_dict[annotation_id],
+                                 annotation_id=annotation_id,
+                                 color=self.annotations.get_color_for_label(annotation_dict[annotation_id]['label']),
+                                 modality=self.file_type,
+                                 anchor_dist=QPointF(0, 0),
+                                 zoom=self.slide_viewer.cur_downsample,
+                                 offset=QPointF(self.slide_viewer.width, self.slide_viewer.height))
+                           for annotation_id in annotation_ids]
+        else:
+            annotations = [Shape(image_size=self.image_size,
+                                 annotation_dict=annotation_dict[annotation_id],
+                                 annotation_id=annotation_id,
+                                 color=self.annotations.get_color_for_label(annotation_dict[annotation_id]['label']),
+                                 modality=self.file_type)
+                           for annotation_id in annotation_ids]
+
+        self.annotations.update_annotations(annotations)
         self.hide_button.raise_()
 
-        self.switch_to_modality(filepath)
         self.patient_label.setText(patient)
-        return labels
+        return annotations
 
     def is_empty(self):
         return self.image_viewer.b_isEmpty
@@ -139,17 +162,23 @@ class CenterDisplayWidget(QWidget):
         self.file_type = modality(filepath)
         self.annotations.set_modality(self.file_type)
 
+        self.image_viewer.resetTransform()
+        self.video_player.resetTransform()
+        self.slide_viewer.resetTransform()
+
         if self.file_type == Modality.image:
-            self.modalitySwitched.emit('image')
+            self.slide_viewer.allow_resize = False
             self.image_viewer.setHidden(False)
             self.video_player.setHidden(True)
             self.slide_viewer.setHidden(True)
 
             self.video_player.pause()
 
+            self.image_viewer.image_size = self.image_size
             self.image_viewer.fitInView(rect)
 
         elif self.file_type == Modality.video:
+            self.slide_viewer.allow_resize = False
             self.modalitySwitched.emit('video')
 
             self.image_viewer.setHidden(True)
@@ -162,7 +191,7 @@ class CenterDisplayWidget(QWidget):
             self.video_player.play()
 
         elif self.file_type == Modality.slide:
-
+            self.slide_viewer.allow_resize = True
             self.modalitySwitched.emit('slide')
 
             self.image_viewer.setHidden(True)

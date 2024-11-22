@@ -66,6 +66,25 @@ class AnnotationGroup(QGraphicsObject):
         else:
             pass
 
+    def create_shape_for_slide(self, top_left: QPoint, zoom: float, offset: QPointF):
+        if not self.drawing:
+            self.drawing = True
+            s = self.scene()  # type: QGraphicsScene
+            self.temp_shape = Shape(image_size=QSize(int(s.width()), int(s.height())),
+                                    shape_type=self.shapeType,
+                                    mode=Shape.ShapeMode.CREATE,
+                                    color=self.draw_new_color,
+                                    modality=self.modality,
+                                    anchor_dist=top_left,
+                                    zoom=zoom,
+                                    offset=offset)
+            self.add_shapes(self.temp_shape)
+            self.temp_shape.drawingDone.connect(self.set_drawing_to_false)
+            self.sToolTip.emit("Press right click to end the annotation.")
+            self.temp_shape.grabMouse()
+        else:
+            pass
+
     def get_color_for_label(self, label_name: str):
         r"""Get a Color based on a label_name"""
         if label_name not in self.classes:
@@ -184,13 +203,13 @@ class AnnotationGroup(QGraphicsObject):
         """
         self.modality = modality
 
-    def update_annotations(self, current_labels: List[Shape]):
+    def update_annotations(self, current_annotations: List[Shape]):
         self.clear()
 
         # for some reason, bugs emerge when you pass the labels as a list
-        for lbl in current_labels:
-            self.add_shapes(lbl)
-        self.updateShapes.emit(current_labels)
+        for annotation in current_annotations:
+            self.add_shapes(annotation)
+        self.updateShapes.emit(current_annotations)
 
     @Slot(QPointF)
     def pixmap_compensation(self, compensation: QPointF):

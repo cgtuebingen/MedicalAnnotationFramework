@@ -4,6 +4,7 @@ import pickle
 import pathlib
 import shutil
 import os
+import uuid
 
 from typing import List, Union
 from taplt.utils.project_structure import modality, create_project_structure, Structure, Modality
@@ -11,74 +12,93 @@ from taplt.utils.settings import SETTINGS, get_tooltip
 
 from PySide6.QtCore import Signal, QObject, QSettings
 
-# TODO: 'file' value references the uid in either 'videos', 'images', or 'whole slide images'
-#  (depends on 'modality' value),
-#  therefore no foreign key constraint here; need to implement it somewhere else (?)
-CREATE_ANNOTATIONS_TABLE = """
-    CREATE TABLE IF NOT EXISTS annotations (
-    uid INTEGER PRIMARY KEY,
-    modality INTEGER NOT NULL,
-    file INTEGER NOT NULL,
-    patient INTEGER NOT NULL,
-    shape BLOB,
-    label INTEGER NOT NULL,
-    FOREIGN KEY (patient) REFERENCES patients(uid),
-    FOREIGN KEY (label) REFERENCES labels(uid));"""
-
-CREATE_VIDEOS_TABLE = """
-    CREATE TABLE IF NOT EXISTS videos (
-    uid INTEGER PRIMARY KEY,
-    filename TEXT NOT NULL UNIQUE,
-    patient INTEGER,
-    FOREIGN KEY (patient) REFERENCES patients(uid));"""
-
-CREATE_IMAGES_TABLE = """
-    CREATE TABLE IF NOT EXISTS images (
-    uid INTEGER PRIMARY KEY,
-    filename TEXT NOT NULL UNIQUE,
-    patient INTEGER,
-    FOREIGN KEY (patient) REFERENCES patients(uid));"""
-
-CREATE_WSI_TABLE = """
-    CREATE TABLE IF NOT EXISTS 'slides' (
-    uid INTEGER PRIMARY KEY,
-    filename TEXT NOT NULL UNIQUE,
-    patient INTEGER,
-    biopsy_id INTEGER,
-    year INTEGER,
-    staining TEXT,
-    width INTEGER,
-    height INTEGER,
-    manufacturer TEXT,
-    institution TEXT,
-    FOREIGN KEY (patient) REFERENCES patients(uid));"""
-
-FILE_TABLES = ['images', 'videos', 'slides']
+# uid is the unique patent id, and therefore it needs to be a string, since most of the ids are hashes
 
 CREATE_PATIENTS_TABLE = """
     CREATE TABLE IF NOT EXISTS patients (
-    uid INTEGER PRIMARY KEY,
-    some_id INTEGER UNIQUE,
-    another_id INTEGER);"""
+        uid TEXT PRIMARY KEY);"""
+
+CREATE_VIDEOS_TABLE = """
+    CREATE TABLE IF NOT EXISTS videos (
+        uid TEXT,
+        filename TEXT NOT NULL,
+        PRIMARY KEY (uid, filename),
+        FOREIGN KEY (uid) REFERENCES patients(uid)
+            ON DELETE CASCADE ON UPDATE CASCADE);"""
+
+CREATE_IMAGES_TABLE = """
+    CREATE TABLE IF NOT EXISTS images (
+        uid TEXT,
+        filename TEXT NOT NULL,
+        PRIMARY KEY (uid, filename),
+        FOREIGN KEY (uid) REFERENCES patients(uid)
+            ON DELETE CASCADE ON UPDATE CASCADE);"""
+
+CREATE_WSI_TABLE = """
+    CREATE TABLE IF NOT EXISTS slides (
+        uid TEXT,
+        filename TEXT NOT NULL,
+        biopsy_id INTEGER,
+        year INTEGER,
+        staining TEXT,
+        width INTEGER,
+        height INTEGER,
+        manufacturer TEXT,
+        institution TEXT,
+        PRIMARY KEY (uid, filename),
+        FOREIGN KEY (uid) REFERENCES patients(uid)
+            ON DELETE CASCADE ON UPDATE CASCADE);"""
+
+# TODO: Add foreign key constraints for uid and filename so that it references only one table
+CREATE_ANNOTATIONS_TABLE = """
+    CREATE TABLE IF NOT EXISTS annotations (
+        annotation_id TEXT PRIMARY KEY,
+        frame_number INTEGER,
+        uid TEXT,
+        filename TEXT NOT NULL,
+        shape_type TEXT NOT NULL,
+        flags BLOB,
+        group_id TEXT,
+        comment TEXT,
+        label TEXT NOT NULL);"""
 
 CREATE_LABELS_TABLE = """
     CREATE TABLE IF NOT EXISTS labels (
-    uid INTEGER PRIMARY KEY,
-    label_class TEXT NOT NULL UNIQUE);"""
+        uid TEXT,
+        label TEXT NOT NULL,
+        filename TEXT,
+        PRIMARY KEY (uid, label, filename)
+        FOREIGN KEY (uid) REFERENCES patients(uid)
+            ON DELETE CASCADE ON UPDATE CASCADE);"""
 
-ADD_ANNOTATION = "INSERT INTO annotations (modality, file, patient, shape, label) VALUES (?, ?, ?, ?, ?);"
-ADD_VIDEO = "INSERT INTO videos (filename, patient) VALUES (?, ?);"
-ADD_IMAGE = "INSERT INTO images (filename, patient) VALUES (?, ?);"
-ADD_WSI = "INSERT INTO 'slides' (filename, patient) VALUES (?, ?);"
-ADD_PATIENT = "INSERT INTO patients (some_id, another_id) VALUES (?, ?);"
-ADD_LABEL = "INSERT INTO labels (label_class) VALUES (?);"
+CREATE_POINTS_TABLE = """
+    CREATE TABLE IF NOT EXISTS points (
+        annotation_id TEXT,
+        vertex_id INTEGER,
+        x FLOAT,
+        y FLOAT,
+        PRIMARY KEY (annotation_id, x, y),
+        FOREIGN KEY (annotation_id) REFERENCES annotations(annotation_id)
+            ON DELETE CASCADE ON UPDATE CASCADE);"""
 
-DELETE_FILE_ANNOTATIONS = "DELETE FROM annotations WHERE modality = ? AND file = ?"
+FILE_TABLES = ['images', 'videos', 'slides']
+
+ADD_PATIENT = "INSERT INTO patients (uid) VALUES (?);"
+ADD_VIDEO = "INSERT INTO videos (uid, filename) VALUES (?, ?);"
+ADD_IMAGE = "INSERT INTO images (uid, filename) VALUES (?, ?);"
+ADD_WSI = "INSERT INTO slides (uid, filename) VALUES (?, ?);"
+ADD_ANNOTATION = ("INSERT INTO annotations "
+                  "(annotation_id, frame_number, uid, filename, shape_type, flags, group_id, comment, label) "
+                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);")
+ADD_LABEL = "INSERT INTO labels (uid, label, filename) VALUES (?, ?, ?);"
+ADD_POINTS = "INSERT INTO points (annotation_id, vertex_id, x, y) VALUES (?, ?, ?, ?);"
+
+DELETE_FILE_ANNOTATIONS = "DELETE FROM annotations WHERE annotation_id = ?;"
 
 
 class SQLiteDatabase(QObject):
     """class to control an SQL database. inherits a QObject to enable pyqt-signal transfer"""
-    sUpdate = Signal(list, int, str, list, list)
+    sUpdate = Signal(list, int, str, list, list, dict)
     sImportFile = Signal(list)
     sOpenSettings = Signal(list)
     sApplySettings = Signal(list)
@@ -94,64 +114,83 @@ class SQLiteDatabase(QObject):
         self.settings = None  # type: QSettings
         self.database_path = "none"
 
-    def add_annotation(self, modality: int, file: int, patient: int, shape: bytes, label: int):
+    def add_annotation(self, frame_number: int, uid: int, file: str, shape: dict, label: str):
         """ adds an entry to the annotation table using the parameter values"""
         with self.connection:
-            self.cursor.execute(ADD_ANNOTATION, (modality, file, patient, shape, label))
+            self.cursor.execute(ADD_ANNOTATION, (frame_number, uid, file, shape, label))
 
-    def add_file(self, filepath: str, patient: str):
+    def add_file(self, filepath: str, uid: str):
         """
         adds a file to the database
         :param filepath: the name of the file to be added
-        :param patient: a patient id which may be added to the database
+        :param uid: a patient id which may be added to the database
         """
         with self.connection:
 
             # check if patient already exists, add if necessary
-            p = self.cursor.execute("""SELECT uid FROM patients WHERE some_id = ?""", (patient,)).fetchone()
-            patient = p[0] if p else self.add_patient(patient)
+            p = self.cursor.execute("""SELECT uid FROM patients WHERE uid = ?""", (uid,)).fetchone()
+            uid = p[0] if p else self.add_patient(uid)
             mod = modality(filepath)
 
             # copy to project location and add to database
             if mod == Modality.video:
                 shutil.copy(filepath, self.location + Structure.VIDEOS_DIR)
-                self.cursor.execute(ADD_VIDEO, (os.path.basename(filepath), patient))
+                self.cursor.execute(ADD_VIDEO, (uid, os.path.basename(filepath)))
             elif mod == Modality.image:
                 shutil.copy(filepath, self.location + Structure.IMAGES_DIR)
-                self.cursor.execute(ADD_IMAGE, (os.path.basename(filepath), patient))
+                self.cursor.execute(ADD_IMAGE, (uid, os.path.basename(filepath)))
             elif mod == Modality.slide:
                 shutil.copy(filepath, self.location + Structure.SLIDES_DIR)
-                self.cursor.execute(ADD_WSI, (os.path.basename(filepath), patient))
+                self.cursor.execute(ADD_WSI, (uid, os.path.basename(filepath)))
 
-    def add_label(self, label_class: str):
+    def add_label(self, uid: str, label: str, filename: str):
         """ add a new label class to database"""
         with self.connection:
             # make sure label does not already exist
-            if self.cursor.execute("SELECT uid FROM labels WHERE label_class = ?", (label_class,)).fetchone():
+            if self.cursor.execute("SELECT label FROM labels WHERE uid = ? AND filename = ?",
+                                   (uid, filename)).fetchone():
                 return
-            self.cursor.execute(ADD_LABEL, (label_class,))
+            self.cursor.execute(ADD_LABEL, (uid, label, filename))
 
-    def add_patient(self, some_id: str, another_id: str = "2"):
+    def add_patient(self, uid: str):
         """ add a new patient to database
         returns the uid of the new patient"""
         with self.connection:
             # make sure patient does not already exist
-            if self.cursor.execute("SELECT uid FROM patients WHERE some_id = ?", (some_id,)).fetchone():
+            if self.cursor.execute("SELECT uid FROM patients WHERE uid = ?", (uid,)).fetchone():
                 return
-            self.cursor.execute(ADD_PATIENT, (some_id, another_id))
-            result = self.cursor.execute("SELECT uid FROM patients WHERE some_id = ?", (some_id,)).fetchone()
+            self.cursor.execute(ADD_PATIENT, (uid,))
+            # TODO: Why is this step necessary? We can just return the uid
+            result = self.cursor.execute("SELECT uid FROM patients WHERE uid = ?", (uid,)).fetchone()
         return result[0]
 
-    def create_annotation_entry(self, filename: str, label_dict: dict, label_class: str):
-        mod, file_uid = self.get_uids_from_filename(filename)
-        patient_uid = self.get_patient_by_filename(filename, mod)
-        label_class = self.get_uid_from_label(label_class)
+    def create_annotation_entry(self, filename: str, label_dict: dict, uid: str, frame_number: int = -1):
+        """
+        Creates an annotation entry dictionary.
 
-        annotation_entry = {'modality': mod,
-                            'file': file_uid,
-                            'patient': patient_uid,
-                            'shape': pickle.dumps(label_dict),
-                            'label': label_class}
+        :param filename: The name of the file associated with the annotation.
+        :type filename: str
+        :param label_dict: The dictionary containing label information.
+        :type label_dict: dict
+        :param uid: The unique identifier for the patient.
+        :type uid: str
+        :param frame_number: The frame number associated with the annotation, defaults to -1.
+        :type frame_number: int, optional
+        :return: A dictionary representing the annotation entry.
+        :rtype: dict
+        """
+        annotation_id = str(uuid.uuid4())
+        annotation_entry = {'annotation_id': annotation_id,
+                            'frame_number': frame_number,
+                            'uid': uid,
+                            'filename': filename,
+                            'points': label_dict['points'],
+                            'shape_type': label_dict['shape_type'],
+                            'flags': label_dict['flags'],
+                            'group_id': label_dict['group_id'],
+                            'comment': label_dict['comment'],
+                            'label': label_dict['label']
+                            }
 
         return annotation_entry
 
@@ -167,6 +206,7 @@ class SQLiteDatabase(QObject):
             self.cursor.execute(CREATE_PATIENTS_TABLE)
             self.cursor.execute(CREATE_LABELS_TABLE)
             self.cursor.execute(CREATE_ANNOTATIONS_TABLE)
+            self.cursor.execute(CREATE_POINTS_TABLE)
 
     def delete_file(self, filename: str, cur_img_idx: int):
         """ this method deletes a file from the database and removes all corresponding annotations
@@ -202,67 +242,45 @@ class SQLiteDatabase(QObject):
     def get_images(self) -> list:
         """ returns a list of all image names which are currently stored in the database"""
         with self.connection:
-            image_paths = self.cursor.execute("SELECT filename FROM images").fetchall()
-        return [image_path[0] for image_path in image_paths]
+            images = self.cursor.execute("SELECT uid, filename FROM images").fetchall()
+        return [(image[0], image[1]) for image in images]
 
     def get_videos(self) -> list:
         """ returns a list of all video names which are currently stored in the database"""
         with self.connection:
-            video_paths = self.cursor.execute("SELECT filename FROM videos").fetchall()
-        return [video_path[0] for video_path in video_paths]
+            videos = self.cursor.execute("SELECT uid, filename FROM videos").fetchall()
+        return [(video[0], video[1]) for video in videos]
 
     def get_slides(self) -> list:
         """ returns a list of all wsi names which are currently stored in the database"""
         with self.connection:
-            wsi_paths = self.cursor.execute("SELECT filename FROM slides").fetchall()
-        return [wsi_path[0] for wsi_path in wsi_paths]
+            wsis = self.cursor.execute("SELECT uid, filename FROM slides").fetchall()
+        return [(wsi[0], wsi[1]) for wsi in wsis]
 
-    def get_label_classes(self) -> list:
+    def get_all_labels(self) -> list:
         """
         :return: a list of all label classes which are currently stored in the database
         """
         with self.connection:
-            label_classes = self.cursor.execute("SELECT label_class FROM labels").fetchall()
+            label_classes = self.cursor.execute("SELECT label FROM labels").fetchall()
         return [label_class[0] for label_class in label_classes]
 
-    def get_label_from_file(self, image: str, moda=0):
+    def get_labels_for_file(self, uid, file):
         """
         :param image: the image name to be searched in
         :return: a list of all label shapes related to the specified image
         """
         with self.connection:
-            table = self.file_tables[moda]
-            image_id = self.get_uid_from_filename(table, image)
-            labels = self.cursor.execute("""SELECT shape FROM annotations
-                                            WHERE modality = ? AND file = ?""", (moda, image_id,)).fetchall()
+            labels = self.cursor.execute("""SELECT label FROM labels
+                                            WHERE uid = ? AND filename = ?""", (uid, file)).fetchall()
 
         return check_for_bytes(labels)
 
     def get_patients(self):
-        """returns all patient ids (not the uids)"""
+        """returns all patient uids"""
         with self.connection:
-            result = self.cursor.execute("SELECT some_id FROM patients").fetchall()
+            result = self.cursor.execute("SELECT uid FROM patients").fetchall()
         return [res[0] for res in result]
-
-    def get_patient_by_filename(self, filename: str, moda: int):
-        """returns the corresponding patient uid of an image"""
-        if moda == Modality.image:
-            with self.connection:
-                self.cursor.execute("SELECT patient FROM images WHERE filename = ?", (filename,))
-                return self.cursor.fetchone()[0]
-        elif moda == Modality.video:
-            with self.connection:
-                self.cursor.execute("SELECT patient FROM videos WHERE filename = ?", (filename,))
-                return self.cursor.fetchone()[0]
-        elif moda == Modality.slide:
-            with self.connection:
-                self.cursor.execute("SELECT patient FROM 'slides' WHERE filename = ?", (filename,))
-                return self.cursor.fetchone()[0]
-
-    def get_patient_by_uid(self, patient_uid: int):
-        """returns the id/patient info from the patients table by the corresponding uid"""
-        self.cursor.execute("SELECT some_id FROM patients WHERE uid = ?", (patient_uid,))
-        return self.cursor.fetchone()[0]
 
     def get_settings(self):
         """retrieves the values stored in the settings file"""
@@ -272,41 +290,6 @@ class SQLiteDatabase(QObject):
             tooltip = get_tooltip(key)
             settings.append((key, value, tooltip))
         return settings
-
-    def get_uid_from_filename(self, table_name: str, filename: str) -> int:
-        """
-        :param table_name: videos, images, or whole slide images
-        :param filename: name of the file
-        :return: the uid which is related to the specified file
-        """
-        with self.connection:
-            query = "SELECT uid FROM " + table_name + " WHERE filename = ?"
-            self.cursor.execute(query, (filename,))
-            result = self.cursor.fetchone()
-        return result[0] if result is not None else None
-
-    def get_uids_from_filename(self, filename: str) -> tuple:
-        """
-        :param filename: name of the file
-        :return: a tuple holding: modality uid (video/image/whole slide image) and file uid
-        """
-        modality, file = None, None
-        for i, table_name in enumerate(self.file_tables):
-            file = self.get_uid_from_filename(table_name, filename)
-            if file is not None:
-                modality = i
-                break
-        return modality, file
-
-    def get_uid_from_label(self, label: str) -> int:
-        """
-        :param label: the label class to get the uid from
-        :return: the uid of the label class if existing
-        """
-        with self.connection:
-            self.cursor.execute("""SELECT uid FROM labels WHERE label_class = ?""", (label,))
-            result = self.cursor.fetchone()
-        return result[0] if result is not None else None
 
     def initialize(self, database_path: str, files: dict = None):
         """
@@ -346,19 +329,19 @@ class SQLiteDatabase(QObject):
         settings = self.get_settings()
         self.sOpenSettings.emit(settings)
 
-    def prepare_files(self, files: list, moda: dict) -> list:
+    def prepare_files(self, files_uid: list, moda: dict) -> list:
         """goes through all filenames and returns them as full paths,
         in a tuple together with a boolean indicating whether there is at least 1 annotation in the image"""
         result = list()
-        for file in files:
-            labels = self.get_label_from_file(file)
+        for file_uid in files_uid:
+            labels = self.get_labels_for_file(file_uid[0], file_uid[1])
             populated = True if labels else False
-            if moda[file] == Modality.image:
-                file = self.location + Structure.IMAGES_DIR + file
-            elif moda[file] == Modality.video:
-                file = self.location + Structure.VIDEOS_DIR + file
+            if moda[file_uid[1]] == Modality.image:
+                file = self.location + Structure.IMAGES_DIR + file_uid[1]
+            elif moda[file_uid[1]] == Modality.video:
+                file = self.location + Structure.VIDEOS_DIR + file_uid[1]
             else:
-                file = self.location + Structure.SLIDES_DIR + file
+                file = self.location + Structure.SLIDES_DIR + file_uid[1]
             result.append((file, populated))
         return result
 
@@ -371,64 +354,90 @@ class SQLiteDatabase(QObject):
         self.sPreviewDatabase.emit(headers, content)
 
     def save(self, current_labels: list, img_idx: int):
-        files = self.get_images()
-        files += self.get_videos()
-        files += self.get_slides()
-        if files:
-            file = files[img_idx]
+        files_uid = self.get_images()
+        files_uid += self.get_videos()
+        files_uid += self.get_slides()
+        if files_uid:
+            file = files_uid[img_idx]
             entries = list()
             for lbl in current_labels:
-                label_dict, label_class = lbl.to_dict()
-                self.add_label(label_class)
-                entries.append(self.create_annotation_entry(file, label_dict, label_class))
-            self.update_image_annotations(image_name=file, entries=entries)
-        self.update_gui(img_idx)
+                label_dict, label = lbl.to_dict()
+                self.add_label(file[0], label, file[1])
+                entries.append(self.create_annotation_entry(file[1], label_dict, file[0]))
+            self.update_image_annotations(entries=entries)
 
     def send_import_info(self):
         existing_patients = self.get_patients()
         self.sImportFile.emit(existing_patients)
 
-    def update_image_annotations(self, image_name: str, entries: list):
+    def update_image_annotations(self, entries: list):
         """
         updates the annotations associated with a given image
         :param image_name: the image to be updated
         :param entries: list of dictionaries representing the annotation entries
         """
         with self.connection:
-
-            # delete all currently stored annotations for the image
-            modality, file = self.get_uids_from_filename(image_name)
-            self.cursor.execute("""DELETE FROM annotations WHERE modality = ?
-                                AND file = ?""", (modality, file))
-
             # add new, updated list of annotations
+            self.cursor.execute("PRAGMA foreign_keys = ON;")
             for entry in entries:
-                self.cursor.execute("""INSERT INTO annotations (modality, file, patient, shape, label) 
-                    VALUES (:modality, :file, :patient, :shape, :label)""", entry)
+                if not self.cursor.execute("""SELECT annotation_id FROM annotations WHERE annotation_id = ?""",
+                                           (entry['annotation_id'],)).fetchone():
+                    self.cursor.execute(ADD_ANNOTATION, (entry['annotation_id'], entry['frame_number'], entry['uid'],
+                                                         entry['filename'], entry['shape_type'],
+                                                         entry['flags'], entry['group_id'], entry['comment'],
+                                                         entry['label']))
+                    [self.cursor.execute(ADD_POINTS, (entry['annotation_id'], i, point[0], point[1])) for i, point
+                     in enumerate(entry['points']) if not
+                     self.cursor.execute("""SELECT x, y FROM points WHERE annotation_id = ? AND x = ? AND y = ?""",
+                                         (entry['annotation_id'], point[0], point[1])).fetchone()]
 
     def update_gui(self, img_idx: int = 0):
         """gathers all information about the project and updates the database"""
-        images = self.get_images()
-        videos = self.get_videos()
-        slides = self.get_slides()
+        images_uid = self.get_images()
+        videos_uid = self.get_videos()
+        slides_uid = self.get_slides()
 
-        moda = {image: Modality.image for image in images}
-        moda.update({video: Modality.video for video in videos})
-        moda.update({slide: Modality.slide for slide in slides})
+        moda = {image[1]: Modality.image for image in images_uid}
+        moda.update({video[1]: Modality.video for video in videos_uid})
+        moda.update({slide[1]: Modality.slide for slide in slides_uid})
 
-        files = images
-        files.extend(videos)
-        files.extend(slides)
+        files_uid = images_uid
+        files_uid.extend(videos_uid)
+        files_uid.extend(slides_uid)
 
-        if files:
-            file = files[img_idx]
-            labels = self.get_label_from_file(file, moda[file])
-            patient = self.get_patient_by_uid(self.get_patient_by_filename(file, moda[file]))
+        if files_uid:
+            file = files_uid[img_idx]
+            labels = self.get_labels_for_file(file[0], file[1])
+            # TODO: Make this work for videos
+            annotations = self.cursor.execute("SELECT annotation_id, shape_type, flags, group_id, comment, label FROM "
+                                              "annotations WHERE uid = ? AND filename = ?",
+                                              (file[0], file[1])).fetchall()
+
+            annotation_ids = [annotation[0] for annotation in annotations]
+
+            annotations_dict = {
+                annotation[0]: {
+                    'shape_type': annotation[1],
+                    'flags': annotation[2],
+                    'group_id': annotation[3],
+                    'comment': annotation[4],
+                    'label': annotation[5]
+                }
+                for annotation in annotations
+            }
+
+            for annotation_id in annotation_ids:
+                points = self.cursor.execute("SELECT vertex_id, x, y FROM points WHERE annotation_id = ?",
+                                             (annotation_id,)).fetchall()
+                annotations_dict[annotation_id]['points'] = sorted(points)
+
+            patient = file[0]
         else:
-            labels, patient = [], ""
-        files = self.prepare_files(files, moda)
-        classes = self.get_label_classes()
-        self.sUpdate.emit(files, img_idx, patient, classes, labels)
+            labels, patient, annotation_ids, annotations_dict = [], "", [], {}
+
+        files = self.prepare_files(files_uid, moda)
+        classes = self.get_all_labels()
+        self.sUpdate.emit(files, img_idx, patient, classes, annotation_ids, annotations_dict)
 
     def update_labels(self, classes: list):
         """

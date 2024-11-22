@@ -3,12 +3,15 @@ from taplt.ui.main_window import LabelingMainWindow
 
 
 class MainLogic:
-    def __init__(self):
+    def __init__(self, dev_mode=False):
 
         # active elements
-        self.main_window = LabelingMainWindow()
+        self.dev_mode = dev_mode
+        self.main_window = LabelingMainWindow(dev_mode)
         self.database = SQLiteDatabase()
         self.connect_events()
+        if self.dev_mode:
+            self.main_window.open_example_project_on_startup()
 
         self.main_window.show()
 

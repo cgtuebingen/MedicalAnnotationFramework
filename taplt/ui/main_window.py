@@ -41,8 +41,9 @@ class LabelingMainWindow(QMainWindow):
         ANNOTATION_SHIFTED: int = 2
         COMMENT: int = 3
 
-    def __init__(self):
+    def __init__(self, dev_mode=False):
         super(LabelingMainWindow, self).__init__()
+        self.dev_mode = dev_mode
         self.setWindowTitle("The All-Purpose Labeling Tool")
         self.resize(1276, 968)
         self.setTabShape(QTabWidget.TabShape.Rounded)
@@ -155,6 +156,13 @@ class LabelingMainWindow(QMainWindow):
         self.menubar.sOpenProject.connect(self.open_project)
         self.menubar.sCloseProject.connect(self.close_project)
         self.menubar.sExampleProject.connect(self.macros.example_project)
+
+    def open_example_project_on_startup(self):
+        """Automatically opens the example project when the application starts."""
+        # Call the method that opens the example project
+        self.macros.example_project(True)
+        self.set_welcome_screen(False)
+        self.menubar.enable_tools()
 
     def set_tool_tip(self, tip: str):
         # TODO: This is kind of working, but not really. You have to hover out of the display widget.
@@ -331,7 +339,7 @@ class LabelingMainWindow(QMainWindow):
         self.right_menu_widget.setHidden(b)
         self.welcome_screen.setHidden(not b)
 
-    def update_window(self, files: list, img_idx, patient: str, classes: list, labels: list):
+    def update_window(self, files: list, img_idx, patient: str, classes: list, annotation_ids: list, annotation_dict: dict):
         """main updating function: all necessary information is passed to the main window"""
         self.img_idx = img_idx
         color_map, new_color = colormap_rgb(n=NUM_COLORS)
@@ -339,7 +347,7 @@ class LabelingMainWindow(QMainWindow):
         self.file_list.update_list(files, self.img_idx)
         if files:
             self.set_no_files_screen(False)
-            current_labels = self.file_display.init_image(files[self.img_idx][0], patient, labels, classes)
+            current_labels = self.file_display.init_image(files[self.img_idx][0], patient, annotation_ids, classes, annotation_dict)
             self.polygons.update_polygons(current_labels)
         else:
             self.set_no_files_screen(True)

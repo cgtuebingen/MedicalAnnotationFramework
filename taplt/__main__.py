@@ -7,7 +7,8 @@ from taplt.src.main_logic import MainLogic
 
 def main(_args):
     app = QApplication(sys.argv)
-    _ = MainLogic()  # the labeling window
+    dev_mode = True # Skips all dialogue windows and opens an example project
+    _ = MainLogic(dev_mode)  # the labeling window
     sys.exit(app.exec())
 
 
